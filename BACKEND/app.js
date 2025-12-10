@@ -2,7 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const ApiError = require("./app/api-error"); 
 
-const contactsRouter = require("./app/routes/product.route");
+const productsRouter = require("./app/routes/product.route");
 
 const app = express();
 

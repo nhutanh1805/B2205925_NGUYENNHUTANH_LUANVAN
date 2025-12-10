@@ -4,16 +4,16 @@ const products = require("../controllers/product.controller");
 const router = express.Router();
 
 router.route("/")
-    .get(products.findAll)
-    .post(products.create)
-    .delete(products.deleteAll);
+  .get(products.findAll)
+  .post(products.create)
+  .delete(products.deleteAll);
 
 router.route("/category/:id")
-    .get(products.findByCategory);
+  .get(products.findByCategory);
 
 router.route("/:id")
-    .get(products.findOne)
-    .put(products.update)
-    .delete(products.delete);
+  .get(products.findOne)
+  .put(products.update)
+  .delete(products.delete);
 
 module.exports = router;
