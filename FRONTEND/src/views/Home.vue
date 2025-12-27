@@ -10,8 +10,6 @@
       </button>
     </div>
 
-<LeftSidebar />
-
     <!-- SIDEBAR CỐ ĐỊNH BÊN PHẢI  -->
     <aside class="community-sidebar">
       <div class="sidebar-content">
@@ -322,7 +320,7 @@ import productService from "@/services/product.service";
 /* video assets */
 import mainVideo from "@/assets/video/BannerMain.mp4";
 import sidebarTrailer from "@/assets/video/BannerMain.mp4";
-import LeftSidebar from "@/components/LeftSidebar.vue";
+
 // Video banner nhỏ
 import smallVideo1 from "@/assets/video/BannerMain.mp4";
 import smallVideo2 from "@/assets/video/BannerMain.mp4";
