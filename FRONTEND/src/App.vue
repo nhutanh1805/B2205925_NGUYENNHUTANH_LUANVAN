@@ -1,28 +1,34 @@
 <template>
   <div id="app">
     <!-- HEADER TOÀN WEB -->
-    <AppHeader />
+    <AppHeader
+      :ui="ui"
+      @update-ui="ui = $event"
+    />
 
     <!-- NỘI DUNG TRANG -->
     <div class="container app-container">
       <router-view />
     </div>
 
-    <TimeOnPage />
+    <!-- TIME ON PAGE -->
+    <TimeOnPage v-if="ui.time" />
 
-    <!-- Compoment Iphone -->
-    <Iphone />
+    <!-- IPHONE UI -->
+    <Iphone v-if="ui.iphone" />
 
-    <!-- Compoment Thông báo đứng im 5s -->
-    <IdleToast ref="idleToast" />
+    <!-- IDLE TOAST -->
+    <IdleToast
+      v-if="ui.idle"
+      ref="idleToast"
+    />
   </div>
 </template>
 
 <script>
 import AppHeader from "@/components/AppHeader.vue";
-import Iphone from "@/components/iphone/Iphone.vue"; // Compoments Iphone
-import TimeOnPage from "@/components/timeonpage/TimeOnPage.vue"; //
-// Compoments Thông báo đứng im
+import Iphone from "@/components/iphone/Iphone.vue";
+import TimeOnPage from "@/components/timeonpage/TimeOnPage.vue";
 import IdleToast from "@/components/idle/IdleToast.vue";
 import { initIdleDetector } from "@/components/idle/IdleDetector";
 
@@ -31,14 +37,25 @@ export default {
   components: {
     AppHeader,
     TimeOnPage,
-    Iphone, // Compoments Iphone
-    IdleToast, // Compoments Thông báo đứng im
+    Iphone,
+    IdleToast,
+  },
+  data() {
+    return {
+      ui: {
+        time: true,
+        iphone: true,
+        idle: true,
+      },
+    };
   },
   mounted() {
     initIdleDetector({
-      idleTime: 3000, // 3 giây
+      idleTime: 3000,
       onIdleCallback: () => {
-        this.$refs.idleToast?.show();
+        if (this.ui.idle) {
+          this.$refs.idleToast?.show();
+        }
       },
     });
   },
