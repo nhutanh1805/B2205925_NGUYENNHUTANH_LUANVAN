@@ -1,5 +1,5 @@
-// src/router/index.js
 import { createWebHistory, createRouter } from "vue-router";
+import adminRoutes from "./admin.router";
 
 const routes = [
   {
@@ -7,6 +7,8 @@ const routes = [
     name: "home",
     component: () => import("@/views/Home.vue"),
   },
+
+  // ===== PRODUCT =====
   {
     path: "/products",
     name: "product.list",
@@ -29,6 +31,11 @@ const routes = [
     component: () => import("@/views/product/ProductEdit.vue"),
     props: true,
   },
+
+  // ===== ADMIN =====
+  ...adminRoutes,
+
+  // ===== NOT FOUND =====
   {
     path: "/:pathMatch(.*)*",
     name: "notfound",
