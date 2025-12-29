@@ -28,15 +28,44 @@ onMounted(() => {
 </script>
 
 <style scoped>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+
 .admin-dashboard {
   max-width: 600px;
   margin: 60px auto;
+  padding: 0 20px;
+  font-family: 'Inter', sans-serif;
+  text-align: center;
+}
+
+h1 {
+  font-size: 2.2rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 32px;
 }
 
 .card {
-  padding: 24px;
+  padding: 32px 24px;
   border-radius: 16px;
-  background: #f9fafb;
-  box-shadow: 0 10px 25px rgba(0,0,0,.08);
+  background: linear-gradient(135deg, #ffffff, #f0f4ff);
+  box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+  text-align: left;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+}
+
+.card p {
+  font-size: 1rem;
+  color: #334155;
+  margin-bottom: 12px;
+}
+
+.card b {
+  color: #1e293b;
 }
 </style>
