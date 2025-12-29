@@ -77,19 +77,7 @@
           Không có sản phẩm phù hợp
         </p>
 
-        <div class="flex flex-wrap justify-center gap-4 mt-8">
-          <button class="btn btn-primary" @click="refreshList">
-            Làm mới
-          </button>
-
-          <router-link to="/products/add" class="btn btn-success">
-            Thêm mới
-          </router-link>
-
-          <button class="btn btn-danger" @click="removeAllProducts">
-            Xóa tất cả
-          </button>
-        </div>
+        
 
       </div>
     </div>

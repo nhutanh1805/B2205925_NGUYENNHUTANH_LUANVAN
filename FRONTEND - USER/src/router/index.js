@@ -14,21 +14,11 @@ const routes = [
     name: "product.list",
     component: () => import("@/views/product/ProductList.vue"),
   },
-  {
-    path: "/products/add",
-    name: "product.add",
-    component: () => import("@/views/product/ProductAdd.vue"),
-  },
+
   {
     path: "/products/:id",
     name: "product.detail",
     component: () => import("@/views/product/ProductDetail.vue"),
-    props: true,
-  },
-  {
-    path: "/products/edit/:id",
-    name: "product.edit",
-    component: () => import("@/views/product/ProductEdit.vue"),
     props: true,
   },
 

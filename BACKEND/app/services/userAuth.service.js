@@ -11,10 +11,15 @@ class UserAuthService {
       name: payload.name,
       email: payload.email,
       password: payload.password,
+      phone: payload.phone || "",
+      address: payload.address || "",
+      gender: payload.gender || "",
+      birthday: payload.birthday ? new Date(payload.birthday) : null,
       role: "user",
       isActive: payload.isActive !== false,
     };
 
+    // Xóa các key undefined
     Object.keys(user).forEach(
       (key) => user[key] === undefined && delete user[key]
     );
@@ -33,7 +38,15 @@ class UserAuthService {
     user.updatedAt = new Date();
 
     const result = await this.User.insertOne(user);
-    return { _id: result.insertedId, email: user.email, name: user.name };
+    return {
+      _id: result.insertedId,
+      email: user.email,
+      name: user.name,
+      phone: user.phone,
+      address: user.address,
+      gender: user.gender,
+      birthday: user.birthday,
+    };
   }
 
   async login(email, password) {
@@ -47,6 +60,10 @@ class UserAuthService {
       _id: user._id,
       name: user.name,
       email: user.email,
+      phone: user.phone,
+      address: user.address,
+      gender: user.gender,
+      birthday: user.birthday,
       role: user.role,
     };
   }

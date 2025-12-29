@@ -5,33 +5,50 @@
     <div class="card" v-if="user">
       <p><b>Tên:</b> {{ user.name }}</p>
       <p><b>Email:</b> {{ user.email }}</p>
+      <p><b>Số điện thoại:</b> {{ user.phone }}</p>
+      <p><b>Địa chỉ:</b> {{ user.address }}</p>
+      <p><b>Giới tính:</b> {{ user.gender }}</p>
+      <p><b>Ngày sinh:</b> {{ formattedBirthday }}</p>
       <p><b>Quyền:</b> {{ user.role }}</p>
+
       <button @click="logout">Đăng xuất</button>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, onMounted, computed } from "vue";
 import { useRouter } from "vue-router";
 
 const router = useRouter();
 const user = ref(null);
 
-onMounted(() => {
+const loadUser = () => {
   const data = localStorage.getItem("user");
   if (!data) {
     router.push("/user/login");
     return;
   }
   user.value = JSON.parse(data);
+};
+
+onMounted(() => {
+  loadUser();
+  window.addEventListener("user-login", loadUser);
 });
 
-function logout() {
+const logout = () => {
   localStorage.removeItem("user");
+  user.value = null;
   window.dispatchEvent(new Event("user-logout"));
   router.push("/user/login");
-}
+};
+
+const formattedBirthday = computed(() => {
+  if (!user.value?.birthday) return "";
+  const d = new Date(user.value.birthday);
+  return d.toLocaleDateString();
+});
 </script>
 
 <style scoped>
@@ -85,9 +102,11 @@ h1 {
   color: white;
   font-weight: 600;
   cursor: pointer;
+  transition: all 0.3s ease;
 }
 
 .card button:hover {
   background: #dc2626;
+  transform: translateY(-2px);
 }
 </style>
