@@ -17,9 +17,10 @@ class UserAuthService {
       birthday: payload.birthday ? new Date(payload.birthday) : null,
       role: "user",
       isActive: payload.isActive !== false,
+      createdAt: new Date(),
+      updatedAt: new Date(),
     };
 
-    // Xóa các key undefined
     Object.keys(user).forEach(
       (key) => user[key] === undefined && delete user[key]
     );
@@ -34,14 +35,13 @@ class UserAuthService {
     if (exist) throw new Error("Email user đã tồn tại");
 
     user.password = await bcrypt.hash(user.password, 10);
-    user.createdAt = new Date();
-    user.updatedAt = new Date();
 
     const result = await this.User.insertOne(user);
+
     return {
       _id: result.insertedId,
-      email: user.email,
       name: user.name,
+      email: user.email,
       phone: user.phone,
       address: user.address,
       gender: user.gender,
@@ -74,12 +74,53 @@ class UserAuthService {
       .toArray();
   }
 
+  async updateProfile(id, payload) {
+    if (!ObjectId.isValid(id)) return null;
+
+    const updateData = {
+      name: payload.name,
+      phone: payload.phone,
+      address: payload.address,
+      gender: payload.gender,
+      birthday: payload.birthday ? new Date(payload.birthday) : null,
+      updatedAt: new Date(),
+    };
+
+    Object.keys(updateData).forEach(
+      (key) => updateData[key] === undefined && delete updateData[key]
+    );
+
+    if (Object.keys(updateData).length === 1) {
+      throw new Error("Không có dữ liệu để cập nhật");
+    }
+
+    const result = await this.User.updateOne(
+      { _id: new ObjectId(id), isActive: true },
+      { $set: updateData }
+    );
+
+    if (result.matchedCount === 0) return null;
+
+    return await this.User.findOne(
+      { _id: new ObjectId(id) },
+      { projection: { password: 0 } }
+    );
+  }
+
   async delete(id) {
+    if (!ObjectId.isValid(id)) return null;
+
     const result = await this.User.findOneAndUpdate(
-      { _id: ObjectId.isValid(id) ? new ObjectId(id) : null },
-      { $set: { isActive: false, deletedAt: new Date() } },
+      { _id: new ObjectId(id) },
+      {
+        $set: {
+          isActive: false,
+          deletedAt: new Date(),
+        },
+      },
       { returnDocument: "after" }
     );
+
     return result.value;
   }
 }

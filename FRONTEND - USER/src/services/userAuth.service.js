@@ -12,6 +12,11 @@ class UserAuthService {
   async login(data) {
     return (await this.api.post("/login", data)).data;
   }
+
+async updateProfile(id, data) {
+  return (await this.api.put(`/profile/${id}`, data)).data.data; 
+}
+
 }
 
 export default new UserAuthService();

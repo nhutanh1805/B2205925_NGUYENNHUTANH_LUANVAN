@@ -1,4 +1,3 @@
-
 const UserAuthService = require("../services/userAuth.service");
 const MongoDB = require("../utils/mongodb.util");
 const ApiError = require("../api-error");
@@ -47,13 +46,33 @@ exports.findAll = async (req, res, next) => {
   }
 };
 
+exports.updateProfile = async (req, res, next) => {
+  try {
+    const service = new UserAuthService(MongoDB.client);
+    const user = await service.updateProfile(req.params.id, req.body);
+
+    if (!user) {
+      return next(new ApiError(404, "Không tìm thấy user"));
+    }
+
+    return res.json({
+      message: "Cập nhật thông tin cá nhân thành công",
+      data: user,
+    });
+  } catch (error) {
+    return next(new ApiError(400, error.message));
+  }
+};
+
 exports.delete = async (req, res, next) => {
   try {
     const service = new UserAuthService(MongoDB.client);
     const result = await service.delete(req.params.id);
+
     if (!result) {
       return next(new ApiError(404, "Không tìm thấy user"));
     }
+
     return res.json({ message: "Xóa user thành công" });
   } catch (error) {
     return next(new ApiError(500, "Không thể xóa user"));
