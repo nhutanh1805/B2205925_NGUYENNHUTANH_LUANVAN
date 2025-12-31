@@ -5,6 +5,7 @@ const ApiError = require("./app/api-error");
 const productsRouter = require("./app/routes/product.route");
 const adminsRouter = require("./app/routes/adminAuth.route");
 const usersRouter = require("./app/routes/user.routes");
+const cartRouter = require("./app/routes/cart.route"); 
 
 const app = express();
 
@@ -18,6 +19,7 @@ app.get("/", (req, res) => {
 app.use("/api/products", productsRouter);
 app.use("/api/admins", adminsRouter);
 app.use("/api/users", usersRouter);
+app.use("/api/cart", cartRouter); 
 
 app.use((req, res, next) => {
     return next(new ApiError(404, "Resource not found"));

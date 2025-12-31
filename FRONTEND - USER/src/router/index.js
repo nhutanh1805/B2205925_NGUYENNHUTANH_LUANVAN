@@ -1,5 +1,6 @@
 import { createWebHistory, createRouter } from "vue-router";
 import userRoutes from "./user.router";
+import cartRoutes from "./cart.router";
 
 const routes = [
   {
@@ -24,6 +25,9 @@ const routes = [
 
   // ===== ADMIN =====
   ...userRoutes,
+
+  // ===== CART =====
+  ...cartRoutes,
 
   // ===== NOT FOUND =====
   {
