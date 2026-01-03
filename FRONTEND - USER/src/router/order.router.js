@@ -12,4 +12,10 @@ export default [
     name: "order.checkout",
     component: CheckoutView,
   },
+
+  {
+  path: "/orders/:orderId",
+  name: "order.detail",
+  component: () => import("@/views/order/OrderDetailView.vue"),
+},
 ];

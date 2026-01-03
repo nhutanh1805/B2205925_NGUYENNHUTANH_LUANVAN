@@ -20,7 +20,7 @@ class OrderService {
       shippingAddress: orderData.shippingAddress,
       phone: orderData.phone,
       note: orderData.note,
-      status: "pending", 
+      status: "pending",
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -48,13 +48,17 @@ class OrderService {
   async updateStatus(orderId, status) {
     if (!ObjectId.isValid(orderId)) return null;
 
-    const result = await this.Order.findOneAndUpdate(
-      { _id: new ObjectId(orderId) },
-      { $set: { status: status, updatedAt: new Date() } },
-      { returnDocument: "after" }
-    );
+    const filter = { _id: new ObjectId(orderId) };
 
-    return result.value;
+    const updateResult = await this.Order.updateOne(filter, {
+      $set: { status: status, updatedAt: new Date() }
+    });
+
+    if (updateResult.matchedCount === 0) {
+      return null;
+    }
+    
+    return await this.Order.findOne(filter);
   }
 }
 
