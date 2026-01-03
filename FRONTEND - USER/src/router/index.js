@@ -1,6 +1,7 @@
 import { createWebHistory, createRouter } from "vue-router";
 import userRoutes from "./user.router";
 import cartRoutes from "./cart.router";
+import orderRoutes from "./order.router";
 
 const routes = [
   {
@@ -28,6 +29,9 @@ const routes = [
 
   // ===== CART =====
   ...cartRoutes,
+
+  // ===== order =====
+ ...orderRoutes,
 
   // ===== NOT FOUND =====
   {

@@ -19,6 +19,16 @@
           Giỏ hàng
         </router-link>
 
+        <!-- ĐƠN HÀNG - Chỉ hiện khi đã đăng nhập -->
+        <router-link
+          v-if="user"
+          to="/orders"
+          class="nav-link orders-link"
+          active-class="orders-active"
+        >
+          Đơn hàng
+        </router-link>
+
         <UserMenu v-if="user" :user="user" @logout="handleLogout" />
 
         <button v-else class="login-btn" @click="router.push('/user/login')">
