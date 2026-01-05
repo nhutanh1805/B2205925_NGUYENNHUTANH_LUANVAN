@@ -1,7 +1,6 @@
 <template>
   <div class="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
     <div class="max-w-5xl mx-auto px-6 py-12">
-      <!-- Header -->
       <div class="flex items-center justify-between mb-8">
         <h1 class="text-3xl font-extrabold text-gray-900 dark:text-white">
           📦 Chi tiết đơn hàng
@@ -11,7 +10,6 @@
         </button>
       </div>
 
-      <!-- Loading -->
       <div v-if="loading" class="bg-white dark:bg-gray-800 rounded-3xl shadow-xl p-10">
         <div class="space-y-6 animate-pulse">
           <div class="h-6 w-1/3 bg-gray-200 dark:bg-gray-700 rounded"></div>
@@ -20,25 +18,17 @@
         </div>
       </div>
 
-      <!-- Order Info -->
       <div v-else-if="order" class="bg-white dark:bg-gray-800 rounded-3xl shadow-xl border border-gray-200 dark:border-gray-700 p-6 space-y-6">
         <div class="flex justify-between items-center">
           <div>
             <h2 class="text-xl font-semibold text-gray-900 dark:text-white">
               Mã đơn: #{{ order._id.slice(-8).toUpperCase() }}
             </h2>
-            <p class="text-gray-600 dark:text-gray-400">
-              Ngày đặt: {{ formatDate(order.createdAt) }}
-            </p>
-            <p class="text-gray-600 dark:text-gray-400">
-              Địa chỉ giao hàng: {{ order.shippingAddress }}
-            </p>
-            <p class="text-gray-600 dark:text-gray-400">
-              Số điện thoại: {{ order.phone }}
-            </p>
-            <p v-if="order.note" class="text-gray-600 dark:text-gray-400">
-              Ghi chú: {{ order.note }}
-            </p>
+            <p class="text-gray-600 dark:text-gray-400">Người đặt: {{ order.userName }}</p>
+            <p class="text-gray-600 dark:text-gray-400">Ngày đặt: {{ formatDate(order.createdAt) }}</p>
+            <p class="text-gray-600 dark:text-gray-400">Địa chỉ giao hàng: {{ order.shippingAddress }}</p>
+            <p class="text-gray-600 dark:text-gray-400">Số điện thoại: {{ order.phone }}</p>
+            <p v-if="order.note" class="text-gray-600 dark:text-gray-400">Ghi chú: {{ order.note }}</p>
           </div>
 
           <div class="flex flex-col gap-2">
@@ -55,7 +45,6 @@
           </div>
         </div>
 
-        <!-- Products Table -->
         <div class="overflow-x-auto">
           <table class="w-full text-sm">
             <thead class="bg-gray-100 dark:bg-gray-900/40">
@@ -80,7 +69,6 @@
           </table>
         </div>
 
-        <!-- Order Summary -->
         <div class="flex justify-end mt-6">
           <div class="text-right">
             <p class="text-gray-600 dark:text-gray-400">Tổng số lượng: {{ order.totalQuantity }}</p>
@@ -89,7 +77,6 @@
         </div>
       </div>
 
-      <!-- Not Found -->
       <div v-else class="bg-white dark:bg-gray-800 rounded-3xl shadow-xl p-20 text-center">
         <div class="text-8xl mb-8">❌</div>
         <h2 class="text-3xl font-bold text-gray-900 dark:text-white mb-4">Đơn hàng không tồn tại</h2>
@@ -115,8 +102,7 @@ const loadOrder = async () => {
   loading.value = true
   try {
     order.value = await OrderService.getOrder(route.params.orderId)
-  } catch (err) {
-    console.error(err)
+  } catch {
     order.value = null
   } finally {
     loading.value = false
@@ -124,16 +110,8 @@ const loadOrder = async () => {
 }
 
 const goBack = () => router.back()
-
-const updateStatus = async (id, status) => {
-  await OrderService.updateOrderStatus(id, status)
-  await loadOrder()
-}
-
-const cancelOrder = async (id) => {
-  await OrderService.updateOrderStatus(id, "cancelled")
-  await loadOrder()
-}
+const updateStatus = async (id, status) => { await OrderService.updateOrderStatus(id, status); await loadOrder() }
+const cancelOrder = async (id) => { await OrderService.updateOrderStatus(id, "cancelled"); await loadOrder() }
 
 onMounted(loadOrder)
 </script>

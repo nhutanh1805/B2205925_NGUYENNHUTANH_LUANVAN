@@ -23,6 +23,7 @@
         </router-link>
       </div>
 
+      <!-- Loading state -->
       <div v-if="loading" class="bg-white dark:bg-gray-800 rounded-3xl shadow-xl p-10">
         <div class="space-y-6 animate-pulse">
           <div class="h-6 w-1/3 bg-gray-200 dark:bg-gray-700 rounded"></div>
@@ -32,6 +33,7 @@
         </div>
       </div>
 
+      <!-- Empty state -->
       <div v-else-if="!orders.length" class="bg-white dark:bg-gray-800 rounded-3xl shadow-xl p-20 text-center">
         <div class="text-8xl mb-8">📭</div>
         <h2 class="text-3xl font-bold text-gray-900 dark:text-white mb-4">Chưa có đơn hàng</h2>
@@ -44,12 +46,14 @@
         </router-link>
       </div>
 
+      <!-- Orders table -->
       <div v-else class="bg-white dark:bg-gray-800 rounded-3xl shadow-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
         <div class="overflow-x-auto">
           <table class="w-full text-sm">
             <thead class="bg-gray-100 dark:bg-gray-900/40">
               <tr>
                 <th class="px-6 py-5 text-left font-semibold text-gray-600 dark:text-gray-400">Mã</th>
+                <th class="px-6 py-5 text-left font-semibold text-gray-600 dark:text-gray-400">Người đặt</th>
                 <th class="px-6 py-5 text-left font-semibold text-gray-600 dark:text-gray-400">Trạng thái</th>
                 <th class="px-6 py-5 text-left font-semibold text-gray-600 dark:text-gray-400">Số lượng</th>
                 <th class="px-6 py-5 text-left font-semibold text-gray-600 dark:text-gray-400">Tổng tiền</th>
@@ -65,6 +69,8 @@
                     #{{ order._id.slice(-8).toUpperCase() }}
                   </button>
                 </td>
+
+                <td class="px-6 py-5 text-gray-900 dark:text-white">{{ order.userName }}</td>
 
                 <td class="px-6 py-5">
                   <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold" :class="statusClass(order.status)">
@@ -103,6 +109,7 @@
           </table>
         </div>
 
+        <!-- Pagination -->
         <div class="flex justify-end gap-2 px-6 py-4 bg-gray-50 dark:bg-gray-900/20">
           <button :disabled="pagination.page === 1" @click="changePage(pagination.page - 1)" class="px-3 py-1 rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition">
             ← Trước
