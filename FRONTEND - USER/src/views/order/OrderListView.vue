@@ -6,7 +6,7 @@
           <h1 class="text-4xl font-extrabold text-gray-900 dark:text-white flex items-center gap-3">
             📦 Đơn hàng
             <span class="text-sm font-semibold px-3 py-1 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">
-              {{ orders.length }}
+            {{ orders.length }} đơn
             </span>
           </h1>
           <p class="mt-2 text-gray-600 dark:text-gray-400">
@@ -16,7 +16,7 @@
 
         <router-link
           to="/products"
-          class="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold shadow-lg hover:shadow-xl hover:scale-[1.03] transition"
+          class="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-black font-semibold shadow-lg hover:shadow-xl hover:scale-[1.03] transition"
         >
           🛒 Mua sắm thêm
         </router-link>
@@ -35,7 +35,7 @@
         v-else-if="!orders.length"
         class="bg-white dark:bg-gray-800 rounded-3xl shadow-xl p-20 text-center"
       >
-        <div class="text-8xl mb-8">📭</div>
+        <div class="text-8xl mb-8"></div>
         <h2 class="text-3xl font-bold text-gray-900 dark:text-white mb-4">
           Chưa có đơn hàng
         </h2>
@@ -44,9 +44,9 @@
         </p>
         <router-link
           to="/products"
-          class="inline-flex items-center gap-2 px-10 py-4 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold shadow-lg hover:shadow-xl hover:scale-[1.03] transition"
+          class="inline-flex items-center gap-2 px-10 py-4 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-black font-semibold shadow-lg hover:shadow-xl hover:scale-[1.03] transition"
         >
-          🚀 Khám phá sản phẩm
+          Khám phá sản phẩm
         </router-link>
       </div>
 

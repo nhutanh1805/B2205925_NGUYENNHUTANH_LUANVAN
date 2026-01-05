@@ -16,14 +16,6 @@
         </router-link>
 
         <router-link
-          to="/cart"
-          class="nav-link cart-link"
-          active-class="cart-active"
-        >
-          Giỏ hàng
-        </router-link>
-
-        <router-link
           to="/orders"
           class="nav-link orders-link"
           active-class="orders-active"

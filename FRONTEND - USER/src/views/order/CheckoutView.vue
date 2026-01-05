@@ -70,7 +70,7 @@
           <button
             @click="placeOrder"
             :disabled="submitting"
-            class="w-full py-5 rounded-xl text-white font-black text-xl shadow-lg
+            class="w-full py-5 rounded-xl text-black font-black text-xl shadow-lg
                    bg-gradient-to-r from-orange-500 to-pink-600
                    hover:scale-105 transition disabled:opacity-70"
           >

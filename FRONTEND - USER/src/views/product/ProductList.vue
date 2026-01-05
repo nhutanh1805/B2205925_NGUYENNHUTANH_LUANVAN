@@ -29,7 +29,7 @@
               <p class="mini-price">{{ formatPrice(product.salePrice || product.price) }}₫</p>
               <span class="mini-stock text-xs">Còn {{ product.stock }}</span>
             </div>
-            <button @click.stop="confirmAddToCart(product)" :disabled="product.stock === 0" class="add-to-cart-btn w-full mt-3 py-3 rounded-xl font-bold text-white shadow-lg transition-all duration-300 flex items-center justify-center gap-2" :class="{'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 hover:scale-105': product.stock > 0,'bg-gray-400 cursor-not-allowed': product.stock === 0}">
+            <button @click.stop="confirmAddToCart(product)" :disabled="product.stock === 0" class="add-to-cart-btn w-full mt-3 py-3 rounded-xl font-bold text-black shadow-lg flex items-center justify-center gap-2" :class="{'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 hover:scale-105': product.stock > 0,'bg-gray-400 cursor-not-allowed': product.stock === 0}">
               <i class="fas fa-shopping-cart"></i>
               {{ product.stock === 0 ? 'Hết hàng' : 'Thêm vào giỏ' }}
             </button>
@@ -45,8 +45,8 @@
               <h2 class="text-3xl font-black mb-4">Xác nhận thêm vào giỏ</h2>
               <p class="text-xl text-gray-700 dark:text-gray-300 mb-8">Bạn có muốn thêm <span class="font-bold text-blue-600">"{{ pendingProduct.name }}"</span> vào giỏ hàng không?</p>
               <div class="flex gap-6 justify-center">
-                <button @click="cancelAdd" class="px-10 py-4 bg-gray-400 hover:bg-gray-500 text-white font-bold rounded-2xl transition-all hover:scale-105">Hủy</button>
-                <button @click="executeAddToCart" class="px-12 py-4 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold rounded-2xl transition-all hover:scale-105 shadow-xl">Có, thêm ngay!</button>
+                <button @click="cancelAdd" class="px-10 py-4 bg-gray-400 hover:bg-gray-500 text-black font-bold rounded-2xl transition-all hover:scale-105">Hủy</button>
+                <button @click="executeAddToCart" class="px-12 py-4 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-black font-bold rounded-2xl transition-all hover:scale-105 shadow-xl">Có, thêm ngay!</button>
               </div>
             </div>
           </div>
@@ -99,11 +99,8 @@ async function refreshList() {
 }
 
 const productStrings = computed(() => products.value.map(p => `${p.name}${p.brand}${p.imei || ""}`.toLowerCase()))
-
 const filteredProducts = computed(() => !searchText.value ? products.value : products.value.filter((_, i) => productStrings.value[i].includes(searchText.value.toLowerCase())))
-
 const filteredProductsCount = computed(() => filteredProducts.value.length)
-
 const formatPrice = v => new Intl.NumberFormat("vi-VN").format(v)
 
 function confirmAddToCart(product) {
@@ -124,7 +121,7 @@ async function executeAddToCart() {
     toastMessage.value = pendingProduct.value.name
     showToast.value = true
     setTimeout(() => { showToast.value = false }, 4000)
-  } catch (error) {
+  } catch {
     alert("Thêm vào giỏ hàng thất bại!")
   }
   pendingProduct.value = null
@@ -173,8 +170,8 @@ function initDragScroll() {
 .badge { position: absolute; top: 12px; left: 12px; font-size: 0.7rem; font-weight: 800; padding: 4px 10px; border-radius: 999px; color: white; z-index: 10; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
 .badge-sale { background: linear-gradient(135deg, #ef4444, #f97316); }
 .badge-out { background: #6b7280; }
-.add-to-cart-btn { font-size: 0.9rem; transform: translateY(20px); opacity: 0; transition: all 0.4s ease; }
-.mini-card:hover .add-to-cart-btn { transform: translateY(0); opacity: 1; }
+.add-to-cart-btn { font-size: 0.9rem; transition: all 0.3s ease; }
+.add-to-cart-btn:hover { transform: scale(1.03); }
 .modal-enter-active, .modal-leave-active { transition: all 0.4s ease; }
 .modal-enter-from, .modal-leave-to { opacity: 0; }
 .modal-enter-from .bg-black { opacity: 0; }
