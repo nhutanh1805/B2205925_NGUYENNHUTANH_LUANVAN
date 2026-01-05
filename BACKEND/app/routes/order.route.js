@@ -7,8 +7,11 @@ router.post("/create", order.createOrder);
 
 router.post("/", order.getOrdersByUser);
 
+router.get("/all", order.getAllOrders);
+
 router.get("/:orderId", order.getOrderById);
 
 router.patch("/:orderId/status", order.updateOrderStatus);
+
 
 module.exports = router;

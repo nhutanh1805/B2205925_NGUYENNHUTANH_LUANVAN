@@ -7,7 +7,7 @@ exports.createOrder = async (req, res, next) => {
   const { userId, shippingAddress, phone, note } = req.body;
 
   if (!userId || !shippingAddress || !phone) {
-    return next(new ApiError(400, "Thiếu thông tin bắt buộc: userId, shippingAddress hoặc phone"));
+    return next(new ApiError(400, "Thiếu thông tin bắt buộc"));
   }
 
   try {
@@ -91,5 +91,35 @@ exports.updateOrderStatus = async (req, res, next) => {
     return res.json({ message: "Cập nhật trạng thái thành công", data: order });
   } catch (error) {
     return next(new ApiError(500, "Lỗi cập nhật trạng thái"));
+  }
+};
+
+exports.getAllOrders = async (req, res, next) => {
+  try {
+    const orderService = new OrderService(MongoDB.client);
+
+    const {
+      page = 1,
+      limit = 10,
+      status,
+      sortBy = "createdAt",
+      sortOrder = "desc"
+    } = req.query;
+
+    const result = await orderService.getAllOrders({
+      page,
+      limit,
+      status,
+      sortBy,
+      sortOrder
+    });
+
+    return res.json({
+      message: "Lấy danh sách tất cả đơn hàng thành công",
+      ...result
+    });
+  } catch (error) {
+    console.error("Lỗi getAllOrders controller:", error);
+    return next(new ApiError(500, "Lỗi lấy danh sách đơn hàng: " + error.message));
   }
 };

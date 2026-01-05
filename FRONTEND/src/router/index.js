@@ -1,5 +1,6 @@
 import { createWebHistory, createRouter } from "vue-router";
 import adminRoutes from "./admin.router";
+import orderRoutes from "./order.router";
 
 const routes = [
   {
@@ -35,6 +36,9 @@ const routes = [
   // ===== ADMIN =====
   ...adminRoutes,
 
+    // ===== order =====
+ ...orderRoutes,
+ 
   // ===== NOT FOUND =====
   {
     path: "/:pathMatch(.*)*",

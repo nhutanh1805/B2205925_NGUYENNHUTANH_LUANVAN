@@ -40,25 +40,81 @@ class OrderService {
   }
 
   async findById(orderId) {
-    if (!ObjectId.isValid(orderId)) return null;
+    if (!orderId || orderId.length !== 24 || !/^[0-9a-fA-F]{24}$/.test(orderId)) {
+      return null;
+    }
 
-    return await this.Order.findOne({ _id: new ObjectId(orderId) });
+    try {
+      return await this.Order.findOne({ _id: new ObjectId(orderId) });
+    } catch (error) {
+      console.error("Lỗi findById:", error);
+      return null;
+    }
   }
 
   async updateStatus(orderId, status) {
-    if (!ObjectId.isValid(orderId)) return null;
-
-    const filter = { _id: new ObjectId(orderId) };
-
-    const updateResult = await this.Order.updateOne(filter, {
-      $set: { status: status, updatedAt: new Date() }
-    });
-
-    if (updateResult.matchedCount === 0) {
+    if (!orderId || orderId.length !== 24 || !/^[0-9a-fA-F]{24}$/.test(orderId)) {
       return null;
     }
-    
-    return await this.Order.findOne(filter);
+
+    try {
+      const filter = { _id: new ObjectId(orderId) };
+
+      const updateResult = await this.Order.updateOne(filter, {
+        $set: { status: status, updatedAt: new Date() }
+      });
+
+      if (updateResult.matchedCount === 0) {
+        return null;
+      }
+      
+      return await this.Order.findOne(filter);
+    } catch (error) {
+      console.error("Lỗi updateStatus:", error);
+      return null;
+    }
+  }
+
+  async getAllOrders({
+    page = 1,
+    limit = 10,
+    status,
+    sortBy = "createdAt",
+    sortOrder = "desc"
+  } = {}) {
+    try {
+      const pageNum = parseInt(page) || 1;
+      const limitNum = Math.min(parseInt(limit) || 10, 100);
+      const skip = (pageNum - 1) * limitNum;
+
+      let query = {};
+      if (status && status.trim() !== "") {
+        query.status = status.trim();
+      }
+
+      const sort = {};
+      sort[sortBy || "createdAt"] = sortOrder === "asc" ? 1 : -1;
+
+      const orders = await this.Order.find(query)
+        .sort(sort)
+        .skip(skip)
+        .limit(limitNum)
+        .toArray();
+
+      const total = await this.Order.countDocuments(query);
+
+      return {
+        data: orders,
+        pagination: {
+          page: pageNum,
+          limit: limitNum,
+          total,
+          totalPages: Math.ceil(total / limitNum)
+        }
+      };
+    } catch (error) {
+      throw error;
+    }
   }
 }
 
