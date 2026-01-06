@@ -49,7 +49,7 @@
           <table class="w-full text-sm">
             <thead class="bg-gray-100 dark:bg-gray-900/40">
               <tr>
-                <th class="px-6 py-3 text-left font-semibold text-gray-600 dark:text-gray-400">Sản phẩm</th>
+                <th class="px-6 py-3 text-left font-semibold text-gray-600 dark:text-gray-400 w-[45%]">Sản phẩm</th>
                 <th class="px-6 py-3 text-left font-semibold text-gray-600 dark:text-gray-400">Giá</th>
                 <th class="px-6 py-3 text-left font-semibold text-gray-600 dark:text-gray-400">Số lượng</th>
                 <th class="px-6 py-3 text-left font-semibold text-gray-600 dark:text-gray-400">Tổng</th>
@@ -57,13 +57,27 @@
             </thead>
             <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
               <tr v-for="item in order.items" :key="item.productId">
-                <td class="px-6 py-4 text-gray-900 dark:text-white flex items-center gap-3">
-                  <img :src="item.images[0]" alt="" class="w-12 h-12 rounded-lg object-cover">
-                  <span>{{ item.name }}</span>
+                <td class="px-6 py-4">
+                  <div class="flex items-center gap-4 group">
+                    <div class="relative">
+                      <img :src="item.images?.[0] || placeholder" class="order-mini-img" />
+                      <div class="absolute inset-0 rounded-xl bg-black opacity-0 group-hover:opacity-20 transition"></div>
+                    </div>
+                    <div class="flex flex-col">
+                      <span class="font-semibold text-gray-900 dark:text-white leading-snug line-clamp-2">
+                        {{ item.name }}
+                      </span>
+                      <span class="text-xs text-gray-500 dark:text-gray-400">
+                        x{{ item.quantity }}
+                      </span>
+                    </div>
+                  </div>
                 </td>
                 <td class="px-6 py-4 text-gray-900 dark:text-white">{{ formatPrice(item.price) }}₫</td>
                 <td class="px-6 py-4 text-gray-900 dark:text-white">{{ item.quantity }}</td>
-                <td class="px-6 py-4 font-bold text-gray-900 dark:text-white">{{ formatPrice(item.price * item.quantity) }}₫</td>
+                <td class="px-6 py-4 font-bold text-gray-900 dark:text-white">
+                  {{ formatPrice(item.price * item.quantity) }}₫
+                </td>
               </tr>
             </tbody>
           </table>
@@ -72,7 +86,9 @@
         <div class="flex justify-end mt-6">
           <div class="text-right">
             <p class="text-gray-600 dark:text-gray-400">Tổng số lượng: {{ order.totalQuantity }}</p>
-            <p class="text-xl font-bold text-gray-900 dark:text-white">Tổng tiền: {{ formatPrice(order.totalPrice) }}₫</p>
+            <p class="text-xl font-bold text-gray-900 dark:text-white">
+              Tổng tiền: {{ formatPrice(order.totalPrice) }}₫
+            </p>
           </div>
         </div>
       </div>
@@ -94,9 +110,17 @@ const route = useRoute()
 const router = useRouter()
 const order = ref(null)
 const loading = ref(true)
+const placeholder = "https://via.placeholder.com/120x160?text=No+Image"
 
-const formatPrice = (v) => new Intl.NumberFormat("vi-VN").format(v)
-const formatDate = (d) => new Date(d).toLocaleString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })
+const formatPrice = v => new Intl.NumberFormat("vi-VN").format(v)
+const formatDate = d =>
+  new Date(d).toLocaleString("vi-VN", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit"
+  })
 
 const loadOrder = async () => {
   loading.value = true
@@ -110,8 +134,31 @@ const loadOrder = async () => {
 }
 
 const goBack = () => router.back()
-const updateStatus = async (id, status) => { await OrderService.updateOrderStatus(id, status); await loadOrder() }
-const cancelOrder = async (id) => { await OrderService.updateOrderStatus(id, "cancelled"); await loadOrder() }
+const updateStatus = async (id, status) => {
+  await OrderService.updateOrderStatus(id, status)
+  await loadOrder()
+}
+const cancelOrder = async id => {
+  await OrderService.updateOrderStatus(id, "cancelled")
+  await loadOrder()
+}
 
 onMounted(loadOrder)
 </script>
+
+<style scoped>
+.order-mini-img {
+  width: 64px;
+  height: 88px;
+  object-fit: cover;
+  border-radius: 14px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.group:hover .order-mini-img {
+  transform: scale(1.05);
+  box-shadow: 0 10px 18px rgba(0, 0, 0, 0.18);
+}
+</style>

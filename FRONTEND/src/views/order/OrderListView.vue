@@ -19,7 +19,7 @@
           to="/products"
           class="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-black font-semibold shadow-lg hover:shadow-xl hover:scale-[1.03] transition"
         >
-          🛒 Mua sắm thêm
+          Xem sản phẩm
         </router-link>
       </div>
 
@@ -180,3 +180,5 @@ const changePage = (page) => loadOrders(page)
 
 onMounted(() => loadOrders(1))
 </script>
+
+

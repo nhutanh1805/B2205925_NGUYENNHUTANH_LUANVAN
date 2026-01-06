@@ -32,26 +32,41 @@
 
       <section v-else class="grid grid-cols-1 lg:grid-cols-3 gap-8">
         
-        <div class="lg:col-span-2 flex flex-wrap gap-6">
-          <div v-for="item in cart.items" :key="item.productId" class="mini-card group">
-            
-            <span v-if="item.salePrice" class="badge badge-sale">SALE</span>
-            <div class="relative overflow-hidden rounded-2xl mb-3">
-              <img :src="item.images?.[0] || placeholder" class="mini-img" />
-              <div class="absolute inset-0 bg-black opacity-0 group-hover:opacity-20 transition-opacity duration-300 rounded-2xl"></div>
+        <div class="lg:col-span-2 flex flex-col gap-4">
+          <div v-for="item in cart.items" :key="item.productId" class="cart-row group">
+
+            <div class="relative">
+              <img :src="item.images?.[0] || placeholder" class="order-mini-img" />
+              <span v-if="item.salePrice" class="badge badge-sale">SALE</span>
             </div>
 
-            <h4 class="mini-name">{{ item.name }}</h4>
-            <div class="flex items-center justify-between mb-2">
-              <p class="mini-price">{{ formatPrice(item.price * item.quantity) }}₫</p>
-              <span class="mini-stock text-xs">x{{ item.quantity }}</span>
-            </div>
+            <div class="flex-1 flex flex-col justify-between">
+              <div>
+                <h4 class="cart-name">{{ item.name }}</h4>
+                <p class="cart-price">{{ formatPrice(item.price * item.quantity) }}₫</p>
+              </div>
 
-            <div class="flex items-center gap-2 justify-center mt-2">
-              <button @click="updateQuantity(item.productId, item.quantity - 1)" :disabled="item.quantity <= 1" class="qty-btn mini-btn">−</button>
-              <span class="font-bold">{{ item.quantity }}</span>
-              <button @click="updateQuantity(item.productId, item.quantity + 1)" class="qty-btn mini-btn bg-orange-500 text-white hover:bg-orange-600">+</button>
-              <button @click="removeItem(item.productId)" class="text-sm text-red-500 hover:underline ml-2">Xóa</button>
+              <div class="flex items-center gap-3 mt-2">
+                <button
+                  @click="updateQuantity(item.productId, item.quantity - 1)"
+                  :disabled="item.quantity <= 1"
+                  class="qty-btn"
+                >−</button>
+
+                <span class="font-bold">{{ item.quantity }}</span>
+
+                <button
+                  @click="updateQuantity(item.productId, item.quantity + 1)"
+                  class="qty-btn bg-orange-500 text-white hover:bg-orange-600"
+                >+</button>
+
+                <button
+                  @click="removeItem(item.productId)"
+                  class="text-sm text-red-500 hover:underline ml-4"
+                >
+                  Xóa
+                </button>
+              </div>
             </div>
 
           </div>
@@ -59,11 +74,14 @@
 
         <aside class="sticky top-6 h-fit bg-white dark:bg-gray-800 rounded-3xl shadow-2xl p-8 flex flex-col gap-6">
           <h2 class="text-2xl font-extrabold text-gray-900 dark:text-white">Thanh toán</h2>
-          
+
           <div class="space-y-4 text-gray-600 dark:text-gray-400">
-            <div class="flex justify-between"><span>Số sản phẩm: </span><span>{{ cart.totalQuantity }}</span></div>
+            <div class="flex justify-between">
+              <span>Số sản phẩm:</span>
+              <span>{{ cart.totalQuantity }}</span>
+            </div>
             <div class="flex justify-between text-lg font-bold text-gray-900 dark:text-white">
-              <span>Tổng tiền: </span>
+              <span>Tổng tiền:</span>
               <span class="text-orange-600">{{ formatPrice(cart.totalPrice) }}₫</span>
             </div>
           </div>
@@ -97,7 +115,7 @@ import CartService from "@/services/cart.service"
 const router = useRouter()
 const cart = ref({ items: [], totalQuantity: 0, totalPrice: 0 })
 const loading = ref(true)
-const placeholder = "https://via.placeholder.com/148x200?text=No+Image"
+const placeholder = "https://via.placeholder.com/120x160?text=No+Image"
 
 const loadCart = async () => {
   loading.value = true
@@ -109,7 +127,9 @@ const loadCart = async () => {
       alert("Bạn cần đăng nhập để xem giỏ hàng")
       router.push("/user/login")
     } else alert("Không thể tải giỏ hàng")
-  } finally { loading.value = false }
+  } finally {
+    loading.value = false
+  }
 }
 
 const updateQuantity = async (productId, quantity) => {
@@ -118,7 +138,7 @@ const updateQuantity = async (productId, quantity) => {
   await loadCart()
 }
 
-const removeItem = async (productId) => {
+const removeItem = async productId => {
   if (!confirm("Xóa sản phẩm này?")) return
   await CartService.removeItem(productId)
   await loadCart()
@@ -130,20 +150,76 @@ const clearCart = async () => {
   await loadCart()
 }
 
-const formatPrice = value => new Intl.NumberFormat("vi-VN").format(value)
+const formatPrice = v => new Intl.NumberFormat("vi-VN").format(v)
+
 onMounted(loadCart)
 </script>
 
 <style scoped>
+.cart-row {
+  display: flex;
+  gap: 16px;
+  padding: 16px;
+  background: white;
+  border-radius: 20px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+  transition: all 0.3s ease;
+}
 
-.mini-card { position: relative; flex: 0 0 160px; background: white; border-radius: 20px; padding: 12px; text-align: center; cursor: pointer; border: 1px solid #e5e7eb; transition: all 0.3s ease; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
-.mini-card:hover { transform: translateY(-6px) scale(1.02); box-shadow: 0 12px 24px rgba(0,0,0,0.15); border-color: #3b82f6; }
-.mini-img { width: 128px; height: 180px; object-fit: cover; border-radius: 16px; margin-bottom: 8px; transition: transform 0.3s ease; }
-.mini-card:hover .mini-img { transform: scale(1.05); }
-.mini-name { font-size: 0.9rem; font-weight: 700; height: 2.4em; overflow: hidden; line-height: 1.2; margin-bottom: 6px; }
-.mini-price { font-size: 1rem; font-weight: bold; color: #dc2626; margin-bottom: 4px; }
-.mini-stock { font-size: 0.75rem; color: #6b7280; }
-.badge { position: absolute; top: 8px; left: 8px; font-size: 0.65rem; font-weight: 800; padding: 3px 8px; border-radius: 999px; color: white; z-index: 10; box-shadow: 0 2px 6px rgba(0,0,0,0.2); }
-.badge-sale { background: linear-gradient(135deg, #ef4444, #f97316); }
-.qty-btn.mini-btn { width: 28px; height: 28px; font-size: 0.9rem; }
+.cart-row:hover {
+  box-shadow: 0 14px 26px rgba(0,0,0,0.16);
+  transform: translateY(-2px);
+}
+
+.order-mini-img {
+  width: 64px;
+  height: 88px;
+  object-fit: cover;
+  border-radius: 14px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+}
+
+.cart-name {
+  font-weight: 700;
+  color: #111827;
+  line-height: 1.2;
+}
+
+.cart-price {
+  font-size: 0.95rem;
+  font-weight: bold;
+  color: #dc2626;
+  margin-top: 4px;
+}
+
+.qty-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: #e5e7eb;
+  font-weight: bold;
+  transition: 0.2s;
+}
+
+.qty-btn:hover {
+  background: #d1d5db;
+}
+
+.badge {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  font-size: 0.65rem;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 999px;
+  color: white;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+}
+
+.badge-sale {
+  background: linear-gradient(135deg, #ef4444, #f97316);
+}
 </style>
