@@ -1,7 +1,7 @@
 <template>
   <div class="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
     <div class="max-w-7xl mx-auto px-6 py-12">
-      <!-- Header -->
+
       <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-6 mb-12">
         <div>
           <h1 class="text-4xl font-extrabold text-gray-900 dark:text-white flex items-center gap-3">
@@ -23,7 +23,6 @@
         </router-link>
       </div>
 
-      <!-- Loading state -->
       <div v-if="loading" class="bg-white dark:bg-gray-800 rounded-3xl shadow-xl p-10">
         <div class="space-y-6 animate-pulse">
           <div class="h-6 w-1/3 bg-gray-200 dark:bg-gray-700 rounded"></div>
@@ -33,7 +32,6 @@
         </div>
       </div>
 
-      <!-- Empty state -->
       <div v-else-if="!orders.length" class="bg-white dark:bg-gray-800 rounded-3xl shadow-xl p-20 text-center">
         <div class="text-8xl mb-8">📭</div>
         <h2 class="text-3xl font-bold text-gray-900 dark:text-white mb-4">Chưa có đơn hàng</h2>
@@ -46,7 +44,6 @@
         </router-link>
       </div>
 
-      <!-- Orders table -->
       <div v-else class="bg-white dark:bg-gray-800 rounded-3xl shadow-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
         <div class="overflow-x-auto">
           <table class="w-full text-sm">
@@ -87,7 +84,12 @@
 
                 <td class="px-6 py-5">
                   <div class="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition">
-                    <select :value="order.status" @change="updateStatus(order._id, $event.target.value)" class="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium">
+                    <select 
+                      :value="order.status" 
+                      @change="updateStatus(order._id, $event.target.value)" 
+                      class="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium"
+                      :disabled="isStatusLocked(order.status)"
+                    >
                       <option value="pending">Chờ xác nhận</option>
                       <option value="confirmed">Đã xác nhận</option>
                       <option value="shipping">Đang giao</option>
@@ -95,7 +97,11 @@
                       <option value="cancelled">Đã hủy</option>
                     </select>
 
-                    <button v-if="order.status === 'pending'" @click="cancelOrder(order._id)" class="px-3 py-2 rounded-lg bg-red-600 text-white text-sm font-semibold hover:bg-red-700 transition">
+                    <button 
+                      v-if="order.status === 'pending'" 
+                      @click="cancelOrder(order._id)" 
+                      class="px-3 py-2 rounded-lg bg-red-600 text-white text-sm font-semibold hover:bg-red-700 transition"
+                    >
                       Hủy
                     </button>
 
@@ -109,7 +115,6 @@
           </table>
         </div>
 
-        <!-- Pagination -->
         <div class="flex justify-end gap-2 px-6 py-4 bg-gray-50 dark:bg-gray-900/20">
           <button :disabled="pagination.page === 1" @click="changePage(pagination.page - 1)" class="px-3 py-1 rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition">
             ← Trước
@@ -167,18 +172,26 @@ const loadOrders = async (page = 1) => {
 const goToDetail = (id) => router.push(`/orders/${id}`)
 
 const updateStatus = async (id, status) => {
-  await OrderService.updateOrderStatus(id, status)
-  await loadOrders(pagination.value.page)
+  try {
+    await OrderService.updateOrderStatus(id, status)
+    await loadOrders(pagination.value.page)
+  } catch (err) {
+    alert(err.message)
+  }
 }
 
 const cancelOrder = async (id) => {
-  await OrderService.updateOrderStatus(id, "cancelled")
-  await loadOrders(pagination.value.page)
+  try {
+    await OrderService.updateOrderStatus(id, "cancelled")
+    await loadOrders(pagination.value.page)
+  } catch (err) {
+    alert(err.message)
+  }
 }
 
 const changePage = (page) => loadOrders(page)
 
+const isStatusLocked = (status) => status === "cancelled" || status === "delivered"
+
 onMounted(() => loadOrders(1))
 </script>
-
-

@@ -10,12 +10,11 @@ class OrderService {
   }
 
   async createOrder(orderData) {
-    // Lấy tên user
     let userName = "";
     const user = await this.User.findOne({ _id: new ObjectId(orderData.userId) });
     if (user) userName = user.name;
 
-    // Kiểm tra stock từng sản phẩm và trừ stock
+    // Kiểm tra stock từng sản phẩm và trừ ngay
     for (const item of orderData.items) {
       const result = await this.productService.Product.updateOne(
         {
@@ -47,7 +46,7 @@ class OrderService {
       shippingAddress: orderData.shippingAddress,
       phone: orderData.phone,
       note: orderData.note,
-      status: "pending",
+      status: "pending", // bắt đầu là pending
       createdAt: new Date(),
       updatedAt: new Date()
     };
@@ -60,7 +59,7 @@ class OrderService {
 
   async getOrdersByUser(userId) {
     const orders = await this.Order.aggregate([
-      { $match: { userId: userId } },
+      { $match: { userId } },
       {
         $lookup: {
           from: "users",
@@ -175,11 +174,46 @@ class OrderService {
     return orders[0] || null;
   }
 
-  async updateStatus(orderId, status) {
+  async updateStatus(orderId, newStatus) {
     if (!orderId || orderId.length !== 24 || !/^[0-9a-fA-F]{24}$/.test(orderId)) return null;
 
-    const filter = { _id: new ObjectId(orderId) };
-    await this.Order.updateOne(filter, { $set: { status, updatedAt: new Date() } });
+    const order = await this.findById(orderId);
+    if (!order) return null;
+
+    const currentStatus = order.status;
+
+    // Nếu đã hủy hoặc đã giao → không sửa
+    if (currentStatus === "cancelled" || currentStatus === "delivered") {
+      throw new Error(`Không thể thay đổi trạng thái từ "${currentStatus}"`);
+    }
+
+    // Tiến trình hợp lệ
+    const allowedTransitions = {
+      pending: ["confirmed", "cancelled"],
+      confirmed: ["shipping", "cancelled"],
+      shipping: ["delivered"],
+    };
+
+    if (!allowedTransitions[currentStatus]?.includes(newStatus)) {
+      throw new Error(`Không thể chuyển từ "${currentStatus}" sang "${newStatus}"`);
+    }
+
+    // Nếu hủy order → cộng lại stock
+    if (newStatus === "cancelled") {
+      for (const item of order.items) {
+        await this.productService.Product.updateOne(
+          { _id: new ObjectId(item.productId) },
+          { $inc: { stock: item.quantity, sold: -item.quantity }, $set: { updatedAt: new Date() } }
+        );
+      }
+    }
+
+    // Cập nhật trạng thái
+    await this.Order.updateOne(
+      { _id: new ObjectId(orderId) },
+      { $set: { status: newStatus, updatedAt: new Date() } }
+    );
+
     return await this.findById(orderId);
   }
 }
