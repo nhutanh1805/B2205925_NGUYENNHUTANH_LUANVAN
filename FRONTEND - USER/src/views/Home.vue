@@ -10,7 +10,7 @@
       </button>
     </div>
 
-    <CommunitySidebar />
+    
 
     <!-- Hero Section -->
     <section
@@ -186,7 +186,7 @@
 import { ref, onMounted } from "vue";
 import productService from "@/services/product.service";
 import mainVideo from "@/assets/video/BannerMain.mp4";
-import CommunitySidebar from "@/components/sidebar/CommunitySidebar.vue";
+
 
 /* Video phụ */
 const smallVideos = Array(12).fill(mainVideo);

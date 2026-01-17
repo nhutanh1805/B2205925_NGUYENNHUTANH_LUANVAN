@@ -22,6 +22,12 @@
       v-if="ui.idle"
       ref="idleToast"
     />
+
+    <!-- Community Sidebar -->
+    <CommunitySidebar v-if="ui.sidebar" />
+
+    <!-- MODEL VIEWER -->
+    <ModelViewer v-if="ui.model" />
   </div>
 </template>
 
@@ -31,6 +37,8 @@ import Iphone from "@/components/iphone/Iphone.vue";
 import TimeOnPage from "@/components/timeonpage/TimeOnPage.vue";
 import IdleToast from "@/components/idle/IdleToast.vue";
 import { initIdleDetector } from "@/components/idle/IdleDetector";
+import ModelViewer from "@/components/ModelViewer/ModelViewer.vue";
+import CommunitySidebar from "@/components/sidebar/CommunitySidebar.vue";
 
 export default {
   name: "App",
@@ -39,6 +47,8 @@ export default {
     TimeOnPage,
     Iphone,
     IdleToast,
+    ModelViewer,
+    CommunitySidebar,
   },
   data() {
     return {
@@ -46,6 +56,8 @@ export default {
         time: localStorage.getItem("ui_time") === "true",
         iphone: localStorage.getItem("ui_iphone") === "true",
         idle: localStorage.getItem("ui_idle") === "true",
+        model: localStorage.getItem("ui_model") === "true",
+        sidebar: localStorage.getItem("ui_sidebar") === "true", // <-- thêm đây
         dark: localStorage.getItem("darkMode") === "true",
         lang: localStorage.getItem("language") || "vi",
       },
@@ -57,6 +69,8 @@ export default {
       localStorage.setItem("ui_time", this.ui.time);
       localStorage.setItem("ui_iphone", this.ui.iphone);
       localStorage.setItem("ui_idle", this.ui.idle);
+      localStorage.setItem("ui_model", this.ui.model);
+      localStorage.setItem("ui_sidebar", this.ui.sidebar); // <-- lưu sidebar
       localStorage.setItem("darkMode", this.ui.dark);
       localStorage.setItem("language", this.ui.lang);
     },
@@ -86,28 +100,3 @@ export default {
   },
 };
 </script>
-
-<style>
-body {
-  background-color: #f8f9fa;
-  font-family: "Segoe UI", sans-serif;
-  margin: 0;
-  transition: background-color 0.4s ease, color 0.4s ease;
-}
-
-.dark body {
-  background-color: #121212;
-  color: #e0e0e0;
-}
-
-.app-container {
-  max-width: 1200px;
-  margin-top: 24px;
-  padding-bottom: 40px;
-  transition: all 0.4s ease;
-}
-
-.dark .app-container {
-  background-color: #121212;
-}
-</style>

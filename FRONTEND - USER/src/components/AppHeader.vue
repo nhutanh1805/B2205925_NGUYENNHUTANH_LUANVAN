@@ -15,7 +15,11 @@
           Sản phẩm
         </router-link>
 
-        <router-link to="/cart" class="nav-link cart-link" active-class="cart-active">
+        <router-link
+          to="/cart"
+          class="nav-link cart-link"
+          active-class="cart-active"
+        >
           Giỏ hàng
         </router-link>
 
@@ -37,29 +41,35 @@
 
         <div class="settings-wrapper" ref="settingsWrapper">
           <button class="settings-btn" @click="toggleSettings">
-            <i class="fas fa-cog settings-icon" :class="{ spin: settingsOpen }"></i>
+            <i
+              class="fas fa-cog settings-icon"
+              :class="{ spin: settingsOpen }"
+            ></i>
           </button>
 
           <transition name="panel">
             <div v-if="settingsOpen" class="settings-panel">
+              <!-- DARK MODE -->
               <div class="setting-item" @click.stop>
                 <span class="setting-label">Chế độ tối</span>
-                <DarkModeToggle 
-                  :is-dark="localUI.dark" 
+                <DarkModeToggle
+                  :is-dark="localUI.dark"
                   @toggle-dark="toggleDarkMode"
                 />
               </div>
 
+              <!-- LANGUAGE -->
               <div class="setting-item" @click.stop>
                 <span class="setting-label">Ngôn ngữ</span>
-                <LanguageSwitcher 
-                  :current-lang="localUI.lang" 
+                <LanguageSwitcher
+                  :current-lang="localUI.lang"
                   @change-lang="changeLanguage"
                 />
               </div>
 
               <div class="divider"></div>
 
+              <!-- DISPLAY OPTIONS -->
               <div class="display-options">
                 <label class="display-label">
                   <input type="checkbox" v-model="localUI.time" />
@@ -72,6 +82,16 @@
                 <label class="display-label">
                   <input type="checkbox" v-model="localUI.idle" />
                   Idle Toast
+                </label>
+
+                <label class="display-label">
+                  <input type="checkbox" v-model="localUI.sidebar" />
+                  Community Sidebar
+                </label>
+
+                <label class="display-label">
+                  <input type="checkbox" v-model="localUI.model" />
+                  Model Viewer
                 </label>
               </div>
             </div>
@@ -92,7 +112,7 @@ import LanguageSwitcher from "@/components/languageswitcher/LanguageSwitcher.vue
 const router = useRouter();
 
 const props = defineProps({
-  ui: { type: Object, required: true }
+  ui: { type: Object, required: true },
 });
 const emit = defineEmits(["update-ui"]);
 
@@ -103,6 +123,7 @@ const localUI = reactive({
   time: props.ui.time ?? true,
   iphone: props.ui.iphone ?? true,
   idle: props.ui.idle ?? true,
+  model: props.ui.model ?? true, // <-- thêm toggle Model Viewer
   dark: props.ui.dark ?? localStorage.getItem("darkMode") === "true",
   lang: props.ui.lang ?? localStorage.getItem("language") ?? "vi",
 });
@@ -156,12 +177,20 @@ watch(localUI, (val) => emit("update-ui", { ...val }), { deep: true });
 .header {
   position: sticky;
   top: 0;
-  z-index: 50;
+  z-index: 9999;
   backdrop-filter: blur(18px);
-  background: linear-gradient(135deg, rgba(59,130,246,.85), rgba(99,102,241,.85)),
-              radial-gradient(circle at top left, rgba(255,255,255,.25), transparent 60%);
-  box-shadow: 0 20px 40px rgba(0,0,0,.35),
-              inset 0 1px 0 rgba(255,255,255,.2);
+  background: linear-gradient(
+      135deg,
+      rgba(59, 130, 246, 0.85),
+      rgba(99, 102, 241, 0.85)
+    ),
+    radial-gradient(
+      circle at top left,
+      rgba(255, 255, 255, 0.25),
+      transparent 60%
+    );
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
 .header-inner {
@@ -185,13 +214,13 @@ watch(localUI, (val) => emit("update-ui", { ...val }), { deep: true });
   width: 42px;
   height: 42px;
   border-radius: 14px;
-  background: rgba(255,255,255,.25);
+  background: rgba(255, 255, 255, 0.25);
 }
 
 .logo-text {
   font-size: 1.5rem;
   font-weight: 900;
-  letter-spacing: .6px;
+  letter-spacing: 0.6px;
   color: white;
 }
 
@@ -205,22 +234,22 @@ watch(localUI, (val) => emit("update-ui", { ...val }), { deep: true });
   padding: 8px 14px;
   border-radius: 999px;
   font-weight: 600;
-  color: rgba(255,255,255,.85);
+  color: rgba(255, 255, 255, 0.85);
   transition: all 0.3s ease;
 }
 
 .nav-link:hover {
-  background: rgba(255,255,255,.15);
+  background: rgba(255, 255, 255, 0.15);
 }
 
 .nav-active {
   color: white;
-  background: rgba(255,255,255,.22);
+  background: rgba(255, 255, 255, 0.22);
 }
 
 .cart-link {
   padding: 8px 18px;
-  background: rgba(255,255,255,.25);
+  background: rgba(255, 255, 255, 0.25);
   border-radius: 999px;
 }
 
@@ -231,12 +260,12 @@ watch(localUI, (val) => emit("update-ui", { ...val }), { deep: true });
   cursor: pointer;
   font-weight: 600;
   color: white;
-  background: rgba(255,255,255,.25);
+  background: rgba(255, 255, 255, 0.25);
   transition: all 0.3s ease;
 }
 
 .login-btn:hover {
-  background: rgba(255,255,255,.35);
+  background: rgba(255, 255, 255, 0.35);
 }
 
 .settings-wrapper {
@@ -247,7 +276,7 @@ watch(localUI, (val) => emit("update-ui", { ...val }), { deep: true });
   width: 48px;
   height: 48px;
   border-radius: 50%;
-  background: rgba(255,255,255,.22);
+  background: rgba(255, 255, 255, 0.22);
   border: none;
   cursor: pointer;
   display: flex;
@@ -257,7 +286,7 @@ watch(localUI, (val) => emit("update-ui", { ...val }), { deep: true });
 }
 
 .settings-btn:hover {
-  background: rgba(255,255,255,.35);
+  background: rgba(255, 255, 255, 0.35);
   transform: rotate(30deg);
 }
 
@@ -276,16 +305,16 @@ watch(localUI, (val) => emit("update-ui", { ...val }), { deep: true });
   top: 64px;
   right: 0;
   width: 320px;
-  background: rgba(255,255,255,.95);
+  background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(20px);
   border-radius: 16px;
   padding: 20px;
-  box-shadow: 0 25px 50px rgba(0,0,0,.4);
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.4);
   z-index: 100;
 }
 
 .dark .settings-panel {
-  background: rgba(30,40,60,.95);
+  background: rgba(30, 40, 60, 0.95);
   color: white;
 }
 
