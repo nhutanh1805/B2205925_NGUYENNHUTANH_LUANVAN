@@ -1,337 +1,461 @@
 <template>
-  <div v-if="product" class="max-w-7xl mx-auto p-6 lg:p-10 bg-gradient-to-b from-gray-50 to-white min-h-screen">
-    <nav class="mb-8 text-sm text-gray-600">
-      <router-link to="/products" class="hover:text-blue-600 transition">Danh sách sản phẩm</router-link>
-      <span class="mx-3">></span>
-      <span class="font-semibold text-gray-800">{{ product.name }}</span>
-    </nav>
+<div v-if="product" class="page">
 
-    <div class="lg:flex lg:gap-12">
-      <div class="lg:w-1/2">
-        <div class="bg-white rounded-3xl shadow-2xl overflow-hidden mb-6">
-          <img 
-            :src="currentImage" 
-            class="w-full h-[500px] object-contain bg-gray-50 transition-all duration-500"
-          />
-        </div>
+<!-- ================= TOP ================= -->
 
-        <div class="product-scroll flex gap-4 overflow-x-auto py-2">
-          <div
-            v-for="(img, i) in product.images"
-            :key="i"
-            class="mini-thumb cursor-pointer transition-all duration-300"
-            :class="{ 'ring-4 ring-blue-500 ring-opacity-50 shadow-xl scale-110': currentImage === img }"
-            @click="currentImage = img"
-          >
-            <img :src="img" class="mini-img rounded-xl" />
-          </div>
-        </div>
-      </div>
+<div class="product-layout">
 
-      <div class="lg:w-1/2 mt-8 lg:mt-0 space-y-8">
-        <div class="bg-white p-8 rounded-3xl shadow-2xl">
-          <h1 class="text-4xl lg:text-5xl font-black text-gray-900 mb-4">{{ product.name }}</h1>
-          
-          <div class="flex items-end gap-6 mb-6">
-            <div>
-              <p class="text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-pink-600">
-                {{ formatPrice(product.salePrice || product.price) }}₫
-              </p>
-              <p v-if="product.salePrice" class="text-2xl text-gray-400 line-through mt-2">
-                {{ formatPrice(product.price) }}₫
-              </p>
-            </div>
-            <span v-if="product.salePrice" class="bg-gradient-to-r from-red-500 to-pink-600 text-white px-6 py-3 rounded-full text-xl font-bold shadow-lg">
-              -{{ discountPercent }}%
-            </span>
-          </div>
-        </div>
+<!-- ================= GALLERY ================= -->
+<div>
 
-        <div class="bg-white p-8 rounded-3xl shadow-2xl grid grid-cols-2 gap-6 text-lg">
-          <div class="flex items-center gap-4">
-            <i class="bi bi-building text-2xl text-blue-600"></i>
-            <div>
-              <p class="text-gray-500 text-sm">Hãng</p>
-              <p class="font-bold">{{ product.brand }}</p>
-            </div>
-          </div>
-          <div class="flex items-center gap-4">
-            <i class="bi bi-box-seam text-2xl text-green-600"></i>
-            <div>
-              <p class="text-gray-500 text-sm">Tồn kho</p>
-              <p class="font-bold text-green-600">{{ product.stock }} máy</p>
-            </div>
-          </div>
-          <div class="flex items-center gap-4">
-            <i class="bi bi-award text-2xl text-yellow-600"></i>
-            <div>
-              <p class="text-gray-500 text-sm">Bảo hành</p>
-              <p class="font-bold">{{ product.warrantyMonths }} tháng</p>
-            </div>
-          </div>
-          <div class="flex items-center gap-4">
-            <i class="bi bi-geo-alt text-2xl text-purple-600"></i>
-            <div>
-              <p class="text-gray-500 text-sm">Xuất xứ</p>
-              <p class="font-bold">{{ product.origin }}</p>
-            </div>
-          </div>
-        </div>
+<div class="main-image">
+<img :src="currentImage"/>
+</div>
 
-        <div class="space-y-4">
-          <button 
-            @click="addToCart"
-            :disabled="product.stock === 0"
-            class="w-full py-6 text-2xl font-black rounded-3xl shadow-2xl transition-all duration-500 flex items-center justify-center gap-4"
-            :class="{
-              'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white hover:scale-105 hover:shadow-3xl': product.stock > 0,
-              'bg-gray-400 text-gray-600 cursor-not-allowed': product.stock === 0
-            }"
-          >
-            <i class="fas fa-shopping-cart text-3xl"></i>
-            {{ product.stock === 0 ? 'Hết hàng' : 'Thêm vào giỏ hàng' }}
-          </button>
+<div class="thumb-list">
+<div
+v-for="(img,i) in product.images"
+:key="i"
+class="thumb"
+:class="{active:currentImage===img}"
+@click="currentImage=img"
+>
+<img :src="img"/>
+</div>
+</div>
 
-          <button 
-            class="w-full py-5 text-xl font-bold rounded-3xl bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white shadow-2xl transition-all hover:scale-105"
-          >
-            Mua ngay
-          </button>
+</div>
 
-          <div class="grid grid-cols-2 gap-4">
-            <router-link 
-              :to="`/products/edit/${product._id}`" 
-              class="py-4 text-center font-bold rounded-3xl bg-yellow-500 hover:bg-yellow-600 text-black shadow-xl transition-all hover:scale-105"
-            >
-              Sửa sản phẩm
-            </router-link>
-            <button 
-              @click="deleteProduct" 
-              class="py-4 font-bold rounded-3xl bg-red-500 hover:bg-red-600 text-white shadow-xl transition-all hover:scale-105"
-            >
-              Xóa sản phẩm
-            </button>
-          </div>
+<!-- ================= BUY BOX ================= -->
+<div class="buybox">
 
-          <router-link 
-            to="/products" 
-            class="block text-center py-4 font-bold rounded-3xl bg-gray-700 hover:bg-gray-800 text-white shadow-xl transition-all hover:scale-105"
-          >
-            Quay lại danh sách
-          </router-link>
-        </div>
-      </div>
-    </div>
+<h1 class="title">{{ product.name }}</h1>
 
-    <div class="mt-16 bg-white p-10 rounded-3xl shadow-2xl">
-      <h2 class="text-4xl font-black text-gray-800 mb-10 text-center">Thông số kỹ thuật</h2>
-      <div class="grid md:grid-cols-3 gap-8">
-        <div class="spec-item text-center p-6 bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl shadow-lg">
-          <h3 class="text-xl font-bold mb-3 text-blue-800">Màn hình</h3>
-          <p class="text-lg font-semibold">{{ product.specs.screen || "N/A" }}</p>
-        </div>
-        <div class="spec-item text-center p-6 bg-gradient-to-br from-purple-50 to-purple-100 rounded-2xl shadow-lg">
-          <h3 class="text-xl font-bold mb-3 text-purple-800">Chip xử lý</h3>
-          <p class="text-lg font-semibold">{{ product.specs.chip || "N/A" }}</p>
-        </div>
-        <div class="spec-item text-center p-6 bg-gradient-to-br from-green-50 to-green-100 rounded-2xl shadow-lg">
-          <h3 class="text-xl font-bold mb-3 text-green-800">RAM</h3>
-          <p class="text-lg font-semibold">{{ product.specs.ram || "N/A" }}</p>
-        </div>
-        <div class="spec-item text-center p-6 bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-2xl shadow-lg">
-          <h3 class="text-xl font-bold mb-3 text-yellow-800">Bộ nhớ</h3>
-          <p class="text-lg font-semibold">{{ product.specs.storage || "N/A" }}</p>
-        </div>
-        <div class="spec-item text-center p-6 bg-gradient-to-br from-red-50 to-red-100 rounded-2xl shadow-lg">
-          <h3 class="text-xl font-bold mb-3 text-red-800">Camera</h3>
-          <p class="text-lg font-semibold">{{ product.specs.camera || "N/A" }}</p>
-        </div>
-        <div class="spec-item text-center p-6 bg-gradient-to-br from-pink-50 to-pink-100 rounded-2xl shadow-lg">
-          <h3 class="text-xl font-bold mb-3 text-pink-800">Pin</h3>
-          <p class="text-lg font-semibold">{{ product.specs.battery || "N/A" }}</p>
-        </div>
-      </div>
-    </div>
+<!-- sold -->
+<div class="sold">
+⭐ {{ product.rating || 4.8 }}
+| Đã bán {{ product.sold || 120 }}
+</div>
 
-    <transition name="toast">
-      <div v-if="showToast" class="fixed top-6 right-6 z-50">
-        <div class="bg-gray-900 text-white px-8 py-5 rounded-2xl shadow-2xl flex items-center gap-5 animate-fade-in">
-          <i class="fas fa-check-circle text-green-400 text-3xl"></i>
-          <div>
-            <p class="font-bold text-lg">localhost thông báo:</p>
-            <p class="text-base opacity-90">Đã thêm "{{ product.name }}" vào giỏ hàng</p>
-          </div>
-        </div>
-      </div>
-    </transition>
-  </div>
+<!-- price -->
+<div class="price-box">
+<span class="sale">
+{{ formatPrice(product.salePrice||product.price) }}₫
+</span>
 
-  <div v-else class="text-center py-32">
-    <h2 class="text-4xl font-bold text-gray-500 mb-8">Sản phẩm không tồn tại</h2>
-    <router-link to="/products" class="inline-block px-12 py-6 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold text-xl rounded-3xl shadow-2xl transition-all hover:scale-105">
-      Quay lại danh sách
-    </router-link>
-  </div>
+<span v-if="product.salePrice" class="origin">
+{{ formatPrice(product.price) }}₫
+</span>
+
+<span v-if="discountPercent" class="discount">
+-{{discountPercent}}%
+</span>
+</div>
+
+<!-- voucher -->
+<div class="voucher">
+🎫 Giảm 50K đơn từ 1tr
+</div>
+
+<!-- shipping -->
+<div class="shipping">
+🚚 Giao từ Cần Thơ • 2-4 ngày
+</div>
+
+<!-- stock -->
+<div class="stock" :class="{out:product.stock===0}">
+{{product.stock>0?"Còn hàng":"Hết hàng"}}
+</div>
+
+<!-- quantity -->
+<div class="qty">
+<span>Số lượng</span>
+
+<button @click="decrease">-</button>
+<b>{{quantity}}</b>
+<button @click="increase">+</button>
+</div>
+
+<!-- actions -->
+<div class="actions">
+
+<button class="btn-primary"
+:disabled="product.stock===0"
+@click="addToCart">
+🛒 Thêm vào giỏ
+</button>
+
+<button class="btn-success"
+@click="buyNow">
+⚡ Mua ngay
+</button>
+
+<button class="btn-outline"
+@click="toggleFavorite">
+❤️ Yêu thích
+</button>
+
+</div>
+
+<!-- trust -->
+<div class="trust">
+✔ Hàng chính hãng  
+✔ 7 ngày đổi trả  
+✔ Bảo hành {{product.warrantyMonths}} tháng
+</div>
+
+</div>
+
+</div>
+
+<!-- ================= SHOP ================= -->
+
+<div class="shop-card">
+
+<div>
+<b>Laptop Nhựt Anh Store</b>
+<p>⭐ 4.9 | 1.2k sản phẩm</p>
+</div>
+
+<div>
+<button class="btn-outline">Xem shop</button>
+<button class="btn-outline">💬 Chat</button>
+</div>
+
+</div>
+
+<!-- ================= TABS ================= -->
+
+<div class="tabs">
+
+<div class="tab-header">
+<button
+v-for="t in tabs"
+:key="t"
+:class="{active:tab===t}"
+@click="tab=t"
+>
+{{t}}
+</button>
+</div>
+
+<!-- DESCRIPTION -->
+<div v-if="tab==='Mô tả'" class="tab-content">
+<p>{{product.description}}</p>
+</div>
+
+<!-- SPECS -->
+<div v-if="tab==='Thông số'" class="tab-content">
+
+<div
+v-for="([key,value]) in specEntries"
+:key="key"
+class="spec-row"
+>
+<span>{{formatKey(key)}}</span>
+<b>{{value}}</b>
+</div>
+
+</div>
+
+<!-- REVIEW -->
+<div v-if="tab==='Đánh giá'" class="tab-content">
+
+<div
+v-for="r in fakeReviews"
+:key="r.id"
+class="review"
+>
+⭐ {{r.star}} — {{r.user}}
+<p>{{r.content}}</p>
+</div>
+
+</div>
+
+</div>
+
+<!-- ================= RELATED ================= -->
+
+<h2 class="related-title">Có thể bạn cũng thích</h2>
+
+<div class="related">
+
+<div
+v-for="item in related"
+:key="item._id"
+class="card"
+@click="goProduct(item._id)"
+>
+<img :src="item.images[0]"/>
+<p>{{item.name}}</p>
+<b>{{formatPrice(item.price)}}₫</b>
+</div>
+
+</div>
+
+<!-- toast -->
+<transition name="toast">
+<div v-if="showToast" class="toast">
+✅ Đã thêm vào giỏ hàng
+</div>
+</transition>
+
+</div>
 </template>
 
 <script setup>
-import { ref, onMounted, computed, nextTick } from "vue";
-import { useRoute, useRouter } from "vue-router";
+import {ref,onMounted,computed} from "vue";
+import {useRoute,useRouter} from "vue-router";
 import ProductService from "@/services/product.service";
 import CartService from "@/services/cart.service";
 
-const route = useRoute();
-const router = useRouter();
-const product = ref(null);
-const currentImage = ref("");
-const showToast = ref(false);
+const route=useRoute();
+const router=useRouter();
 
-const formatPrice = v => new Intl.NumberFormat("vi-VN").format(v);
+const product=ref(null);
+const related=ref([]);
 
-const discountPercent = computed(() => {
-  if (!product.value?.salePrice || !product.value?.price) return 0;
-  return Math.round(((product.value.price - product.value.salePrice) / product.value.price) * 100);
+const currentImage=ref("");
+const quantity=ref(1);
+const showToast=ref(false);
+
+const tabs=["Mô tả","Thông số","Đánh giá"];
+const tab=ref("Mô tả");
+
+/* fake review demo */
+const fakeReviews=[
+{id:1,user:"Nguyễn A",star:5,content:"Sản phẩm rất tốt"},
+{id:2,user:"Trần B",star:4,content:"Đóng gói đẹp"}
+];
+
+const discountPercent=computed(()=>{
+if(!product.value?.salePrice)return 0;
+return Math.round(
+100-(product.value.salePrice/product.value.price)*100
+);
 });
 
-const deleteProduct = async () => {
-  if (confirm("Bạn có chắc muốn xóa sản phẩm này?")) {
-    try {
-      await ProductService.delete(product.value._id);
-      alert("Xóa thành công!");
-      router.push("/products");
-    } catch (err) {
-      alert("Lỗi khi xóa sản phẩm!");
-    }
-  }
-};
-
-async function addToCart() {
-  if (product.value.stock === 0) return;
-
-  try {
-    await CartService.addToCart(product.value._id, 1);
-    
-    showToast.value = true;
-    setTimeout(() => {
-      showToast.value = false;
-    }, 4000);
-  } catch (error) {
-    alert("Thêm vào giỏ hàng thất bại!");
-  }
-}
-
-onMounted(async () => {
-  try {
-    product.value = await ProductService.get(route.params.id);
-    if (product.value?.images?.length) {
-      currentImage.value = product.value.images[0];
-    }
-    nextTick(initDragScroll);
-  } catch (err) {
-    console.error(err);
-  }
+const specEntries=computed(()=>{
+if(!product.value?.specs)return[];
+return Object.entries(product.value.specs)
+.filter(([_,v])=>v);
 });
 
-function initDragScroll() {
-  const el = document.querySelector(".product-scroll");
-  if (!el) return;
-  let isDown = false, startX = 0, scrollLeft = 0;
+const formatPrice=v=>new Intl.NumberFormat("vi-VN").format(v);
 
-  el.addEventListener("mousedown", e => {
-    isDown = true;
-    startX = e.pageX - el.offsetLeft;
-    scrollLeft = el.scrollLeft;
-    el.classList.add("dragging");
-  });
+const formatKey=k=>
+k.replace(/([A-Z])/g," $1")
+.replace(/^./,s=>s.toUpperCase());
 
-  ["mouseleave", "mouseup"].forEach(ev =>
-    el.addEventListener(ev, () => {
-      isDown = false;
-      el.classList.remove("dragging");
-    })
-  );
-
-  el.addEventListener("mousemove", e => {
-    if (!isDown) return;
-    e.preventDefault();
-    const x = e.pageX - el.offsetLeft;
-    el.scrollLeft = scrollLeft - (x - startX) * 1.5;
-  });
+function increase(){
+if(quantity.value<product.value.stock)
+quantity.value++;
 }
+
+function decrease(){
+if(quantity.value>1)
+quantity.value--;
+}
+
+async function addToCart(){
+await CartService.addToCart(product.value._id,quantity.value);
+
+showToast.value=true;
+setTimeout(()=>showToast.value=false,2500);
+}
+
+async function buyNow(){
+await addToCart();
+router.push("/checkout");
+}
+
+function toggleFavorite(){
+
+let fav=JSON.parse(localStorage.getItem("favorite")||"[]");
+
+fav.includes(product.value._id)
+?fav=fav.filter(id=>id!==product.value._id)
+:fav.push(product.value._id);
+
+localStorage.setItem("favorite",JSON.stringify(fav));
+}
+
+function goProduct(id){
+router.push(`/product/${id}`);
+}
+
+onMounted(async()=>{
+
+const res=await ProductService.get(route.params.id);
+
+product.value=res;
+
+currentImage.value=
+res.images?.[0] ||
+"https://via.placeholder.com/600";
+
+related.value=
+await ProductService.getRelated(res.category);
+
+});
 </script>
 
 <style scoped>
-.product-scroll {
-  display: flex;
-  gap: 16px;
-  overflow-x: auto;
-  padding-bottom: 12px;
-  cursor: grab;
+
+.page{max-width:1200px;margin:auto;padding:30px;}
+
+.product-layout{
+display:grid;
+grid-template-columns:1.1fr 1fr;
+gap:40px;
 }
 
-.product-scroll.dragging {
-  cursor: grabbing;
+/* gallery */
+.main-image img{
+width:100%;
+height:450px;
+object-fit:contain;
+border:1px solid #eee;
+border-radius:12px;
 }
 
-.product-scroll::-webkit-scrollbar {
-  height: 8px;
+.thumb-list{display:flex;gap:10px;margin-top:10px;}
+
+.thumb{
+width:70px;height:70px;
+cursor:pointer;border:2px solid transparent;
+border-radius:8px;overflow:hidden;
 }
 
-.product-scroll::-webkit-scrollbar-thumb {
-  background: linear-gradient(90deg, #3b82f6, #8b5cf6);
-  border-radius: 4px;
+.thumb.active{border-color:#2563eb;}
+
+.thumb img{width:100%;height:100%;object-fit:cover;}
+
+/* buybox */
+.buybox{
+border:1px solid #eee;
+padding:24px;border-radius:12px;
+background:white;
 }
 
-.mini-thumb {
-  flex: 0 0 100px;
-  border-radius: 20px;
-  overflow: hidden;
-  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+.title{font-size:26px;font-weight:700;}
+
+.price-box{display:flex;gap:10px;align-items:center;}
+
+.sale{font-size:28px;color:#ef4444;font-weight:bold;}
+
+.origin{text-decoration:line-through;color:#999;}
+
+.discount{
+background:#ef4444;color:white;
+padding:3px 8px;border-radius:6px;
 }
 
-.mini-img {
-  width: 100%;
-  height: 140px;
-  object-fit: cover;
-  transition: transform 0.4s ease;
+.qty{
+display:flex;gap:10px;
+align-items:center;margin:15px 0;
 }
 
-.mini-thumb:hover .mini-img {
-  transform: scale(1.1);
+.qty button{
+width:32px;height:32px;
+border:1px solid #ddd;background:white;
+cursor:pointer;
 }
 
-.toast-enter-active {
-  animation: toastInTop 0.6s ease;
+.actions{display:flex;gap:10px;margin-top:15px;}
+
+.btn-primary{
+flex:1;padding:12px;
+background:#2563eb;color:white;border:none;
+border-radius:8px;
 }
 
-.toast-leave-active {
-  animation: toastOutTop 0.4s ease forwards;
+.btn-success{
+flex:1;padding:12px;
+background:#16a34a;color:white;border:none;
+border-radius:8px;
 }
 
-@keyframes toastInTop {
-  0% {
-    opacity: 0;
-    transform: translateY(-50px);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0);
-  }
+.btn-outline{
+padding:10px;border:1px solid #ddd;
+background:white;border-radius:8px;
+cursor:pointer;
 }
 
-@keyframes toastOutTop {
-  0% {
-    opacity: 1;
-    transform: translateY(0);
-  }
-  100% {
-    opacity: 0;
-    transform: translateY(-30px);
-  }
+.trust{
+margin-top:15px;
+font-size:14px;color:#555;
 }
 
-.animate-fade-in {
-  animation: toastInTop 0.6s ease;
+/* shop */
+.shop-card{
+margin-top:30px;
+display:flex;
+justify-content:space-between;
+border:1px solid #eee;
+padding:20px;border-radius:12px;
+background:white;
 }
+
+/* tabs */
+.tabs{margin-top:30px;background:white;padding:20px;border-radius:12px;}
+
+.tab-header button{
+margin-right:10px;
+padding:10px 15px;
+border:none;background:#f3f4f6;
+cursor:pointer;
+}
+
+.tab-header .active{
+background:#2563eb;color:white;
+}
+
+.spec-row{
+display:flex;
+justify-content:space-between;
+border-bottom:1px solid #eee;
+padding:10px 0;
+}
+
+.review{
+border-bottom:1px solid #eee;
+padding:10px 0;
+}
+
+/* related */
+.related-title{margin-top:40px;}
+
+.related{
+display:grid;
+grid-template-columns:repeat(auto-fill,minmax(200px,1fr));
+gap:20px;
+}
+
+.card{
+border:1px solid #eee;
+padding:10px;border-radius:12px;
+cursor:pointer;background:white;
+}
+
+.card img{
+width:100%;
+height:150px;
+object-fit:contain;
+}
+
+.toast{
+position:fixed;
+top:20px;
+right:20px;
+background:#111827;
+color:white;
+padding:14px 22px;
+border-radius:10px;
+}
+
+@media(max-width:900px){
+.product-layout{grid-template-columns:1fr;}
+}
+
 </style>

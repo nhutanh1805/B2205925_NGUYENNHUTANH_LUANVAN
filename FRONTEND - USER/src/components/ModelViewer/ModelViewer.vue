@@ -30,6 +30,7 @@ let animationId
 const models = [
   { name: "iPhone 17 Pro Max", path: "/models/Model Iphone 17 Pro Max.glb" },
   { name: "iPhone 17 Air", path: "/models/Model Iphone 17 Air.glb" },
+  { name: "Galaxy S25 Ultra", path: "/models/Model Samsung S25 Ultra.glb" },
   { name: "Galaxy S25 Ultra", path: "/models/Model Samsung S25 Ultra.glb" }
 ]
 
@@ -148,16 +149,18 @@ onUnmounted(() => {
   position: fixed;
   bottom: 24px;
   right: 24px;
-  width: 320px;
+  width: 400px;
   height: 450px;
   border-radius: 16px;
   overflow: hidden;
   background: radial-gradient(circle at top, #f0f0f0, #d9d9d9);
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
-  z-index: 9999;
+  z-index: 100;
   display: flex;
   align-items: flex-end;
   justify-content: center;
+  justify-content: flex-start;
+  padding-left: 6px;         
 }
 
 .model-list {
