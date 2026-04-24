@@ -12,7 +12,7 @@
 
     <CommunitySidebar />
 
-    <!-- Hero Section -->
+    <!-- HERO -->
     <section
       class="min-vh-100 d-flex align-items-center position-relative overflow-hidden"
       :style="{
@@ -21,82 +21,75 @@
         backgroundPosition: 'center',
       }"
     >
-      <div
-        class="position-absolute top-0 start-0 w-100 h-100"
-        style="background-color: rgba(0, 0, 0, 0.85)"
-      ></div>
+      <div class="position-absolute top-0 start-0 w-100 h-100"
+        style="background-color: rgba(0, 0, 0, 0.85)">
+      </div>
 
       <div class="container position-relative z-2 py-5 text-center text-white">
         <div class="row justify-content-center">
           <div class="col-lg-10 col-xl-8">
-            <span
-              class="badge bg-primary bg-gradient fs-5 px-5 py-3 rounded-pill shadow-lg mb-4"
-            >
-              <i class="bi bi-phone me-2"></i>Hot Deal 2025 - Smartphone Mới
-              Nhất
-              <i class="bi bi-phone ms-2"></i>
+
+            <span class="badge bg-primary bg-gradient fs-5 px-5 py-3 rounded-pill shadow-lg mb-4">
+              🔌 Hot Deal 2025 - Phụ Kiện Điện Thoại
             </span>
 
             <h1 class="display-1 fw-bold mb-4">
-              TechStore - Điện Thoại Chính Hãng
+              TechStore - Phụ Kiện Điện Thoại Chính Hãng
             </h1>
 
             <p class="lead fs-2 mb-5">
-              iPhone • Samsung • Xiaomi • OPPO • Realme<br />
-              Những mẫu điện thoại hot nhất, giá tốt nhất đang chờ bạn
+              Ốp lưng • Sạc nhanh • Cáp Type-C • Tai nghe • Pin dự phòng<br />
+              Phụ kiện hot nhất, giá tốt nhất đang chờ bạn
             </p>
 
-            <div
-              class="d-flex flex-column flex-sm-row gap-4 justify-content-center"
-            >
+            <div class="d-flex flex-column flex-sm-row gap-4 justify-content-center">
+
               <router-link
                 to="/products"
                 class="btn btn-danger btn-lg px-6 py-4 rounded-pill fw-bold shadow-lg fs-4"
               >
-                <i class="bi bi-cart me-2"></i>Mua Ngay
+                🛒 Mua Phụ Kiện Ngay
               </router-link>
 
               <router-link
                 to="/products"
                 class="btn btn-outline-warning btn-lg px-6 py-4 rounded-pill fw-bold shadow-lg fs-4 text-white"
               >
-                Xem Tất Cả Sản Phẩm<i class="bi bi-box-seam ms-2"></i>
+                Xem Tất Cả Phụ Kiện
               </router-link>
+
             </div>
 
-            <div class="mt-5">
-              <i class="bi bi-phone text-warning fs-2 mx-3"></i>
-              <i class="bi bi-battery-full text-success fs-2 mx-3"></i>
-              <i class="bi bi-lightning-charge text-primary fs-2 mx-3"></i>
-            </div>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- Danh mục -->
+    <!-- DANH MỤC -->
     <section class="py-5 bg-white">
       <div class="container py-5">
-        <h2 class="text-center fw-bold mb-5">Hãng Nổi Bật</h2>
+        <h2 class="text-center fw-bold mb-5">Danh Mục Phụ Kiện</h2>
+
         <div class="row row-cols-2 row-cols-md-4 row-cols-lg-6 g-4 text-center">
+
           <div class="col" v-for="brand in brands" :key="brand.name">
             <div class="genre-icon mx-auto mb-2">
-              <img
-                :src="brand.logo"
-                :alt="brand.name"
-                class="img-fluid rounded-circle"
-              />
+              <img :src="brand.logo" :alt="brand.name" class="img-fluid rounded-circle"/>
             </div>
             {{ brand.name }}
           </div>
+
         </div>
       </div>
     </section>
 
-    <!-- VIDEO BANNER CHÍNH -->
+    <!-- VIDEO CHÍNH -->
     <section class="py-5 bg-dark text-white">
       <div class="container text-center">
-        <h2 class="fw-bold mb-4">Siêu phẩm SmartPhone mới 2025 đã cập bến!</h2>
+
+        <h2 class="fw-bold mb-4">
+          🔥 Phụ kiện công nghệ mới 2025 đã có mặt!
+        </h2>
 
         <video
           ref="mainVideoRef"
@@ -111,15 +104,18 @@
         </video>
 
         <p class="mt-3 text-muted">
-          Trailer giới thiệu những bộ truyện hot nhất năm 2025
+          Video giới thiệu phụ kiện điện thoại hot nhất
         </p>
+
       </div>
     </section>
 
-    <!-- VIDEO BANNER NHỎ -->
+    <!-- VIDEO NHỎ -->
     <section class="py-5 bg-light">
       <div class="container">
-        <h2 class="fw-bold mb-4 text-center">🎬 Video giới thiệu sản phẩm</h2>
+        <h2 class="fw-bold mb-4 text-center">
+          🎬 Video phụ kiện nổi bật
+        </h2>
 
         <div class="d-flex flex-wrap gap-3 justify-content-center">
           <div
@@ -137,20 +133,27 @@
             ></video>
           </div>
         </div>
+
       </div>
     </section>
 
-    <!-- HIỂN THỊ SẢN PHẨM -->
+    <!-- SẢN PHẨM -->
     <section class="py-6 featured-products">
       <div class="container">
+
         <div class="d-flex justify-content-between align-items-center mb-4">
-          <h2 class="fw-bold display-6 text-white mb-0">🔥 Sản phẩm nổi bật</h2>
+
+          <h2 class="fw-bold display-6 text-white mb-0">
+            🔥 Phụ kiện nổi bật
+          </h2>
+
           <router-link
             to="/products"
             class="btn btn-outline-light rounded-pill px-4 fw-bold"
           >
             Xem tất cả →
           </router-link>
+
         </div>
 
         <div class="featured-scroll">
@@ -160,25 +163,39 @@
             class="featured-card"
           >
             <router-link :to="`/products/${product._id}`" class="card-inner">
+
               <span class="badge-hot">HOT</span>
+
               <img
                 :src="smallCover(getProductImage(product))"
-                alt=""
                 class="product-img"
               />
+
               <div class="card-info">
+
                 <h6 class="product-name">{{ product.name }}</h6>
+
                 <p class="product-price">
                   {{ product.price?.toLocaleString() }}₫
                 </p>
-                <p class="product-sold">🔥 Đã bán {{ product.sold || 0 }}</p>
-                <button class="btn-buy">Xem chi tiết</button>
+
+                <p class="product-sold">
+                  🔥 Đã bán {{ product.sold || 0 }}
+                </p>
+
+                <button class="btn-buy">
+                  Xem chi tiết
+                </button>
+
               </div>
+
             </router-link>
           </div>
         </div>
+
       </div>
     </section>
+
   </div>
 </template>
 

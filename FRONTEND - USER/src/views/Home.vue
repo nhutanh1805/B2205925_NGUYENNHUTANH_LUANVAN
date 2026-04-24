@@ -10,8 +10,6 @@
       </button>
     </div>
 
-    
-
     <!-- Hero Section -->
     <section
       class="min-vh-100 d-flex align-items-center position-relative overflow-hidden"
@@ -32,18 +30,17 @@
             <span
               class="badge bg-primary bg-gradient fs-5 px-5 py-3 rounded-pill shadow-lg mb-4"
             >
-              <i class="bi bi-phone me-2"></i>Hot Deal 2025 - Smartphone Mới
-              Nhất
+              <i class="bi bi-phone me-2"></i>Hot Deal 2025 - Phụ Kiện Điện Thoại
               <i class="bi bi-phone ms-2"></i>
             </span>
 
             <h1 class="display-1 fw-bold mb-4">
-              TechStore - Điện Thoại Chính Hãng
+              TechStore - Phụ Kiện Điện Thoại Chính Hãng
             </h1>
 
             <p class="lead fs-2 mb-5">
-              iPhone • Samsung • Xiaomi • OPPO • Realme<br />
-              Những mẫu điện thoại hot nhất, giá tốt nhất đang chờ bạn
+              Ốp lưng • Cáp sạc • Tai nghe • Sạc nhanh • Pin dự phòng<br />
+              Phụ kiện chất lượng cao, giá tốt cho mọi dòng điện thoại
             </p>
 
             <div
@@ -66,8 +63,8 @@
 
             <div class="mt-5">
               <i class="bi bi-phone text-warning fs-2 mx-3"></i>
-              <i class="bi bi-battery-full text-success fs-2 mx-3"></i>
-              <i class="bi bi-lightning-charge text-primary fs-2 mx-3"></i>
+              <i class="bi bi-lightning-charge text-success fs-2 mx-3"></i>
+              <i class="bi bi-earbuds text-primary fs-2 mx-3"></i>
             </div>
           </div>
         </div>
@@ -77,7 +74,7 @@
     <!-- Danh mục -->
     <section class="py-5 bg-white">
       <div class="container py-5">
-        <h2 class="text-center fw-bold mb-5">Hãng Nổi Bật</h2>
+        <h2 class="text-center fw-bold mb-5">Danh Mục Phụ Kiện</h2>
         <div class="row row-cols-2 row-cols-md-4 row-cols-lg-6 g-4 text-center">
           <div class="col" v-for="brand in brands" :key="brand.name">
             <div class="genre-icon mx-auto mb-2">
@@ -96,7 +93,9 @@
     <!-- VIDEO BANNER CHÍNH -->
     <section class="py-5 bg-dark text-white">
       <div class="container text-center">
-        <h2 class="fw-bold mb-4">Siêu phẩm SmartPhone mới 2025 đã cập bến!</h2>
+        <h2 class="fw-bold mb-4">
+          Bộ sưu tập phụ kiện điện thoại mới nhất 2025
+        </h2>
 
         <video
           ref="mainVideoRef"
@@ -111,7 +110,7 @@
         </video>
 
         <p class="mt-3 text-muted">
-          Trailer giới thiệu những bộ truyện hot nhất năm 2025
+          Khám phá các phụ kiện hot trend dành cho smartphone
         </p>
       </div>
     </section>
@@ -119,7 +118,7 @@
     <!-- VIDEO BANNER NHỎ -->
     <section class="py-5 bg-light">
       <div class="container">
-        <h2 class="fw-bold mb-4 text-center">🎬 Video giới thiệu sản phẩm</h2>
+        <h2 class="fw-bold mb-4 text-center">🎬 Video giới thiệu phụ kiện</h2>
 
         <div class="d-flex flex-wrap gap-3 justify-content-center">
           <div
@@ -144,7 +143,9 @@
     <section class="py-6 featured-products">
       <div class="container">
         <div class="d-flex justify-content-between align-items-center mb-4">
-          <h2 class="fw-bold display-6 text-white mb-0">🔥 Sản phẩm nổi bật</h2>
+          <h2 class="fw-bold display-6 text-white mb-0">
+            🔥 Phụ kiện bán chạy
+          </h2>
           <router-link
             to="/products"
             class="btn btn-outline-light rounded-pill px-4 fw-bold"
@@ -223,7 +224,7 @@ import LogoRealme from "@/assets/img/LogoRealme.jpg";
 
 /* Danh sách brands */
 const brands = [
-  { name: "Apple", logo: LogoApple },
+  { name: "", logo: LogoApple },
   { name: "SamSung", logo: LogoSamSung },
   { name: "Xiaomi", logo: LogoXiaomi },
   { name: "Vivo", logo: LogoViVo },

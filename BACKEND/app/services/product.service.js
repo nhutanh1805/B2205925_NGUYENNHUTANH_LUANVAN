@@ -7,26 +7,119 @@ class ProductService {
 
   /* ================= CATEGORY CONFIG ================= */
   categoryConfig = {
-    tai_nghe: {
-      label: "Tai nghe",
-      specs: ["type", "connectivity", "batteryLife", "noiseCancelling"]
-    },
+  tai_nghe: {
+    label: "Tai nghe",
+    specs: [
+      "loai",
+      "ket_noi",
+      "thoi_luong_pin",
+      "chong_on",
+      "kich_thuoc_driver",
+      "day_tan_so",
+      "tro_khang",
+      "micro",
+      "phien_ban_bluetooth",
+      "trong_luong"
+    ]
+  },
 
-    cu_sac: {
-      label: "Củ sạc",
-      specs: ["power", "ports", "fastCharge"]
-    },
+  op_lung: {
+    label: "Ốp lưng",
+    specs: [
+      "chat_lieu",
+      "tuong_thich_model",
+      "mau_sac",
+      "do_day",
+      "chong_soc",
+      "chong_tray",
+      "trong_luong",
+      "kieu_dang",
+      "do_bam",
+      "tan_nhiet"
+    ]
+  },
 
-    op_lung: {
-      label: "Ốp lưng",
-      specs: ["material", "compatibleModel", "color"]
-    },
+  cu_sac: {
+    label: "Củ sạc",
+    specs: [
+      "cong_suat",
+      "so_cong",
+      "ho_tro_sac_nhanh",
+      "dien_ap_vao",
+      "dien_ap_ra",
+      "chat_lieu",
+      "chuan_sac",
+      "an_toan",
+      "kich_thuoc",
+      "trong_luong"
+    ]
+  },
 
-    cap_sac: {
-      label: "Cáp sạc",
-      specs: ["length", "connectorType", "fastChargeSupport"]
-    }
-  };
+  cap_sac: {
+    label: "Cáp sạc",
+    specs: [
+      "do_dai",
+      "loai_dau_cam",
+      "ho_tro_sac_nhanh",
+      "toc_do_truyen",
+      "chat_lieu",
+      "do_ben",
+      "chong_dut",
+      "tuong_thich",
+      "loi_day",
+      "cong_suat_toi_da"
+    ]
+  },
+
+  pin_du_phong: {
+    label: "Pin dự phòng",
+    specs: [
+      "dung_luong",
+      "cong_suat_ra",
+      "ho_tro_sac_nhanh",
+      "so_cong",
+      "dung_luong_thuc",
+      "loai_pin",
+      "cong_sac_vao",
+      "den_led",
+      "trong_luong",
+      "an_toan"
+    ]
+  },
+
+  kinh_cuong_luc: {
+    label: "Kính cường lực",
+    specs: [
+      "do_cung",
+      "do_day",
+      "chong_vet_van_tay",
+      "tuong_thich_model",
+      "do_trong_suot",
+      "chong_vo",
+      "phu_oleophobic",
+      "vien_kinh",
+      "do_phu_man_hinh",
+      "do_cong"
+    ]
+  },
+
+  sac_khong_day: {
+    label: "Sạc không dây",
+    specs: [
+      "cong_suat",
+      "chuan_sac",
+      "ho_tro_magsafe",
+      "hieu_suat",
+      "khoang_cach_sac",
+      "nhiet_do_hoat_dong",
+      "den_bao",
+      "chat_lieu",
+      "tuong_thich",
+      "toc_do_sac"
+    ]
+  }
+};
+
 
   /* ================= EXTRACT DATA ================= */
 

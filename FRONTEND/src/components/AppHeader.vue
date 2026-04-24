@@ -224,9 +224,9 @@ watch(localUI, (val) => emit("update-ui", { ...val }), { deep: true });
 }
 
 .cart-link {
-  padding: 8px 18px;
-  background: rgba(255, 255, 255, 0.25);
+  padding: 8px 14px;
   border-radius: 999px;
+  background: transparent;
 }
 
 .login-btn {
