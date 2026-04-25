@@ -1,171 +1,287 @@
 <template>
-  <div class="max-w-4xl mx-auto p-6" v-if="product">
-    <h1 class="text-3xl font-bold mb-6">Chỉnh sửa sản phẩm</h1>
+<div v-if="product" class="max-w-5xl mx-auto p-6 bg-white rounded-lg shadow">
 
-    <form @submit.prevent="submit" class="space-y-6">
-      <!-- Thông tin cơ bản -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <input v-model="product.name" placeholder="Tên sản phẩm" required class="input" />
-        <input v-model="product.slug" placeholder="Slug (iphone-15-pro-max)" required class="input" />
-        <input v-model="product.shortDescription" placeholder="Mô tả ngắn" class="input" />
-        <input v-model="product.description" placeholder="Mô tả đầy đủ" class="input" />
+<h1 class="text-3xl font-bold mb-6">
+Chỉnh sửa sản phẩm
+</h1>
 
-        <input v-model.number="product.price" type="number" placeholder="Giá gốc" required class="input" />
-        <input v-model.number="product.salePrice" type="number" placeholder="Giá khuyến mãi" class="input" />
-        <input v-model="product.sku" placeholder="SKU" class="input" />
-        <input v-model="product.imei" placeholder="IMEI" class="input" />
-        <input v-model.number="product.stock" type="number" placeholder="Số lượng tồn" class="input" />
-        <input v-model.number="product.sold" type="number" placeholder="Số lượng đã bán" class="input" />
-        <input v-model="product.brand" placeholder="Hãng (Apple, Samsung...)" class="input" />
+<form @submit.prevent="submit" class="space-y-6">
 
-        <input v-model.number="product.batteryHealth" type="number" placeholder="Battery Health (%)" class="input" />
-        <input v-model="product.origin" placeholder="Xuất xứ" class="input" />
-        <input v-model.number="product.warrantyMonths" type="number" placeholder="Bảo hành (tháng)" class="input" />
-      </div>
+<!-- ================= BASIC ================= -->
 
-      <!-- Specs Nhóm 1 -->
-      <div class="mt-4">
-        <h2 class="font-semibold mb-2">Thông số cơ bản</h2>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <input v-model="product.specs.color" placeholder="Màu sắc" class="input" />
-          <input v-model="product.specs.storage" placeholder="Dung lượng" class="input" />
-          <input v-model="product.specs.ram" placeholder="RAM" class="input" />
-          <input v-model="product.specs.screen" placeholder="Màn hình" class="input" />
-          <input v-model="product.specs.camera" placeholder="Camera" class="input" />
-          <input v-model="product.specs.chip" placeholder="Chip" class="input" />
-        </div>
-      </div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-      <!-- Specs Nhóm 2 -->
-      <div class="mt-4">
-        <h2 class="font-semibold mb-2">Thông số nâng cao</h2>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <input v-model="product.specs.battery" type="number" placeholder="Pin (mAh)" class="input" />
-          <input v-model="product.specs.weight" type="number" placeholder="Trọng lượng (g)" class="input" />
-          <input v-model="product.specs.bluetooth" placeholder="Bluetooth" class="input" />
-          <input v-model="product.specs.wifi" placeholder="WiFi" class="input" />
-          <input v-model="product.specs.nfc" placeholder="NFC" class="input" />
-        </div>
-      </div>
+<input v-model="product.name" required placeholder="Tên sản phẩm" class="input"/>
+<input v-model="product.slug" required placeholder="Slug" class="input"/>
 
-      <!-- Tùy chọn -->
-      <div class="flex items-center gap-6 mt-4">
-        <label class="flex items-center gap-2">
-          <input type="checkbox" v-model="product.isFeatured" /> Sản phẩm nổi bật
-        </label>
-        <label class="flex items-center gap-2">
-          <input type="checkbox" v-model="product.isActive" /> Kích hoạt
-        </label>
-      </div>
+<input v-model="product.shortDescription" placeholder="Mô tả ngắn" class="input"/>
+<input v-model="product.description" placeholder="Mô tả chi tiết" class="input"/>
 
-      <!-- Upload ảnh -->
-      <div class="mt-4">
-        <label class="block font-semibold mb-2">Ảnh sản phẩm</label>
-        <div
-          class="border-2 border-dashed border-gray-300 rounded-lg p-4 flex flex-wrap gap-4 cursor-pointer hover:border-blue-500"
-          @drop.prevent="handleDrop"
-          @dragover.prevent
-          @click="$refs.fileInput.click()"
-        >
-          <div
-            v-for="(img, index) in product.images"
-            :key="index"
-            class="relative w-24 h-24 rounded-lg overflow-hidden border"
-          >
-            <img :src="img" class="w-full h-full object-cover" />
-            <button
-              type="button"
-              class="absolute top-0 right-0 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center"
-              @click.stop="removeImage(index)"
-            >
-              ×
-            </button>
-          </div>
+<input v-model.number="product.price" type="number" placeholder="Giá gốc" class="input"/>
+<input v-model.number="product.salePrice" type="number" placeholder="Giá KM" class="input"/>
 
-          <div class="w-24 h-24 flex items-center justify-center text-gray-400">
-            + Thêm
-          </div>
+<input v-model="product.sku" placeholder="SKU" class="input"/>
+<input v-model.number="product.stock" type="number" placeholder="Tồn kho" class="input"/>
 
-          <input
-            type="file"
-            ref="fileInput"
-            multiple
-            accept="image/*"
-            class="hidden"
-            @change="handleFileSelect"
-          />
-        </div>
-      </div>
+<input v-model="product.brand" placeholder="Hãng" class="input"/>
 
-      <!-- Submit -->
-      <button
-        type="submit"
-        class="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 text-xl font-semibold mt-4"
-      >
-        CẬP NHẬT
-      </button>
-    </form>
-  </div>
+<select v-model="product.category" class="input">
+<option disabled value="">-- Chọn danh mục --</option>
+
+<option
+v-for="(cat,key) in CATEGORY_CONFIG"
+:key="key"
+:value="key"
+>
+{{ cat.label }}
+</option>
+
+</select>
+
+<input v-model="product.origin" placeholder="Xuất xứ" class="input"/>
+<input v-model.number="product.warrantyMonths" type="number" placeholder="Bảo hành" class="input"/>
+
+</div>
+
+<!-- ================= COMPATIBILITY ================= -->
+
+<div>
+<h2 class="font-semibold mb-2">Thiết bị tương thích</h2>
+
+<input
+v-model="compatibilityInput"
+class="input"
+placeholder="Enter để thêm"
+@keydown.enter.prevent="addCompatibility"
+/>
+
+<div class="flex flex-wrap gap-2 mt-3">
+<span
+v-for="(item,index) in product.compatibility"
+:key="index"
+class="px-3 py-1 bg-gray-200 rounded-full cursor-pointer"
+@click="removeCompatibility(index)"
+>
+{{ item }} ✕
+</span>
+</div>
+</div>
+
+<!-- ================= DYNAMIC SPECS ================= -->
+
+<div v-if="categorySpecs.length">
+<h2 class="font-semibold mb-2">
+Thông số kỹ thuật
+</h2>
+
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+<div
+v-for="field in categorySpecs"
+:key="field.key"
+>
+<input
+v-model="product.specs[field.key]"
+:placeholder="field.label"
+class="input"
+/>
+</div>
+
+</div>
+</div>
+
+<!-- ================= OPTION ================= -->
+
+<div class="flex gap-6">
+<label class="flex items-center gap-2">
+<input type="checkbox" v-model="product.isFeatured"/>
+Nổi bật
+</label>
+
+<label class="flex items-center gap-2">
+<input type="checkbox" v-model="product.isActive"/>
+Hiển thị
+</label>
+</div>
+
+<!-- ================= IMAGE ================= -->
+
+<div>
+<h2 class="font-semibold mb-2">Ảnh sản phẩm</h2>
+
+<div
+class="border-2 border-dashed rounded-lg p-4 flex flex-wrap gap-4 cursor-pointer hover:border-blue-500"
+@click="$refs.fileInput.click()"
+@drop.prevent="handleDrop"
+@dragover.prevent
+>
+
+<div
+v-for="(img,index) in product.images"
+:key="index"
+class="relative w-24 h-24 border rounded overflow-hidden"
+>
+<img :src="img" class="w-full h-full object-cover"/>
+
+<button
+type="button"
+class="absolute top-0 right-0 bg-red-500 text-white w-5 h-5 rounded-full"
+@click.stop="removeImage(index)"
+>
+×
+</button>
+</div>
+
+<div class="w-24 h-24 flex items-center justify-center text-gray-400">
++ Thêm
+</div>
+
+<input
+ref="fileInput"
+type="file"
+multiple
+accept="image/*"
+class="hidden"
+@change="handleFileSelect"
+/>
+
+</div>
+</div>
+
+<!-- ================= SUBMIT ================= -->
+
+<button
+type="submit"
+class="w-full bg-blue-600 text-white py-3 rounded-lg text-xl hover:bg-blue-700"
+>
+CẬP NHẬT
+</button>
+
+</form>
+</div>
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, watch, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import ProductService from "@/services/product.service";
 
 const route = useRoute();
 const router = useRouter();
+
 const product = ref(null);
-const fileInput = ref(null);
+const categorySpecs = ref([]);
+const compatibilityInput = ref("");
+
+/* ================= CATEGORY CONFIG ================= */
+
+const CATEGORY_CONFIG = window.CATEGORY_CONFIG || {}; 
+// 👉 dùng chung config với Add (có thể import file riêng)
+
+/* ================= LOAD PRODUCT ================= */
 
 onMounted(async () => {
-  product.value = await ProductService.get(route.params.id);
-  if (!product.value.images) product.value.images = [];
-  if (!product.value.specs) product.value.specs = {};
+
+const data = await ProductService.get(route.params.id);
+
+data.images ||= [];
+data.specs ||= {};
+data.compatibility ||= [];
+
+product.value = data;
+
+initSpecs(data.category);
+
 });
 
-const handleFileSelect = (event) => {
-  const files = Array.from(event.target.files);
-  processFiles(files);
+/* ================= INIT SPECS ================= */
+
+const initSpecs = (category) => {
+
+const config = CATEGORY_CONFIG[category];
+
+if(!config){
+categorySpecs.value=[];
+return;
+}
+
+categorySpecs.value=config.specs;
+
+config.specs.forEach(s=>{
+if(!product.value.specs[s.key])
+product.value.specs[s.key]="";
+});
+
 };
 
-const handleDrop = (event) => {
-  const files = Array.from(event.dataTransfer.files);
-  processFiles(files);
+/* ================= WATCH CATEGORY ================= */
+
+watch(()=>product.value?.category,(newCat)=>{
+
+if(!product.value) return;
+
+product.value.specs={};
+initSpecs(newCat);
+
+});
+
+/* ================= COMPATIBILITY ================= */
+
+const addCompatibility=()=>{
+if(!compatibilityInput.value.trim())return;
+product.value.compatibility.push(compatibilityInput.value.trim());
+compatibilityInput.value="";
 };
 
-const processFiles = (files) => {
-  files.forEach((file) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      product.value.images.push(e.target.result);
-    };
-    reader.readAsDataURL(file);
-  });
+const removeCompatibility=i=>{
+product.value.compatibility.splice(i,1);
 };
 
-const removeImage = (index) => {
-  product.value.images.splice(index, 1);
+/* ================= IMAGE ================= */
+
+const handleFileSelect=e=>{
+processFiles([...e.target.files]);
 };
+
+const handleDrop=e=>{
+processFiles([...e.dataTransfer.files]);
+};
+
+const processFiles=files=>{
+files.forEach(file=>{
+const reader=new FileReader();
+reader.onload=e=>{
+product.value.images.push(e.target.result);
+};
+reader.readAsDataURL(file);
+});
+};
+
+const removeImage=i=>{
+product.value.images.splice(i,1);
+};
+
+/* ================= SUBMIT ================= */
 
 const submit = async () => {
-  if (!product.value.images.length) {
-    alert("Vui lòng thêm ít nhất 1 ảnh sản phẩm!");
-    return;
-  }
 
-  try {
-    await ProductService.update(route.params.id, product.value);
-    alert("Cập nhật sản phẩm thành công!");
-    router.push("/products");
-  } catch (err) {
-    alert("Lỗi: " + (err.response?.data?.message || err.message));
-  }
+if(!product.value.images.length)
+return alert("Phải có ít nhất 1 ảnh");
+
+try{
+await ProductService.update(route.params.id,product.value);
+alert("Cập nhật thành công!");
+router.push("/products");
+}catch(err){
+alert(err.response?.data?.message||err.message);
+}
+
 };
 </script>
 
 <style scoped>
-.input {
-  @apply border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:border-blue-500;
+.input{
+@apply border border-gray-300 rounded-lg px-4 py-3 w-full
+focus:outline-none focus:border-blue-500;
 }
 </style>

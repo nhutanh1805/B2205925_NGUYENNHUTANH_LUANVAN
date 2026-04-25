@@ -94,7 +94,10 @@ function goDetail(id) {
 }
 
 async function refreshList() {
-  const res = await ProductService.getAll()
+ const res = await ProductService.getAll({
+  page: 1,
+  limit: 999
+});
   products.value = res.products || res
 }
 

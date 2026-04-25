@@ -186,7 +186,7 @@
 <script setup>
 import { ref, onMounted } from "vue";
 import productService from "@/services/product.service";
-import mainVideo from "@/assets/video/BannerMain.mp4";
+import mainVideo from "@/assets/video/Banner Chính.mp4";
 
 
 /* Video phụ */

@@ -25,7 +25,6 @@
 
 <input v-model="form.brand" placeholder="Hãng" class="input"/>
 
-<!-- ===== CATEGORY SELECT ===== -->
 <select v-model="form.category" class="input">
 <option disabled value="">-- Chọn danh mục --</option>
 
@@ -40,7 +39,7 @@ v-for="(cat,key) in CATEGORY_CONFIG"
 </select>
 
 <input v-model="form.origin" placeholder="Xuất xứ" class="input"/>
-<input v-model.number="form.warrantyMonths" type="number" placeholder="Bảo hành" class="input"/>
+<input v-model.number="form.warrantyMonths" type="number" placeholder="Bảo hành (tháng)" class="input"/>
 
 </div>
 
@@ -81,13 +80,11 @@ Thông số kỹ thuật
 v-for="field in categorySpecs"
 :key="field.key"
 >
-
 <input
 v-model="form.specs[field.key]"
 :placeholder="field.label"
 class="input"
 />
-
 </div>
 
 </div>
@@ -133,7 +130,6 @@ class="absolute top-0 right-0 bg-red-500 text-white w-5 h-5 rounded-full"
 >
 ×
 </button>
-
 </div>
 
 <div class="w-24 h-24 flex items-center justify-center text-gray-400">
@@ -173,43 +169,119 @@ import ProductService from "@/services/product.service";
 const router = useRouter();
 
 /* ================= CATEGORY CONFIG ================= */
+/* ⭐ GIỐNG BACKEND 100% */
 
 const CATEGORY_CONFIG = {
 
 tai_nghe:{
 label:"Tai nghe",
 specs:[
-{key:"type",label:"Loại tai nghe"},
-{key:"connectivity",label:"Kết nối"},
-{key:"batteryLife",label:"Thời lượng pin"},
-{key:"noiseCancelling",label:"Chống ồn"}
-]
-},
-
-cu_sac:{
-label:"Củ sạc",
-specs:[
-{key:"power",label:"Công suất"},
-{key:"ports",label:"Cổng sạc"},
-{key:"fastCharge",label:"Sạc nhanh"}
+{key:"loai",label:"Loại"},
+{key:"ket_noi",label:"Kết nối"},
+{key:"thoi_luong_pin",label:"Thời lượng pin"},
+{key:"chong_on",label:"Chống ồn"},
+{key:"kich_thuoc_driver",label:"Driver"},
+{key:"day_tan_so",label:"Dải tần"},
+{key:"tro_khang",label:"Trở kháng"},
+{key:"micro",label:"Micro"},
+{key:"phien_ban_bluetooth",label:"Bluetooth"},
+{key:"trong_luong",label:"Trọng lượng"}
 ]
 },
 
 op_lung:{
 label:"Ốp lưng",
 specs:[
-{key:"material",label:"Chất liệu"},
-{key:"compatibleModel",label:"Dòng máy"},
-{key:"color",label:"Màu sắc"}
+{key:"chat_lieu",label:"Chất liệu"},
+{key:"tuong_thich_model",label:"Model"},
+{key:"mau_sac",label:"Màu sắc"},
+{key:"do_day",label:"Độ dày"},
+{key:"chong_soc",label:"Chống sốc"},
+{key:"chong_tray",label:"Chống trầy"},
+{key:"trong_luong",label:"Trọng lượng"},
+{key:"kieu_dang",label:"Kiểu dáng"},
+{key:"do_bam",label:"Độ bám"},
+{key:"tan_nhiet",label:"Tản nhiệt"}
+]
+},
+
+cu_sac:{
+label:"Củ sạc",
+specs:[
+{key:"cong_suat",label:"Công suất"},
+{key:"so_cong",label:"Số cổng"},
+{key:"ho_tro_sac_nhanh",label:"Sạc nhanh"},
+{key:"dien_ap_vao",label:"Điện áp vào"},
+{key:"dien_ap_ra",label:"Điện áp ra"},
+{key:"chat_lieu",label:"Chất liệu"},
+{key:"chuan_sac",label:"Chuẩn sạc"},
+{key:"an_toan",label:"An toàn"},
+{key:"kich_thuoc",label:"Kích thước"},
+{key:"trong_luong",label:"Trọng lượng"}
 ]
 },
 
 cap_sac:{
 label:"Cáp sạc",
 specs:[
-{key:"length",label:"Chiều dài"},
-{key:"connectorType",label:"Loại đầu"},
-{key:"fastChargeSupport",label:"Hỗ trợ sạc nhanh"}
+{key:"do_dai",label:"Độ dài"},
+{key:"loai_dau_cam",label:"Đầu cắm"},
+{key:"ho_tro_sac_nhanh",label:"Sạc nhanh"},
+{key:"toc_do_truyen",label:"Tốc độ truyền"},
+{key:"chat_lieu",label:"Chất liệu"},
+{key:"do_ben",label:"Độ bền"},
+{key:"chong_dut",label:"Chống đứt"},
+{key:"tuong_thich",label:"Tương thích"},
+{key:"loi_day",label:"Lõi dây"},
+{key:"cong_suat_toi_da",label:"Công suất tối đa"}
+]
+},
+
+pin_du_phong:{
+label:"Pin dự phòng",
+specs:[
+{key:"dung_luong",label:"Dung lượng"},
+{key:"cong_suat_ra",label:"Công suất ra"},
+{key:"ho_tro_sac_nhanh",label:"Sạc nhanh"},
+{key:"so_cong",label:"Số cổng"},
+{key:"dung_luong_thuc",label:"Dung lượng thực"},
+{key:"loai_pin",label:"Loại pin"},
+{key:"cong_sac_vao",label:"Cổng sạc vào"},
+{key:"den_led",label:"Đèn LED"},
+{key:"trong_luong",label:"Trọng lượng"},
+{key:"an_toan",label:"An toàn"}
+]
+},
+
+kinh_cuong_luc:{
+label:"Kính cường lực",
+specs:[
+{key:"do_cung",label:"Độ cứng"},
+{key:"do_day",label:"Độ dày"},
+{key:"chong_vet_van_tay",label:"Chống vân tay"},
+{key:"tuong_thich_model",label:"Model"},
+{key:"do_trong_suot",label:"Độ trong suốt"},
+{key:"chong_vo",label:"Chống vỡ"},
+{key:"phu_oleophobic",label:"Phủ oleophobic"},
+{key:"vien_kinh",label:"Viền kính"},
+{key:"do_phu_man_hinh",label:"Độ phủ màn"},
+{key:"do_cong",label:"Độ cong"}
+]
+},
+
+sac_khong_day:{
+label:"Sạc không dây",
+specs:[
+{key:"cong_suat",label:"Công suất"},
+{key:"chuan_sac",label:"Chuẩn sạc"},
+{key:"ho_tro_magsafe",label:"MagSafe"},
+{key:"hieu_suat",label:"Hiệu suất"},
+{key:"khoang_cach_sac",label:"Khoảng cách sạc"},
+{key:"nhiet_do_hoat_dong",label:"Nhiệt độ"},
+{key:"den_bao",label:"Đèn báo"},
+{key:"chat_lieu",label:"Chất liệu"},
+{key:"tuong_thich",label:"Tương thích"},
+{key:"toc_do_sac",label:"Tốc độ sạc"}
 ]
 }
 
@@ -223,7 +295,7 @@ slug:"",
 shortDescription:"",
 description:"",
 price:0,
-salePrice:0,
+salePrice:null,
 sku:"",
 stock:0,
 brand:"",
@@ -241,9 +313,9 @@ isActive:true
 
 const categorySpecs = ref([]);
 
-watch(()=>form.category,(newCategory)=>{
+watch(()=>form.category,(category)=>{
 
-const config=CATEGORY_CONFIG[newCategory];
+const config=CATEGORY_CONFIG[category];
 
 if(!config){
 categorySpecs.value=[];
@@ -254,8 +326,8 @@ return;
 categorySpecs.value=config.specs;
 
 form.specs={};
-config.specs.forEach(f=>{
-form.specs[f.key]="";
+config.specs.forEach(s=>{
+form.specs[s.key]="";
 });
 
 });
@@ -265,13 +337,13 @@ form.specs[f.key]="";
 const compatibilityInput=ref("");
 
 const addCompatibility=()=>{
-if(!compatibilityInput.value)return;
-form.compatibility.push(compatibilityInput.value);
+if(!compatibilityInput.value.trim())return;
+form.compatibility.push(compatibilityInput.value.trim());
 compatibilityInput.value="";
 };
 
-const removeCompatibility=index=>{
-form.compatibility.splice(index,1);
+const removeCompatibility=i=>{
+form.compatibility.splice(i,1);
 };
 
 /* ================= IMAGE ================= */
@@ -285,39 +357,17 @@ processFiles([...e.dataTransfer.files]);
 };
 
 const processFiles=files=>{
-
 files.forEach(file=>{
-
-const img=new Image();
 const reader=new FileReader();
-
-reader.onload=e=>img.src=e.target.result;
-
-img.onload=()=>{
-
-const canvas=document.createElement("canvas");
-const ctx=canvas.getContext("2d");
-
-const MAX_WIDTH=800;
-const scale=MAX_WIDTH/img.width;
-
-canvas.width=MAX_WIDTH;
-canvas.height=img.height*scale;
-
-ctx.drawImage(img,0,0,canvas.width,canvas.height);
-
-const compressed=canvas.toDataURL("image/jpeg",0.6);
-
-form.images.push(compressed);
+reader.onload=e=>{
+form.images.push(e.target.result);
 };
-
 reader.readAsDataURL(file);
-
 });
 };
 
-const removeImage=index=>{
-form.images.splice(index,1);
+const removeImage=i=>{
+form.images.splice(i,1);
 };
 
 /* ================= SUBMIT ================= */
@@ -328,8 +378,8 @@ if(!form.images.length)
 return alert("Phải có ít nhất 1 ảnh");
 
 try{
-await ProductService.create(form);
-alert("Thêm phụ kiện thành công!");
+await ProductService.create({...form});
+alert("Thêm sản phẩm thành công!");
 router.push("/products");
 }catch(err){
 alert(err.response?.data?.message||err.message);

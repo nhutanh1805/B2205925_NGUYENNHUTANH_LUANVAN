@@ -34,7 +34,7 @@ class="thumb"
 <!-- sold -->
 <div class="sold">
 ⭐ {{ product.rating || 4.8 }}
-| Đã bán {{ product.sold || 120 }}
+| Đã bán {{ product.sold }}
 </div>
 
 <!-- price -->
