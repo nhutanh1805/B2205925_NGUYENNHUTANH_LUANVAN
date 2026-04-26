@@ -1,96 +1,79 @@
 <template>
-  <div class="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 py-10">
-    <div class="max-w-5xl mx-auto px-4">
-      <header class="text-center mb-12">
-        <h1 class="text-5xl font-black bg-gradient-to-r from-orange-500 to-pink-600 bg-clip-text text-transparent">
-          Thanh toán
-        </h1>
-        <p class="text-gray-500 dark:text-gray-400 mt-3">Xác nhận thông tin đơn hàng</p>
-      </header>
+  <div class="p-6 max-w-5xl mx-auto">
 
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-10">
+    <h1 class="text-2xl font-bold mb-6">
+      Thanh toán
+    </h1>
 
-        <div class="lg:col-span-2">
-          <form @submit.prevent="placeOrder" class="bg-white dark:bg-gray-800 rounded-3xl shadow-xl p-8 space-y-8">
-            <div>
-              <label class="block text-lg font-bold mb-3">Địa chỉ giao hàng</label>
-              <input
-                v-model="form.shippingAddress"
-                required
-                class="w-full px-5 py-4 rounded-xl border dark:border-gray-600 bg-gray-50 dark:bg-gray-700 focus:ring-4 focus:ring-orange-300"
-                placeholder="Ví dụ: Vĩnh Xuân, Vĩnh Long"
-              />
-            </div>
+    <!-- FORM -->
+    <div class="space-y-4 mb-6">
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label class="block text-lg font-bold mb-3">Số điện thoại</label>
-                <input
-                  v-model="form.phone"
-                  type="tel"
-                  required
-                  class="w-full px-5 py-4 rounded-xl border dark:border-gray-600 bg-gray-50 dark:bg-gray-700"
-                  placeholder="0123456789"
-                />
-              </div>
-              <div>
-                <label class="block text-lg font-bold mb-3">Ghi chú (tùy chọn)</label>
-                <input
-                  v-model="form.note"
-                  class="w-full px-5 py-4 rounded-xl border dark:border-gray-600 bg-gray-50 dark:bg-gray-700"
-                  placeholder="Giao giờ hành chính, gọi trước khi đến..."
-                />
-              </div>
-            </div>
+      <input
+        v-model="form.shippingAddress"
+        placeholder="Địa chỉ"
+        class="border p-3 w-full rounded"
+      />
 
-            <div class="pt-6 border-t dark:border-gray-700">
-              <router-link
-                to="/cart"
-                class="text-orange-600 hover:underline font-semibold"
-              >
-                Quay lại giỏ hàng
-              </router-link>
-            </div>
-          </form>
-        </div>
+      <input
+        v-model="form.phone"
+        placeholder="SĐT"
+        class="border p-3 w-full rounded"
+      />
 
-        <aside class="sticky top-6 h-fit bg-white dark:bg-gray-800 rounded-3xl shadow-2xl p-8">
-          <h2 class="text-2xl font-black mb-6">Tóm tắt đơn hàng</h2>
-          <div class="space-y-3 text-gray-600 dark:text-gray-400 mb-6">
-            <div class="flex justify-between">
-              <span>Số sản phẩm</span>
-              <span>{{ cart.totalQuantity }}</span>
-            </div>
-            <div class="flex justify-between text-2xl font-black text-gray-900 dark:text-white pt-4 border-t dark:border-gray-700">
-              <span>Tổng tiền</span>
-              <span class="text-orange-600">{{ formatPrice(cart.totalPrice) }}₫</span>
-            </div>
-          </div>
-
-          <button
-            @click="placeOrder"
-            :disabled="submitting"
-            class="w-full py-5 rounded-xl text-black font-black text-xl shadow-lg
-                   bg-gradient-to-r from-orange-500 to-pink-600
-                   hover:scale-105 transition disabled:opacity-70"
-          >
-            {{ submitting ? "Đang xử lý..." : "Xác nhận đặt hàng" }}
-          </button>
-        </aside>
-      </div>
+      <input
+        v-model="form.note"
+        placeholder="Ghi chú"
+        class="border p-3 w-full rounded"
+      />
     </div>
+
+    <hr class="my-6" />
+
+    <!-- SUMMARY -->
+    <div class="mb-6">
+      <p>Số lượng: {{ cart.totalQuantity }}</p>
+      <p class="font-bold text-lg">
+        Tổng tiền: {{ formatPrice(cart.totalPrice) }}₫
+      </p>
+    </div>
+
+    <hr class="my-6" />
+
+    <!-- BUTTONS -->
+    <div class="space-y-3">
+
+      <button
+        @click="placeOrder"
+        :disabled="loading"
+        class="w-full bg-black text-white py-3 rounded"
+      >
+        Đặt hàng COD
+      </button>
+
+      <button
+        @click="payVNPay"
+        :disabled="loading"
+        class="w-full bg-blue-600 text-white py-3 rounded"
+      >
+        Thanh toán VNPay
+      </button>
+
+    </div>
+
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
+
 import CartService from "@/services/cart.service";
 import OrderService from "@/services/order.service";
 
 const router = useRouter();
+
 const cart = ref({ items: [], totalQuantity: 0, totalPrice: 0 });
-const submitting = ref(false);
+const loading = ref(false);
 
 const form = ref({
   shippingAddress: "",
@@ -98,39 +81,121 @@ const form = ref({
   note: "",
 });
 
-const formatPrice = (value) => new Intl.NumberFormat("vi-VN").format(value);
+// ================= FORMAT =================
+const formatPrice = (v) =>
+  new Intl.NumberFormat("vi-VN").format(v || 0);
 
+// ================= LOAD CART =================
 const loadCart = async () => {
   try {
     const res = await CartService.getCart();
-    cart.value = res;
-    if (cart.value.items.length === 0) {
-      alert("Giỏ hàng trống!");
+
+    cart.value = {
+      items: res.items || [],
+      totalQuantity: res.totalQuantity || 0,
+      totalPrice: res.totalPrice || 0,
+    };
+
+    if (!cart.value.items.length) {
+      alert("Giỏ hàng trống");
       router.push("/cart");
     }
+
   } catch (err) {
-    alert("Không thể tải giỏ hàng");
+    console.error(err);
     router.push("/cart");
   }
 };
 
-const placeOrder = async () => {
-  if (!form.value.shippingAddress || !form.value.phone) {
-    alert("Vui lòng điền đầy đủ thông tin!");
-    return;
-  }
+onMounted(loadCart);
 
-  submitting.value = true;
+// ================= VALIDATE =================
+const validate = () => {
+  if (!form.value.shippingAddress) return alert("Nhập địa chỉ"), false;
+  if (!form.value.phone) return alert("Nhập SĐT"), false;
+  return true;
+};
+
+// ================= COD =================
+const placeOrder = async () => {
+  if (!validate()) return;
+
+  loading.value = true;
+
   try {
-    const res = await OrderService.createOrder(form.value);
-    alert("Đặt hàng thành công! Chuyển đến danh sách đơn hàng...");
+    const order = await OrderService.createOrder({
+      ...form.value,
+      items: cart.value.items,
+      totalPrice: cart.value.totalPrice,
+      totalQuantity: cart.value.totalQuantity,
+    });
+
+    // ⚠️ FIX: backend trả trực tiếp object
+    if (!order || !order._id) {
+      throw new Error("Không tạo được đơn hàng");
+    }
+
+    alert("Đặt hàng COD thành công");
     router.push("/orders");
+
   } catch (err) {
-    alert("Đặt hàng thất bại: " + (err.response?.data?.message || err.message));
+    console.error(err);
+    alert(err.message || "Lỗi COD");
   } finally {
-    submitting.value = false;
+    loading.value = false;
   }
 };
 
-onMounted(loadCart);
+// ================= VNPay =================
+const payVNPay = async () => {
+  if (!validate()) return;
+
+  loading.value = true;
+
+  try {
+    // 1. CREATE ORDER
+    const order = await OrderService.createOrder({
+      ...form.value,
+      items: cart.value.items,
+      totalPrice: cart.value.totalPrice,
+      totalQuantity: cart.value.totalQuantity,
+    });
+
+    console.log("ORDER RESPONSE:", order); 
+
+    const orderId = order?._id || order?.data?._id;
+
+    if (!orderId) {
+      throw new Error("Không tạo được đơn hàng");
+    }
+
+    // 2. CALL VNPay
+    const res = await fetch("http://localhost:3000/api/payment/create-vnpay", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        orderId,
+        amount: cart.value.totalPrice
+      })
+    });
+
+    const data = await res.json();
+
+    const paymentUrl = data.payment_url;
+
+    if (!paymentUrl) {
+      throw new Error("Không lấy được link VNPay");
+    }
+
+    window.location.href = paymentUrl;
+
+  } catch (err) {
+    console.error(err);
+    alert(err.message || "VNPay lỗi");
+  } finally {
+    loading.value = false;
+  }
+};
 </script>

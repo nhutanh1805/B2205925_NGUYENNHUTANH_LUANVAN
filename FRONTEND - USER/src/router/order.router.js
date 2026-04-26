@@ -12,10 +12,22 @@ export default [
     name: "order.checkout",
     component: CheckoutView,
   },
+  {
+    path: "/orders/:orderId",
+    name: "order.detail",
+    component: () => import("@/views/order/OrderDetailView.vue"),
+  },
+
+  // VNPay return (PHẢI MATCH BACKEND)
+  {
+    path: "/payment/vnpay-return",
+    name: "payment.return",
+    component: () => import("@/views/payment/PaymentSuccess.vue"),
+  },
 
   {
-  path: "/orders/:orderId",
-  name: "order.detail",
-  component: () => import("@/views/order/OrderDetailView.vue"),
-},
+    path: "/payment-failed",
+    name: "payment.failed",
+    component: () => import("@/views/payment/PaymentFailed.vue"),
+  },
 ];
