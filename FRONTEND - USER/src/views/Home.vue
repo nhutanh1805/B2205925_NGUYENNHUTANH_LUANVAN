@@ -12,7 +12,7 @@
 
     <!-- Hero Section -->
     <section
-      class="hero-section min-vh-100 d-flex align-items-center position-relative overflow-hidden"
+      class="min-vh-100 d-flex align-items-center position-relative overflow-hidden"
       :style="{
         backgroundImage: `url(${heroImage})`,
         backgroundSize: 'cover',
@@ -24,104 +24,47 @@
         style="background-color: rgba(0, 0, 0, 0.85)"
       ></div>
 
-      <div class="container-fluid position-relative z-2 py-5">
-        <div class="row align-items-center h-100">
-          <!-- CAROUSEL BANNER BÊN TRÁI -->
-          <div class="col-lg-6 d-none d-lg-block mb-5 mb-lg-0">
-            <div class="carousel-wrapper">
-              <div class="carousel-container">
-                <div class="carousel-inner">
-                  <div
-                    v-for="(banner, index) in bannerCarousel"
-                    :key="index"
-                    class="carousel-item"
-                    :class="{ active: index === currentBannerIndex }"
-                  >
-                    <img
-                      :src="banner.image"
-                      :alt="banner.title"
-                      class="carousel-image"
-                    />
-                    <div class="carousel-caption">
-                      <h4>{{ banner.title }}</h4>
-                      <p>{{ banner.subtitle }}</p>
-                    </div>
-                  </div>
-                </div>
+      <div class="container position-relative z-2 py-5 text-center text-white">
+        <div class="row justify-content-center">
+          <div class="col-lg-10 col-xl-8">
+            <span
+              class="badge bg-primary bg-gradient fs-5 px-5 py-3 rounded-pill shadow-lg mb-4"
+            >
+              <i class="bi bi-phone me-2"></i>Hot Deal 2025 - Phụ Kiện Điện Thoại
+              <i class="bi bi-phone ms-2"></i>
+            </span>
 
-                <!-- Navigation Buttons -->
-                <button
-                  class="carousel-control prev"
-                  @click="previousBanner"
-                  title="Ảnh trước"
-                >
-                  <i class="bi bi-chevron-left"></i>
-                </button>
-                <button
-                  class="carousel-control next"
-                  @click="nextBanner"
-                  title="Ảnh tiếp"
-                >
-                  <i class="bi bi-chevron-right"></i>
-                </button>
+            <h1 class="display-1 fw-bold mb-4">
+              TechStore - Phụ Kiện Điện Thoại Chính Hãng
+            </h1>
 
-                <!-- Indicators -->
-                <div class="carousel-indicators">
-                  <button
-                    v-for="(banner, index) in bannerCarousel"
-                    :key="index"
-                    class="indicator"
-                    :class="{ active: index === currentBannerIndex }"
-                    @click="currentBannerIndex = index"
-                    :title="`Ảnh ${index + 1}`"
-                  ></button>
-                </div>
-              </div>
+            <p class="lead fs-2 mb-5">
+              Ốp lưng • Cáp sạc • Tai nghe • Sạc nhanh • Pin dự phòng<br />
+              Phụ kiện chất lượng cao, giá tốt cho mọi dòng điện thoại
+            </p>
+
+            <div
+              class="d-flex flex-column flex-sm-row gap-4 justify-content-center"
+            >
+              <router-link
+                to="/products"
+                class="btn btn-danger btn-lg px-6 py-4 rounded-pill fw-bold shadow-lg fs-4"
+              >
+                <i class="bi bi-cart me-2"></i>Mua Ngay
+              </router-link>
+
+              <router-link
+                to="/products"
+                class="btn btn-outline-warning btn-lg px-6 py-4 rounded-pill fw-bold shadow-lg fs-4 text-white"
+              >
+                Xem Tất Cả Sản Phẩm<i class="bi bi-box-seam ms-2"></i>
+              </router-link>
             </div>
-          </div>
 
-          <!-- HERO CONTENT BÊN PHẢI -->
-          <div class="col-lg-6">
-            <div class="text-center text-lg-start text-white">
-              <span
-                class="badge bg-primary bg-gradient fs-5 px-5 py-3 rounded-pill shadow-lg mb-4 d-inline-block"
-              >
-                <i class="bi bi-phone me-2"></i>Hot Deal 2025 - Phụ Kiện Điện Thoại
-                <i class="bi bi-phone ms-2"></i>
-              </span>
-
-              <h1 class="display-1 fw-bold mb-4">
-                TechStore - Phụ Kiện Điện Thoại Chính Hãng
-              </h1>
-
-              <p class="lead fs-2 mb-5">
-                Ốp lưng • Cáp sạc • Tai nghe • Sạc nhanh • Pin dự phòng<br />
-                Phụ kiện chất lượng cao, giá tốt cho mọi dòng điện thoại
-              </p>
-
-              <div
-                class="d-flex flex-column flex-sm-row gap-4 justify-content-center justify-content-lg-start"
-              >
-                <router-link
-                  to="/products"
-                  class="btn btn-danger btn-lg px-6 py-4 rounded-pill fw-bold shadow-lg fs-4"
-                >
-                  <i class="bi bi-cart me-2"></i>Mua Ngay
-                </router-link>
-
-                <router-link
-                  to="/products"
-                  class="btn btn-outline-warning btn-lg px-6 py-4 rounded-pill fw-bold shadow-lg fs-4 text-white"
-                >
-                  Xem Tất Cả Sản Phẩm<i class="bi bi-box-seam ms-2"></i>
-                </router-link>
-              </div>
-
-              <div class="mt-5">
-                <i class="bi bi-phone text-warning fs-2 mx-3"></i>
-                <i class="bi bi-lightning-charge text-success fs-2 mx-3"></i>
-                <i class="bi bi-earbuds text-primary fs-2 mx-3"></i>
-              </div>
+            <div class="mt-5">
+              <i class="bi bi-phone text-warning fs-2 mx-3"></i>
+              <i class="bi bi-lightning-charge text-success fs-2 mx-3"></i>
+              <i class="bi bi-earbuds text-primary fs-2 mx-3"></i>
             </div>
           </div>
         </div>
@@ -391,59 +334,6 @@ import productService from "@/services/product.service";
 import mainVideo from "@/assets/video/Banner Chính.mp4";
 import heroImage from "@/assets/img/BannerPhone.jpg";
 
-/* ========== CAROUSEL BANNER ========== */
-const currentBannerIndex = ref(0);
-let carouselInterval = null;
-
-const bannerCarousel = ref([
-  {
-    image: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&h=400&fit=crop",
-    title: "Tai Nghe Premium",
-    subtitle: "Chất âm cực hay, pin bền bỏng",
-  },
-  {
-    image: "https://images.unsplash.com/photo-1510635460830-eb7b0876b747?w=600&h=400&fit=crop",
-    title: "Ốp Lưng Chính Hãng",
-    subtitle: "Bảo vệ điện thoại của bạn",
-  },
-  {
-    image: "https://images.unsplash.com/photo-1556656793-08538906a9f8?w=600&h=400&fit=crop",
-    title: "Cáp Sạc Nhanh",
-    subtitle: "Sạc nhanh, bền lâu 100%",
-  },
-  {
-    image: "https://images.unsplash.com/photo-1609091839311-d5365f9ff1c5?w=600&h=400&fit=crop",
-    title: "Pin Dự Phòng Khủng",
-    subtitle: "Sạc 3 lần điện thoại",
-  },
-  {
-    image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600&h=400&fit=crop",
-    title: "Sạc Không Dây",
-    subtitle: "Tiện lợi, an toàn 100%",
-  },
-]);
-
-const nextBanner = () => {
-  currentBannerIndex.value = (currentBannerIndex.value + 1) % bannerCarousel.value.length;
-  resetCarouselTimer();
-};
-
-const previousBanner = () => {
-  currentBannerIndex.value = (currentBannerIndex.value - 1 + bannerCarousel.value.length) % bannerCarousel.value.length;
-  resetCarouselTimer();
-};
-
-const startCarouselAutoSlide = () => {
-  carouselInterval = setInterval(() => {
-    nextBanner();
-  }, 5000);
-};
-
-const resetCarouselTimer = () => {
-  if (carouselInterval) clearInterval(carouselInterval);
-  startCarouselAutoSlide();
-};
-
 /* Video phụ */
 const smallVideos = Array(12).fill(mainVideo);
 
@@ -609,149 +499,15 @@ onMounted(async () => {
   }
   
   startCountdown();
-  startCarouselAutoSlide();
 });
 
 onUnmounted(() => {
   if (countdownInterval) clearInterval(countdownInterval);
-  if (carouselInterval) clearInterval(carouselInterval);
 });
 
 </script>
 
 <style scoped>
-/* ========== HERO SECTION & CAROUSEL ========== */
-.hero-section {
-  position: relative;
-}
-
-.carousel-wrapper {
-  padding: 20px;
-  margin-bottom: 20px;
-}
-
-.carousel-container {
-  position: relative;
-  width: 100%;
-  max-width: 500px;
-  height: 380px;
-  border-radius: 20px;
-  overflow: hidden;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
-  background: white;
-}
-
-.carousel-inner {
-  position: relative;
-  width: 100%;
-  height: 100%;
-}
-
-.carousel-item {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  opacity: 0;
-  transition: opacity 0.6s ease-in-out;
-}
-
-.carousel-item.active {
-  opacity: 1;
-}
-
-.carousel-image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.carousel-caption {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.9), transparent);
-  color: white;
-  padding: 30px 20px 20px;
-  text-align: left;
-}
-
-.carousel-caption h4 {
-  font-size: 1.3rem;
-  font-weight: 700;
-  margin-bottom: 8px;
-}
-
-.carousel-caption p {
-  font-size: 0.95rem;
-  margin: 0;
-  opacity: 0.9;
-}
-
-.carousel-control {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  background: rgba(255, 255, 255, 0.9);
-  border: none;
-  color: #333;
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.2rem;
-  transition: all 0.3s;
-  z-index: 10;
-}
-
-.carousel-control:hover {
-  background: white;
-  transform: translateY(-50%) scale(1.1);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-}
-
-.carousel-control.prev {
-  left: 15px;
-}
-
-.carousel-control.next {
-  right: 15px;
-}
-
-.carousel-indicators {
-  position: absolute;
-  bottom: 15px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  gap: 8px;
-  z-index: 10;
-}
-
-.indicator {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  border: none;
-  background: rgba(255, 255, 255, 0.6);
-  cursor: pointer;
-  transition: all 0.3s;
-  padding: 0;
-}
-
-.indicator.active {
-  background: white;
-  width: 28px;
-  border-radius: 5px;
-}
-
-.indicator:hover {
-  background: rgba(255, 255, 255, 0.9);
-}
-
 /* VIDEO CONTROL LEFT */
 .video-control-global-left {
   position: fixed;
@@ -1239,41 +995,6 @@ onUnmounted(() => {
 
 /* Responsive */
 @media (max-width: 768px) {
-  .carousel-wrapper {
-    padding: 0;
-    margin-bottom: 0;
-  }
-
-  .carousel-container {
-    height: 300px;
-  }
-
-  .carousel-control {
-    width: 38px;
-    height: 38px;
-    font-size: 1rem;
-  }
-
-  .carousel-control.prev {
-    left: 10px;
-  }
-
-  .carousel-control.next {
-    right: 10px;
-  }
-
-  .carousel-caption {
-    padding: 20px 15px 15px;
-  }
-
-  .carousel-caption h4 {
-    font-size: 1rem;
-  }
-
-  .carousel-caption p {
-    font-size: 0.85rem;
-  }
-
   .flash-sale-header {
     flex-direction: column;
   }
