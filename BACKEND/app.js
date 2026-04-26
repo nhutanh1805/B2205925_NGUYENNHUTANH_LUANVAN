@@ -1,7 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 const ApiError = require("./app/api-error"); 
-
+const paymentRoute = require("./app/routes/payment.route");
 const productsRouter = require("./app/routes/product.route");
 const adminsRouter = require("./app/routes/adminAuth.route");
 const usersRouter = require("./app/routes/user.routes");
@@ -16,7 +16,7 @@ app.use(express.json());
 app.get("/", (req, res) => {
     res.json({ message: "Welcome to ecommerce application." });
 });
-
+app.use("/api/payment", paymentRoute);
 app.use("/api/products", productsRouter);
 app.use("/api/admins", adminsRouter);
 app.use("/api/users", usersRouter);

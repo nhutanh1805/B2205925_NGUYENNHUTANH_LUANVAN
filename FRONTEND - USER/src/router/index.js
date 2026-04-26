@@ -24,14 +24,26 @@ const routes = [
     props: true,
   },
 
+  // ===== VNPay PAYMENT (THÊM MỚI) =====
+  {
+    path: "/payment-success",
+    name: "payment.success",
+    component: () => import("@/views/payment/PaymentSuccess.vue"),
+  },
+  {
+    path: "/payment-failed",
+    name: "payment.failed",
+    component: () => import("@/views/payment/PaymentFailed.vue"),
+  },
+
   // ===== ADMIN =====
   ...userRoutes,
 
   // ===== CART =====
   ...cartRoutes,
 
-  // ===== order =====
- ...orderRoutes,
+  // ===== ORDER =====
+  ...orderRoutes,
 
   // ===== NOT FOUND =====
   {
