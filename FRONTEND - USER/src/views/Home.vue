@@ -187,7 +187,7 @@
 import { ref, onMounted } from "vue";
 import productService from "@/services/product.service";
 import mainVideo from "@/assets/video/Banner Chính.mp4";
-
+import heroImage from "@/assets/img/BannerPhone.jpg";
 
 /* Video phụ */
 const smallVideos = Array(12).fill(mainVideo);
@@ -215,21 +215,21 @@ const toggleAllVideos = () => {
 };
 
 //* Import trực tiếp ảnh hãng */
-import LogoApple from "@/assets/img/LogoApple.jpg";
-import LogoSamSung from "@/assets/img/LogoSamSung.jpg";
-import LogoXiaomi from "@/assets/img/LogoXiaomi.jpg";
-import LogoViVo from "@/assets/img/LogoViVo.jpg";
-import LogoOppo from "@/assets/img/LogoOppo.jpg";
-import LogoRealme from "@/assets/img/LogoRealme.jpg";
+import TaiNghe from "@/assets/img/Tai nghe.jpg";
+import CuSac from "@/assets/img/Củ sạc.jpg";
+import CapSac from "@/assets/img/Cáp sạc.jpg";
+import KinhCuongLuc from "@/assets/img/Kính cường lực.jpg";
+import PinDuPhong from "@/assets/img/Pin dự phòng.jpg";
+import SacKhongDay from "@/assets/img/Sạc không dây.jpg";
 
 /* Danh sách brands */
 const brands = [
-  { name: "", logo: LogoApple },
-  { name: "SamSung", logo: LogoSamSung },
-  { name: "Xiaomi", logo: LogoXiaomi },
-  { name: "Vivo", logo: LogoViVo },
-  { name: "Oppo", logo: LogoOppo },
-  { name: "Realme", logo: LogoRealme },
+  { name: "Tai Nghe", logo: TaiNghe },
+  { name: "Củ sạc", logo: CuSac },
+  { name: "Xiaomi", logo: CapSac },
+  { name: "Vivo", logo: KinhCuongLuc },
+  { name: "Oppo", logo: PinDuPhong },
+  { name: "Realme", logo: SacKhongDay },
 ];
 
 /* Sản phẩm nổi bật */
@@ -278,7 +278,6 @@ onMounted(async () => {
   }
 });
 
-const heroImage = "@/assets/img/BannerPhone.jpg";
 </script>
 
 <style scoped>
