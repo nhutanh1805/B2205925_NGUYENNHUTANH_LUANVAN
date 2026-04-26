@@ -1,5 +1,9 @@
 const crypto = require("crypto");
 const moment = require("moment");
+const querystring = require("qs");
+
+const MongoDB = require("../utils/mongodb.util");
+const OrderService = require("../services/order.service");
 const vnpayConfig = require("../config/vnpay.config");
 
 // =========================
@@ -7,24 +11,21 @@ const vnpayConfig = require("../config/vnpay.config");
 // =========================
 function sortObject(obj) {
   const sorted = {};
-  const keys = Object.keys(obj).sort();
-  keys.forEach((key) => {
+  Object.keys(obj).sort().forEach((key) => {
     sorted[key] = obj[key];
   });
   return sorted;
 }
 
 // =========================
-// CREATE PAYMENT URL
+// CREATE PAYMENT
 // =========================
 exports.createVNPayPayment = async (req, res) => {
   try {
     const { orderId, amount } = req.body;
 
     if (!orderId || !amount) {
-      return res.status(400).json({
-        message: "Thiếu orderId hoặc amount",
-      });
+      return res.status(400).json({ message: "Thiếu orderId hoặc amount" });
     }
 
     let vnp_Params = {};
@@ -40,17 +41,13 @@ exports.createVNPayPayment = async (req, res) => {
     vnp_Params["vnp_OrderType"] = "billpayment";
 
     vnp_Params["vnp_Amount"] = amount * 100;
-
     vnp_Params["vnp_ReturnUrl"] = vnpayConfig.vnp_ReturnUrl;
 
     vnp_Params["vnp_IpAddr"] = "127.0.0.1";
-
     vnp_Params["vnp_CreateDate"] = moment().format("YYYYMMDDHHmmss");
 
-    // SORT
     vnp_Params = sortObject(vnp_Params);
 
-    // CREATE SIGN STRING
     const signData = Object.keys(vnp_Params)
       .sort()
       .map((key) => `${key}=${encodeURIComponent(vnp_Params[key])}`)
@@ -67,8 +64,6 @@ exports.createVNPayPayment = async (req, res) => {
 
     vnp_Params["vnp_SecureHash"] = secureHash;
 
-    const querystring = require("qs");
-
     const paymentUrl =
       vnpayConfig.vnp_Url +
       "?" +
@@ -76,14 +71,12 @@ exports.createVNPayPayment = async (req, res) => {
 
     return res.json({ payment_url: paymentUrl });
   } catch (err) {
-    return res.status(500).json({
-      message: err.message,
-    });
+    return res.status(500).json({ message: err.message });
   }
 };
 
 // =========================
-// RETURN URL (VERIFY)
+// RETURN + UPDATE ORDER
 // =========================
 exports.vnpayReturn = async (req, res) => {
   try {
@@ -110,31 +103,41 @@ exports.vnpayReturn = async (req, res) => {
       .update(Buffer.from(signData, "utf-8"))
       .digest("hex");
 
-    // =========================
-    // VERIFY SUCCESS
-    // =========================
-    if (secureHash === checkHash) {
-      const orderId = vnp_Params["vnp_TxnRef"];
-      const responseCode = vnp_Params["vnp_ResponseCode"];
+    if (secureHash !== checkHash) {
+      return res.status(400).json({ message: "Sai chữ ký VNPay" });
+    }
 
-      if (responseCode === "00") {
-        // TODO: update DB order = PAID
+    const orderId = vnp_Params["vnp_TxnRef"];
+    const responseCode = vnp_Params["vnp_ResponseCode"];
+
+    const client = await MongoDB.connect();
+    const orderService = new OrderService(client);
+
+    // =========================
+    // SUCCESS
+    // =========================
+    if (responseCode === "00") {
+      try {
+        // 🔥 UPDATE ORDER STATUS
+        await orderService.updateStatus(orderId, "confirmed");
+
         return res.redirect(
           "http://localhost:3002/payment-success"
         );
-      } else {
+      } catch (err) {
+        console.log("UPDATE ERROR:", err);
+
         return res.redirect(
           "http://localhost:3002/payment-failed"
         );
       }
     }
 
-    return res.status(400).json({
-      message: "Sai chữ ký VNPay",
-    });
+    // FAIL
+    return res.redirect(
+      "http://localhost:3002/payment-failed"
+    );
   } catch (err) {
-    return res.status(500).json({
-      message: err.message,
-    });
+    return res.status(500).json({ message: err.message });
   }
 };

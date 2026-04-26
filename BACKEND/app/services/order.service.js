@@ -216,6 +216,49 @@ class OrderService {
 
     return await this.findById(orderId);
   }
+  
+async updateStatus(orderId, newStatus) {
+  if (!orderId || orderId.length !== 24) {
+    throw new Error("OrderId không hợp lệ");
+  }
+
+  const order = await this.findById(orderId);
+  if (!order) {
+    throw new Error("Không tìm thấy đơn hàng");
+  }
+
+  const currentStatus = order.status;
+
+  if (currentStatus === "cancelled" || currentStatus === "delivered") {
+    throw new Error("Không thể cập nhật đơn này");
+  }
+
+  const allowed = {
+    pending: ["confirmed", "cancelled"],
+    confirmed: ["shipping", "cancelled"],
+    shipping: ["delivered"],
+  };
+
+  if (!allowed[currentStatus]?.includes(newStatus)) {
+    throw new Error(
+      `Không thể chuyển từ ${currentStatus} → ${newStatus}`
+    );
+  }
+
+  await this.Order.updateOne(
+    { _id: new ObjectId(orderId) },
+    {
+      $set: {
+        status: newStatus,
+        updatedAt: new Date(),
+      },
+    }
+  );
+
+  return await this.findById(orderId);
+}
+
+
 }
 
 module.exports = OrderService;
