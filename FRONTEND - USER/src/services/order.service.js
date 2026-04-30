@@ -31,15 +31,20 @@ class OrderService {
       shippingAddress: data.shippingAddress,
       phone: data.phone,
       note: data.note,
-      items: data.items,
-      totalPrice: data.totalPrice,
-      totalQuantity: data.totalQuantity,
     };
 
-    // ⚠️ backend trả thẳng order object
     const res = await this.api.post("/create", payload);
     return res.data;
   }
+
+  // ✅ HỦY / UPDATE STATUS
+  async updateOrderStatus(orderId, status) {
+  return (
+    await this.api.patch(`/${orderId}/status`, {
+      status,
+    })
+  ).data;
+}
 }
 
 export default new OrderService();

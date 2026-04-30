@@ -371,10 +371,10 @@ import SacKhongDay from "@/assets/img/Sạc không dây.jpg";
 const brands = [
   { name: "Tai Nghe", logo: TaiNghe },
   { name: "Củ sạc", logo: CuSac },
-  { name: "Xiaomi", logo: CapSac },
-  { name: "Vivo", logo: KinhCuongLuc },
-  { name: "Oppo", logo: PinDuPhong },
-  { name: "Realme", logo: SacKhongDay },
+  { name: "Cáp sạc", logo: CapSac },
+  { name: "Kính cường lực", logo: KinhCuongLuc },
+  { name: "Pin dự phòng", logo: PinDuPhong },
+  { name: "Sạc không dây", logo: SacKhongDay },
 ];
 
 /* Sản phẩm nổi bật */
