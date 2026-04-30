@@ -1,62 +1,59 @@
 <template>
-  <div class="p-6 max-w-5xl mx-auto">
+  <div class="checkout-page">
 
-    <h1 class="text-2xl font-bold mb-6">
-      Thanh toán
-    </h1>
+    <div class="checkout-card">
 
-    <!-- FORM -->
-    <div class="space-y-4 mb-6">
+      <!-- HEADER -->
+      <div class="header">
+        <h1>Thanh toán đơn hàng</h1>
+        <p>Hoàn tất đơn hàng của bạn chỉ trong vài bước</p>
+      </div>
 
-      <input
-        v-model="form.shippingAddress"
-        placeholder="Địa chỉ"
-        class="border p-3 w-full rounded"
-      />
+      <div class="content">
 
-      <input
-        v-model="form.phone"
-        placeholder="SĐT"
-        class="border p-3 w-full rounded"
-      />
+        <!-- LEFT -->
+        <div class="left">
 
-      <input
-        v-model="form.note"
-        placeholder="Ghi chú"
-        class="border p-3 w-full rounded"
-      />
-    </div>
+          <h2>Thông tin giao hàng</h2>
 
-    <hr class="my-6" />
+          <input v-model="form.shippingAddress" placeholder="Địa chỉ giao hàng" />
+          <input v-model="form.phone" placeholder="Số điện thoại" />
+          <input v-model="form.note" placeholder="Ghi chú (tuỳ chọn)" />
 
-    <!-- SUMMARY -->
-    <div class="mb-6">
-      <p>Số lượng: {{ cart.totalQuantity }}</p>
-      <p class="font-bold text-lg">
-        Tổng tiền: {{ formatPrice(cart.totalPrice) }}₫
-      </p>
-    </div>
+          <button class="btn-cod" @click="placeOrder">
+            Thanh toán COD
+          </button>
 
-    <hr class="my-6" />
+          <button class="btn-vnpay" @click="payVNPay">
+            VNPay
+          </button>
 
-    <!-- BUTTONS -->
-    <div class="space-y-3">
+        </div>
 
-      <button
-        @click="placeOrder"
-        :disabled="loading"
-        class="w-full bg-black text-white py-3 rounded"
-      >
-        Đặt hàng COD
-      </button>
+        <!-- RIGHT -->
+        <div class="right">
 
-      <button
-        @click="payVNPay"
-        :disabled="loading"
-        class="w-full bg-blue-600 text-white py-3 rounded"
-      >
-        Thanh toán VNPay
-      </button>
+          <h2>Đơn hàng</h2>
+
+          <div
+            v-for="(item, index) in cart.items"
+            :key="index"
+            class="item"
+          >
+            <span>{{ item.name }} × {{ item.quantity }}</span>
+            <b>{{ formatPrice(item.price * item.quantity) }}₫</b>
+          </div>
+
+          <div class="total">
+            <div>Số lượng: {{ cart.totalQuantity }}</div>
+            <div class="price">
+              {{ formatPrice(cart.totalPrice) }}₫
+            </div>
+          </div>
+
+        </div>
+
+      </div>
 
     </div>
 
@@ -81,11 +78,9 @@ const form = ref({
   note: "",
 });
 
-// ================= FORMAT =================
 const formatPrice = (v) =>
   new Intl.NumberFormat("vi-VN").format(v || 0);
 
-// ================= LOAD CART =================
 const loadCart = async () => {
   try {
     const res = await CartService.getCart();
@@ -102,26 +97,20 @@ const loadCart = async () => {
     }
 
   } catch (err) {
-    console.error(err);
     router.push("/cart");
   }
 };
 
 onMounted(loadCart);
 
-// ================= VALIDATE =================
 const validate = () => {
   if (!form.value.shippingAddress) return alert("Nhập địa chỉ"), false;
   if (!form.value.phone) return alert("Nhập SĐT"), false;
   return true;
 };
 
-// ================= NORMALIZE ORDER RESPONSE =================
-const normalizeOrder = (res) => {
-  return res?.data ?? res;
-};
+const normalize = (r) => r?.data ?? r;
 
-// ================= COD =================
 const placeOrder = async () => {
   if (!validate()) return;
 
@@ -135,26 +124,20 @@ const placeOrder = async () => {
       totalQuantity: cart.value.totalQuantity,
     });
 
-    const order = normalizeOrder(res);
+    const order = normalize(res);
 
-    // ✅ FIX CHUẨN
-    if (!order?._id) {
-      throw new Error("Không tạo được đơn hàng");
-    }
+    if (!order?._id) throw new Error("Lỗi tạo đơn");
 
     alert("Đặt hàng COD thành công");
-
     router.push("/orders");
 
   } catch (err) {
-    console.error(err);
-    alert(err.message || "Lỗi COD");
+    alert(err.message);
   } finally {
     loading.value = false;
   }
 };
 
-// ================= VNPay =================
 const payVNPay = async () => {
   if (!validate()) return;
 
@@ -168,19 +151,14 @@ const payVNPay = async () => {
       totalQuantity: cart.value.totalQuantity,
     });
 
-    const order = normalizeOrder(res);
+    const order = normalize(res);
 
     const orderId = order?._id;
-
-    if (!orderId) {
-      throw new Error("Không tạo được đơn hàng");
-    }
+    if (!orderId) throw new Error("Không tạo đơn");
 
     const paymentRes = await fetch("http://localhost:3000/api/payment/create-vnpay", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         orderId,
         amount: cart.value.totalPrice
@@ -189,19 +167,159 @@ const payVNPay = async () => {
 
     const data = await paymentRes.json();
 
-    const paymentUrl = data?.payment_url;
+    if (!data?.payment_url) throw new Error("VNPay lỗi");
 
-    if (!paymentUrl) {
-      throw new Error("Không lấy được link VNPay");
-    }
-
-    window.location.href = paymentUrl;
+    window.location.href = data.payment_url;
 
   } catch (err) {
-    console.error(err);
-    alert(err.message || "VNPay lỗi");
+    alert(err.message);
   } finally {
     loading.value = false;
   }
 };
 </script>
+
+<style scoped>
+
+/* ===== PAGE CENTER FIX ===== */
+.checkout-page {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  background: linear-gradient(135deg, #c7d2fe, #fbcfe8, #ddd6fe);
+  position: relative;
+  overflow: hidden;
+}
+
+/* background glow */
+.checkout-page::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 20% 20%, rgba(99,102,241,0.25), transparent 40%),
+    radial-gradient(circle at 80% 30%, rgba(236,72,153,0.25), transparent 40%),
+    radial-gradient(circle at 50% 80%, rgba(34,197,94,0.2), transparent 40%);
+  z-index: 0;
+}
+
+/* ===== CARD ===== */
+.checkout-card {
+  width: 100%;
+  max-width: 900px;
+
+  background: rgba(255,255,255,0.75);
+  backdrop-filter: blur(25px);
+
+  border-radius: 24px;
+  overflow: hidden;
+
+  box-shadow: 0 30px 80px rgba(0,0,0,0.25);
+
+  position: relative;
+  z-index: 10;
+}
+
+/* HEADER */
+.header {
+  text-align: center;
+  padding: 20px;
+  background: linear-gradient(90deg, #6366f1, #a855f7);
+  color: white;
+}
+
+/* CONTENT */
+.content {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+/* LEFT */
+.left {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.left input {
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid #ddd;
+  transition: 0.2s;
+}
+
+.left input:focus {
+  outline: none;
+  border-color: #6366f1;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(99,102,241,0.2);
+}
+
+/* BUTTONS */
+.btn-cod {
+  background: #000;
+  color: white;
+  padding: 10px;
+  border-radius: 12px;
+  transition: 0.2s;
+}
+
+.btn-cod:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+}
+
+.btn-vnpay {
+  background: linear-gradient(90deg, #22c55e, #10b981);
+  color: white;
+  padding: 10px;
+  border-radius: 12px;
+  transition: 0.2s;
+}
+
+.btn-vnpay:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(16,185,129,0.3);
+}
+
+/* RIGHT */
+.right {
+  padding: 20px;
+  background: #f8fafc;
+}
+
+.item {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px;
+  background: white;
+  border-radius: 12px;
+  margin-bottom: 8px;
+  transition: 0.2s;
+}
+
+.item:hover {
+  transform: translateX(4px);
+}
+
+.total {
+  margin-top: 10px;
+  font-weight: bold;
+}
+
+.price {
+  color: #ef4444;
+  font-size: 20px;
+}
+
+/* MOBILE */
+@media (max-width: 768px) {
+  .content {
+    grid-template-columns: 1fr;
+  }
+}
+
+</style>
