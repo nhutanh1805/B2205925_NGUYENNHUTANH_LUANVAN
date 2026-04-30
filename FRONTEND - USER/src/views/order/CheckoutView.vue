@@ -116,6 +116,11 @@ const validate = () => {
   return true;
 };
 
+// ================= NORMALIZE ORDER RESPONSE =================
+const normalizeOrder = (res) => {
+  return res?.data ?? res;
+};
+
 // ================= COD =================
 const placeOrder = async () => {
   if (!validate()) return;
@@ -123,19 +128,22 @@ const placeOrder = async () => {
   loading.value = true;
 
   try {
-    const order = await OrderService.createOrder({
+    const res = await OrderService.createOrder({
       ...form.value,
       items: cart.value.items,
       totalPrice: cart.value.totalPrice,
       totalQuantity: cart.value.totalQuantity,
     });
 
-    // ⚠️ FIX: backend trả trực tiếp object
-    if (!order || !order._id) {
+    const order = normalizeOrder(res);
+
+    // ✅ FIX CHUẨN
+    if (!order?._id) {
       throw new Error("Không tạo được đơn hàng");
     }
 
     alert("Đặt hàng COD thành công");
+
     router.push("/orders");
 
   } catch (err) {
@@ -153,24 +161,22 @@ const payVNPay = async () => {
   loading.value = true;
 
   try {
-    // 1. CREATE ORDER
-    const order = await OrderService.createOrder({
+    const res = await OrderService.createOrder({
       ...form.value,
       items: cart.value.items,
       totalPrice: cart.value.totalPrice,
       totalQuantity: cart.value.totalQuantity,
     });
 
-    console.log("ORDER RESPONSE:", order); 
+    const order = normalizeOrder(res);
 
-    const orderId = order?._id || order?.data?._id;
+    const orderId = order?._id;
 
     if (!orderId) {
       throw new Error("Không tạo được đơn hàng");
     }
 
-    // 2. CALL VNPay
-    const res = await fetch("http://localhost:3000/api/payment/create-vnpay", {
+    const paymentRes = await fetch("http://localhost:3000/api/payment/create-vnpay", {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -181,9 +187,9 @@ const payVNPay = async () => {
       })
     });
 
-    const data = await res.json();
+    const data = await paymentRes.json();
 
-    const paymentUrl = data.payment_url;
+    const paymentUrl = data?.payment_url;
 
     if (!paymentUrl) {
       throw new Error("Không lấy được link VNPay");
