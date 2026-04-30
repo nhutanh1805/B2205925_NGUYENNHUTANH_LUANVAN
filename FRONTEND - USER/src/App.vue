@@ -16,7 +16,7 @@
     <TimeOnPage v-if="ui.time" />
 
     <Iphone v-if="ui.iphone" />
-
+    <ChatbotPopup />
     <IdleToast
       v-if="ui.idle"
       ref="idleToast"
@@ -37,7 +37,7 @@ import IdleToast from "@/components/idle/IdleToast.vue";
 import { initIdleDetector } from "@/components/idle/IdleDetector";
 import ModelViewer from "@/components/ModelViewer/ModelViewer.vue";
 import CommunitySidebar from "@/components/sidebar/CommunitySidebar.vue";
-
+import ChatbotPopup from "@/components/ChatbotPopup.vue";
 export default {
   name: "App",
 
@@ -48,6 +48,7 @@ export default {
     IdleToast,
     ModelViewer,
     CommunitySidebar,
+    ChatbotPopup,
   },
 
   data() {
