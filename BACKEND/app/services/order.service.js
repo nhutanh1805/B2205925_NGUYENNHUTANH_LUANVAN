@@ -189,10 +189,10 @@ class OrderService {
 
     // Tiến trình hợp lệ
     const allowedTransitions = {
-      pending: ["confirmed", "cancelled"],
-      confirmed: ["shipping", "cancelled"],
-      shipping: ["delivered"],
-    };
+  pending: ["confirmed", "cancelled"], // chỉ giai đoạn này được hủy
+  confirmed: ["shipping"],             // ❌ không cho hủy nữa
+  shipping: ["delivered"],
+};
 
     if (!allowedTransitions[currentStatus]?.includes(newStatus)) {
       throw new Error(`Không thể chuyển từ "${currentStatus}" sang "${newStatus}"`);

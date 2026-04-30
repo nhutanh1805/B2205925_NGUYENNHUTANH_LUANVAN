@@ -81,7 +81,7 @@
                   <div class="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition">
                     <!-- Hủy đơn khi pending hoặc confirmed -->
                     <button 
-                      v-if="order.status === 'pending' || order.status === 'confirmed'" 
+                      v-if="order.status === 'pending'" 
                       @click="confirmCancel(order._id)" 
                       class="px-3 py-2 rounded-lg bg-red-600 text-white text-sm font-semibold hover:bg-red-700 transition"
                     >

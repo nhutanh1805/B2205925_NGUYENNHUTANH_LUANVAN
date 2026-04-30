@@ -19,6 +19,7 @@
       </div>
 
       <div v-else-if="order" class="bg-white dark:bg-gray-800 rounded-3xl shadow-xl border border-gray-200 dark:border-gray-700 p-6 space-y-6">
+
         <div class="flex justify-between items-center">
           <div>
             <h2 class="text-xl font-semibold text-gray-900 dark:text-white">
@@ -31,17 +32,11 @@
             <p v-if="order.note" class="text-gray-600 dark:text-gray-400">Ghi chú: {{ order.note }}</p>
           </div>
 
+          <!-- ❌ KHÔNG CHO THAY ĐỔI TRẠNG THÁI -->
           <div class="flex flex-col gap-2">
-            <select v-model="order.status" @change="updateStatus(order._id, order.status)" class="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium">
-              <option value="pending">Chờ xác nhận</option>
-              <option value="confirmed">Đã xác nhận</option>
-              <option value="shipping">Đang giao</option>
-              <option value="delivered">Hoàn thành</option>
-              <option value="cancelled">Đã hủy</option>
-            </select>
-            <button v-if="order.status === 'pending'" @click="cancelOrder(order._id)" class="px-3 py-2 rounded-lg bg-red-600 text-white text-sm font-semibold hover:bg-red-700 transition">
-              Hủy đơn
-            </button>
+            <div class="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 text-sm font-medium text-gray-800 dark:text-gray-200">
+              {{ getStatusLabel(order.status) }}
+            </div>
           </div>
         </div>
 
@@ -55,6 +50,7 @@
                 <th class="px-6 py-3 text-left font-semibold text-gray-600 dark:text-gray-400">Tổng</th>
               </tr>
             </thead>
+
             <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
               <tr v-for="item in order.items" :key="item.productId">
                 <td class="px-6 py-4">
@@ -73,6 +69,7 @@
                     </div>
                   </div>
                 </td>
+
                 <td class="px-6 py-4 text-gray-900 dark:text-white">{{ formatPrice(item.price) }}₫</td>
                 <td class="px-6 py-4 text-gray-900 dark:text-white">{{ item.quantity }}</td>
                 <td class="px-6 py-4 font-bold text-gray-900 dark:text-white">
@@ -91,11 +88,14 @@
             </p>
           </div>
         </div>
+
       </div>
 
       <div v-else class="bg-white dark:bg-gray-800 rounded-3xl shadow-xl p-20 text-center">
         <div class="text-8xl mb-8">❌</div>
-        <h2 class="text-3xl font-bold text-gray-900 dark:text-white mb-4">Đơn hàng không tồn tại</h2>
+        <h2 class="text-3xl font-bold text-gray-900 dark:text-white mb-4">
+          Đơn hàng không tồn tại
+        </h2>
       </div>
     </div>
   </div>
@@ -108,11 +108,13 @@ import OrderService from "@/services/order.service"
 
 const route = useRoute()
 const router = useRouter()
+
 const order = ref(null)
 const loading = ref(true)
 const placeholder = "https://via.placeholder.com/120x160?text=No+Image"
 
 const formatPrice = v => new Intl.NumberFormat("vi-VN").format(v)
+
 const formatDate = d =>
   new Date(d).toLocaleString("vi-VN", {
     day: "2-digit",
@@ -134,13 +136,17 @@ const loadOrder = async () => {
 }
 
 const goBack = () => router.back()
-const updateStatus = async (id, status) => {
-  await OrderService.updateOrderStatus(id, status)
-  await loadOrder()
-}
-const cancelOrder = async id => {
-  await OrderService.updateOrderStatus(id, "cancelled")
-  await loadOrder()
+
+// 🔥 chỉ hiển thị label trạng thái
+const getStatusLabel = (status) => {
+  switch (status) {
+    case "pending": return "Chờ xác nhận"
+    case "confirmed": return "Đã xác nhận"
+    case "shipping": return "Đang giao"
+    case "delivered": return "Hoàn thành"
+    case "cancelled": return "Đã hủy"
+    default: return status
+  }
 }
 
 onMounted(loadOrder)
