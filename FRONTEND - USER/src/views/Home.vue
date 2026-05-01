@@ -43,9 +43,7 @@
               Phụ kiện chất lượng cao, giá tốt cho mọi dòng điện thoại
             </p>
 
-            <div
-              class="d-flex flex-column flex-sm-row gap-4 justify-content-center"
-            >
+            <div class="d-flex flex-column flex-sm-row gap-4 justify-content-center">
               <router-link
                 to="/products"
                 class="btn btn-danger btn-lg px-6 py-4 rounded-pill fw-bold shadow-lg fs-4"
@@ -78,11 +76,7 @@
         <div class="row row-cols-2 row-cols-md-4 row-cols-lg-6 g-4 text-center">
           <div class="col" v-for="brand in brands" :key="brand.name">
             <div class="genre-icon mx-auto mb-2">
-              <img
-                :src="brand.logo"
-                :alt="brand.name"
-                class="img-fluid rounded-circle"
-              />
+              <img :src="brand.logo" :alt="brand.name" class="img-fluid rounded-circle" />
             </div>
             {{ brand.name }}
           </div>
@@ -93,25 +87,16 @@
     <!-- VIDEO BANNER CHÍNH -->
     <section class="py-5 bg-dark text-white">
       <div class="container text-center">
-        <h2 class="fw-bold mb-4">
-          Bộ sưu tập phụ kiện điện thoại mới nhất 2025
-        </h2>
-
+        <h2 class="fw-bold mb-4">Bộ sưu tập phụ kiện điện thoại mới nhất 2025</h2>
         <video
           ref="mainVideoRef"
           class="img-fluid rounded-4 shadow-lg"
-          autoplay
-          muted
-          loop
-          playsinline
+          autoplay muted loop playsinline
           style="max-height: 600px; width: 100%; object-fit: cover"
         >
           <source :src="mainVideo" type="video/mp4" />
         </video>
-
-        <p class="mt-3 text-muted">
-          Khám phá các phụ kiện hot trend dành cho smartphone
-        </p>
+        <p class="mt-3 text-muted">Khám phá các phụ kiện hot trend dành cho smartphone</p>
       </div>
     </section>
 
@@ -119,21 +104,9 @@
     <section class="py-5 bg-light">
       <div class="container">
         <h2 class="fw-bold mb-4 text-center">🎬 Video giới thiệu phụ kiện</h2>
-
         <div class="d-flex flex-wrap gap-3 justify-content-center">
-          <div
-            v-for="(video, index) in smallVideos"
-            :key="index"
-            class="small-video-card"
-          >
-            <video
-              :src="video"
-              autoplay
-              muted
-              loop
-              playsinline
-              class="rounded shadow-sm"
-            ></video>
+          <div v-for="(video, index) in smallVideos" :key="index" class="small-video-card">
+            <video :src="video" autoplay muted loop playsinline class="rounded shadow-sm"></video>
           </div>
         </div>
       </div>
@@ -143,35 +116,20 @@
     <section class="py-6 featured-products">
       <div class="container">
         <div class="d-flex justify-content-between align-items-center mb-4">
-          <h2 class="fw-bold display-6 text-white mb-0">
-            🔥 Phụ kiện bán chạy
-          </h2>
-          <router-link
-            to="/products"
-            class="btn btn-outline-light rounded-pill px-4 fw-bold"
-          >
+          <h2 class="fw-bold display-6 text-white mb-0">🔥 Phụ kiện bán chạy</h2>
+          <router-link to="/products" class="btn btn-outline-light rounded-pill px-4 fw-bold">
             Xem tất cả →
           </router-link>
         </div>
 
         <div class="featured-scroll">
-          <div
-            v-for="product in hotProducts"
-            :key="product._id"
-            class="featured-card"
-          >
+          <div v-for="product in hotProducts" :key="product._id" class="featured-card">
             <router-link :to="`/products/${product._id}`" class="card-inner">
               <span class="badge-hot">HOT</span>
-              <img
-                :src="smallCover(getProductImage(product))"
-                alt=""
-                class="product-img"
-              />
+              <img :src="smallCover(getProductImage(product))" alt="" class="product-img" />
               <div class="card-info">
                 <h6 class="product-name">{{ product.name }}</h6>
-                <p class="product-price">
-                  {{ product.price?.toLocaleString() }}₫
-                </p>
+                <p class="product-price">{{ product.price?.toLocaleString() }}₫</p>
                 <p class="product-sold">🔥 Đã bán {{ product.sold || 0 }}</p>
                 <button class="btn-buy">Xem chi tiết</button>
               </div>
@@ -181,7 +139,7 @@
       </div>
     </section>
 
-    <!-- CHỨC NĂNG 1: FLASH SALE SECTION -->
+    <!-- FLASH SALE SECTION -->
     <section class="py-6 flash-sale-section">
       <div class="container">
         <div class="flash-sale-header mb-5">
@@ -208,19 +166,11 @@
         </div>
 
         <div class="row g-4">
-          <div
-            v-for="product in flashSaleProducts"
-            :key="product._id"
-            class="col-md-6 col-lg-3"
-          >
+          <div v-for="product in flashSaleProducts" :key="product._id" class="col-md-6 col-lg-3">
             <div class="flash-sale-card">
               <router-link :to="`/products/${product._id}`">
                 <div class="flash-sale-image-wrapper">
-                  <img
-                    :src="smallCover(getProductImage(product))"
-                    alt=""
-                    class="flash-sale-image"
-                  />
+                  <img :src="smallCover(getProductImage(product))" alt="" class="flash-sale-image" />
                   <div class="discount-badge">-{{ product.discount || 15 }}%</div>
                 </div>
                 <div class="flash-sale-info">
@@ -238,7 +188,7 @@
       </div>
     </section>
 
-    <!-- CHỨC NĂNG 2: REVIEWS/TESTIMONIALS SECTION -->
+    <!-- ✅ REVIEWS THẬT — lấy từ API -->
     <section class="py-6 reviews-section">
       <div class="container">
         <div class="text-center mb-5">
@@ -246,38 +196,60 @@
           <p class="text-muted fs-5">Nghe ý kiến từ những khách hàng hài lòng của chúng tôi</p>
         </div>
 
-        <div class="reviews-container">
-          <div
-            v-for="review in reviews"
-            :key="review.id"
-            class="review-card"
-          >
+        <!-- Loading -->
+        <div v-if="reviewsLoading" class="text-center py-5">
+          <div class="spinner-border text-primary" role="status"></div>
+          <p class="mt-2 text-muted">Đang tải đánh giá...</p>
+        </div>
+
+        <!-- Danh sách review thật -->
+        <div v-else-if="latestReviews.length" class="reviews-container">
+          <div v-for="review in latestReviews" :key="review._id" class="review-card">
             <div class="review-header">
               <div class="reviewer-info">
-                <img :src="review.avatar" alt="" class="reviewer-avatar" />
+                <!-- Avatar chữ cái đầu như ReviewSection -->
+                <div class="reviewer-avatar-text">
+                  {{ review.userInfo?.name?.charAt(0)?.toUpperCase() || "U" }}
+                </div>
                 <div>
-                  <h6 class="reviewer-name">{{ review.name }}</h6>
-                  <span class="reviewer-date">{{ review.date }}</span>
+                  <h6 class="reviewer-name">{{ review.userInfo?.name || "Người dùng" }}</h6>
+                  <span class="reviewer-date">{{ formatDate(review.createdAt) }}</span>
                 </div>
               </div>
               <div class="review-stars">
-                <span v-for="star in 5" :key="star" class="star" :class="{ filled: star <= review.rating }">★</span>
+                <span
+                  v-for="star in 5"
+                  :key="star"
+                  class="star"
+                  :class="{ filled: star <= review.rating }"
+                >★</span>
               </div>
             </div>
+
+            <p v-if="review.title" class="review-title-text">{{ review.title }}</p>
             <p class="review-text">{{ review.comment }}</p>
-            <span class="review-product">{{ review.product }}</span>
+
+            <!-- Tên sản phẩm nếu có -->
+            <span v-if="review.productName" class="review-product">
+              {{ review.productName }}
+            </span>
           </div>
         </div>
 
+        <!-- Không có review -->
+        <div v-else class="text-center py-5 text-muted">
+          <p>Chưa có đánh giá nào. Hãy mua hàng và để lại đánh giá! 🌟</p>
+        </div>
+
         <div class="text-center mt-5">
-          <button class="btn btn-outline-primary rounded-pill px-5 py-3 fw-bold">
-            Xem tất cả đánh giá →
-          </button>
+          <router-link to="/products" class="btn btn-outline-primary rounded-pill px-5 py-3 fw-bold">
+            Mua hàng & đánh giá →
+          </router-link>
         </div>
       </div>
     </section>
 
-    <!-- CHỨC NĂNG 3: NEW ARRIVALS SECTION -->
+    <!-- NEW ARRIVALS SECTION -->
     <section class="py-6 new-arrivals-section">
       <div class="container">
         <div class="d-flex justify-content-between align-items-center mb-5">
@@ -285,27 +257,16 @@
             <h2 class="fw-bold mb-2">📱 Sản Phẩm Mới Nhất</h2>
             <p class="text-muted">Khám phá các phụ kiện mới vừa về hàng</p>
           </div>
-          <router-link
-            to="/products"
-            class="btn btn-primary rounded-pill px-4 fw-bold"
-          >
+          <router-link to="/products" class="btn btn-primary rounded-pill px-4 fw-bold">
             Xem tất cả →
           </router-link>
         </div>
 
         <div class="new-arrivals-grid">
-          <div
-            v-for="product in newArrivals"
-            :key="product._id"
-            class="new-arrival-item"
-          >
+          <div v-for="product in newArrivals" :key="product._id" class="new-arrival-item">
             <router-link :to="`/products/${product._id}`" class="arrival-card">
               <div class="arrival-image-wrapper">
-                <img
-                  :src="smallCover(getProductImage(product))"
-                  alt=""
-                  class="arrival-image"
-                />
+                <img :src="smallCover(getProductImage(product))" alt="" class="arrival-image" />
                 <span class="new-badge">NEW</span>
               </div>
               <div class="arrival-info">
@@ -331,35 +292,10 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from "vue";
 import productService from "@/services/product.service";
+import ReviewService from "@/services/review.service";
 import mainVideo from "@/assets/video/Banner Chính.mp4";
 import heroImage from "@/assets/img/BannerPhone.jpg";
 
-/* Video phụ */
-const smallVideos = Array(12).fill(mainVideo);
-
-/* Nút điều khiển video */
-const mainVideoRef = ref(null);
-const allPlaying = ref(true);
-
-/* Toggle video chính + 12 video nhỏ */
-const toggleAllVideos = () => {
-  // Chọn video chính
-  const videos = [];
-  if (mainVideoRef.value) videos.push(mainVideoRef.value);
-
-  // Chọn 12 video nhỏ
-  const smallVideoElements = document.querySelectorAll(
-    ".small-video-card video"
-  );
-  smallVideoElements.forEach((v) => videos.push(v));
-
-  if (allPlaying.value) videos.forEach((v) => v.pause());
-  else videos.forEach((v) => v.play());
-
-  allPlaying.value = !allPlaying.value;
-};
-
-//* Import trực tiếp ảnh hãng */
 import TaiNghe from "@/assets/img/Tai nghe.jpg";
 import CuSac from "@/assets/img/Củ sạc.jpg";
 import CapSac from "@/assets/img/Cáp sạc.jpg";
@@ -367,7 +303,23 @@ import KinhCuongLuc from "@/assets/img/Kính cường lực.jpg";
 import PinDuPhong from "@/assets/img/Pin dự phòng.jpg";
 import SacKhongDay from "@/assets/img/Sạc không dây.jpg";
 
-/* Danh sách brands */
+/* Video phụ */
+const smallVideos = Array(12).fill(mainVideo);
+
+/* Video refs */
+const mainVideoRef = ref(null);
+const allPlaying = ref(true);
+
+const toggleAllVideos = () => {
+  const videos = [];
+  if (mainVideoRef.value) videos.push(mainVideoRef.value);
+  document.querySelectorAll(".small-video-card video").forEach((v) => videos.push(v));
+  if (allPlaying.value) videos.forEach((v) => v.pause());
+  else videos.forEach((v) => v.play());
+  allPlaying.value = !allPlaying.value;
+};
+
+/* Brands */
 const brands = [
   { name: "Tai Nghe", logo: TaiNghe },
   { name: "Củ sạc", logo: CuSac },
@@ -377,100 +329,79 @@ const brands = [
   { name: "Sạc không dây", logo: SacKhongDay },
 ];
 
-/* Sản phẩm nổi bật */
+/* Sản phẩm */
 const hotProducts = ref([]);
-
-/* CHỨC NĂNG 1: FLASH SALE */
 const flashSaleProducts = ref([]);
+const newArrivals = ref([]);
+
+/* ✅ Reviews thật */
+const latestReviews = ref([]);
+const reviewsLoading = ref(false);
+
+/* Countdown */
 const countdownTimer = ref({ hours: 2, minutes: 30, seconds: 45 });
 let countdownInterval = null;
 
 const startCountdown = () => {
   countdownInterval = setInterval(() => {
-    let seconds = countdownTimer.value.seconds - 1;
-    let minutes = countdownTimer.value.minutes;
-    let hours = countdownTimer.value.hours;
-
-    if (seconds < 0) {
-      seconds = 59;
-      minutes -= 1;
-    }
-    if (minutes < 0) {
-      minutes = 59;
-      hours -= 1;
-    }
-    if (hours < 0) {
-      hours = 2;
-      minutes = 30;
-      seconds = 45;
-    }
-
+    let { hours, minutes, seconds } = countdownTimer.value;
+    seconds--;
+    if (seconds < 0) { seconds = 59; minutes--; }
+    if (minutes < 0) { minutes = 59; hours--; }
+    if (hours < 0) { hours = 2; minutes = 30; seconds = 45; }
     countdownTimer.value = { hours, minutes, seconds };
   }, 1000);
 };
 
-/* CHỨC NĂNG 2: REVIEWS/TESTIMONIALS */
-const reviews = ref([
-  {
-    id: 1,
-    name: "Nguyễn Thị Hương",
-    avatar: "https://i.pravatar.cc/100?img=1",
-    date: "2 ngày trước",
-    rating: 5,
-    comment: "Sản phẩm chất lượng, giao hàng nhanh. Đóng gói cẩn thận, tôi rất hài lòng!",
-    product: "Ốp lưng iPhone 15",
-  },
-  {
-    id: 2,
-    name: "Trần Minh Quân",
-    avatar: "https://i.pravatar.cc/100?img=2",
-    date: "1 tuần trước",
-    rating: 5,
-    comment: "Tai nghe này chất âm tuyệt vời, pin cũng rất bền. Giá còn rất hợp lý.",
-    product: "Tai nghe Bluetooth",
-  },
-  {
-    id: 3,
-    name: "Lê Phương Linh",
-    avatar: "https://i.pravatar.cc/100?img=3",
-    date: "2 tuần trước",
-    rating: 4,
-    comment: "Sạc nhanh rất tốt, chỉ tiếc là không có màu sắc đa dạng hơn.",
-    product: "Sạc nhanh 65W",
-  },
-  {
-    id: 4,
-    name: "Phạm Huy Hoàng",
-    avatar: "https://i.pravatar.cc/100?img=4",
-    date: "3 tuần trước",
-    rating: 5,
-    comment: "Pin dự phòng này dùng rất tốt, sạc đầy nhanh và không phát nóng.",
-    product: "Pin dự phòng 30000mAh",
-  },
-]);
+/* ✅ Load reviews thật từ nhiều sản phẩm bán chạy */
+async function loadLatestReviews(products = []) {
+  reviewsLoading.value = true;
+  try {
+    const collected = [];
 
-/* CHỨC NĂNG 3: NEW ARRIVALS */
-const newArrivals = ref([]);
+    // Lấy review từ tối đa 6 sản phẩm đầu tiên
+    const targets = products.slice(0, 6);
+    await Promise.all(
+      targets.map(async (p) => {
+        try {
+          const res = await ReviewService.getByProduct(p._id, { page: 1, limit: 3 });
+          const reviews = res.reviews || [];
+          // Gắn tên sản phẩm vào mỗi review để hiển thị
+          reviews.forEach((r) => {
+            r.productName = p.name;
+          });
+          collected.push(...reviews);
+        } catch (_) {}
+      })
+    );
 
-const productCover = (product) => {
-  if (!product) return "https://via.placeholder.com/112x160";
-  let url = product.image?.url || product.thumbnail || product.image || null;
-  if (!url) return "https://via.placeholder.com/112x160";
-  if (url.includes("cloudinary"))
-    return url.replace("/upload/", "/upload/c_fill,w_112,h_160,q_auto,f_auto/");
-  return url;
-};
+    // Chỉ lấy review 5 sao + sắp xếp mới nhất, giới hạn 8 cái
+    latestReviews.value = collected
+      .filter((r) => r.rating >= 4)
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      .slice(0, 8);
+  } catch (_) {
+  } finally {
+    reviewsLoading.value = false;
+  }
+}
 
+/* Format ngày */
+function formatDate(dateStr) {
+  return new Date(dateStr).toLocaleDateString("vi-VN", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+}
+
+/* Image helpers */
 const getProductImage = (product) => {
   if (!product) return null;
   if (typeof product.image === "string") return product.image;
   if (typeof product.thumbnail === "string") return product.thumbnail;
   if (Array.isArray(product.images))
-    return (
-      product.images[0]?.secure_url ||
-      product.images[0]?.url ||
-      product.images[0]
-    );
+    return product.images[0]?.secure_url || product.images[0]?.url || product.images[0];
   return null;
 };
 
@@ -481,538 +412,213 @@ const smallCover = (url) => {
   return url;
 };
 
-/* Lấy dữ liệu ban đầu */
 onMounted(async () => {
   try {
-    const res = await productService.getAll({
-      limit: 12,
-      sortBy: "sold",
-      sortOrder: "desc",
-    });
+    const res = await productService.getAll({ limit: 12, sortBy: "sold", sortOrder: "desc" });
     const products = (res.products || res).slice(0, 12);
-    
+
     hotProducts.value = products.slice(0, 8);
     flashSaleProducts.value = products.slice(0, 4);
     newArrivals.value = products.slice(4, 12);
+
+    // ✅ Load reviews thật sau khi có danh sách sản phẩm
+    await loadLatestReviews(products);
   } catch (err) {
     console.log(err);
   }
-  
+
   startCountdown();
 });
 
 onUnmounted(() => {
   if (countdownInterval) clearInterval(countdownInterval);
 });
-
 </script>
 
 <style scoped>
 /* VIDEO CONTROL LEFT */
 .video-control-global-left {
   position: fixed;
-  bottom: 30px;
-  left: 30px;
+  bottom: 30px; left: 30px;
   z-index: 9999;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  display: flex; flex-direction: column; gap: 8px;
 }
 .video-control-global-left button {
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.5);
   transition: transform 0.3s, box-shadow 0.3s;
 }
 .video-control-global-left button:hover {
   transform: translateY(-3px) scale(1.05);
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 12px 28px rgba(0,0,0,0.6);
 }
 
 /* Featured products */
-.featured-products {
-  background: linear-gradient(135deg, #1e1b4b, #020617);
-}
-.featured-scroll {
-  display: flex;
-  gap: 24px;
-  overflow-x: auto;
-  scroll-snap-type: x mandatory;
-}
-.featured-card {
-  flex: 0 0 200px;
-  scroll-snap-align: start;
-}
+.featured-products { background: linear-gradient(135deg, #1e1b4b, #020617); }
+.featured-scroll { display: flex; gap: 24px; overflow-x: auto; scroll-snap-type: x mandatory; }
+.featured-card { flex: 0 0 200px; scroll-snap-align: start; }
 .card-inner {
-  position: relative;
-  display: block;
-  background: #0f172a;
-  border-radius: 20px;
-  overflow: hidden;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
-  transition: 0.35s;
-  text-decoration: none;
-  color: white;
+  position: relative; display: block;
+  background: #0f172a; border-radius: 20px; overflow: hidden;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+  transition: 0.35s; text-decoration: none; color: white;
 }
-.card-inner:hover {
-  transform: translateY(-8px) scale(1.04);
-  box-shadow: 0 30px 80px rgba(99, 102, 241, 0.6);
-}
-.product-img {
-  width: 100%;
-  height: 260px;
-  object-fit: cover;
-}
-.card-info {
-  padding: 14px;
-}
-.product-name {
-  font-weight: 700;
-  margin-bottom: 6px;
-}
-.product-price {
-  color: #fde047;
-  font-weight: bold;
-}
-.product-sold {
-  font-size: 0.8rem;
-  opacity: 0.8;
-}
+.card-inner:hover { transform: translateY(-8px) scale(1.04); box-shadow: 0 30px 80px rgba(99,102,241,0.6); }
+.product-img { width: 100%; height: 260px; object-fit: cover; }
+.card-info { padding: 14px; }
+.product-name { font-weight: 700; margin-bottom: 6px; }
+.product-price { color: #fde047; font-weight: bold; }
+.product-sold { font-size: 0.8rem; opacity: 0.8; }
 .btn-buy {
-  margin-top: 10px;
-  width: 100%;
-  padding: 8px;
-  border-radius: 999px;
-  border: none;
-  font-weight: bold;
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
-  color: white;
-  opacity: 0;
-  transform: translateY(10px);
-  transition: 0.3s;
+  margin-top: 10px; width: 100%; padding: 8px; border-radius: 999px; border: none;
+  font-weight: bold; background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white;
+  opacity: 0; transform: translateY(10px); transition: 0.3s;
 }
-.card-inner:hover .btn-buy {
-  opacity: 1;
-  transform: translateY(0);
-}
+.card-inner:hover .btn-buy { opacity: 1; transform: translateY(0); }
 .badge-hot {
-  position: absolute;
-  top: 12px;
-  left: 12px;
-  padding: 6px 12px;
-  font-size: 0.75rem;
-  font-weight: bold;
-  border-radius: 999px;
+  position: absolute; top: 12px; left: 12px;
+  padding: 6px 12px; font-size: 0.75rem; font-weight: bold; border-radius: 999px;
   background: linear-gradient(135deg, #ef4444, #f97316);
 }
 .small-video-card video {
-  width: 180px;
-  height: 100px;
-  object-fit: cover;
-  border-radius: 12px;
-  border: 1px solid rgba(0, 0, 0, 0.1);
+  width: 180px; height: 100px; object-fit: cover;
+  border-radius: 12px; border: 1px solid rgba(0,0,0,0.1);
   transition: transform 0.3s, box-shadow 0.3s;
 }
-.small-video-card video:hover {
-  transform: scale(1.05);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
-}
+.small-video-card video:hover { transform: scale(1.05); box-shadow: 0 8px 20px rgba(0,0,0,0.4); }
 
-/* ========== FLASH SALE SECTION ========== */
+/* FLASH SALE */
 .flash-sale-section {
   background: linear-gradient(135deg, #fef3c7 0%, #fef08a 100%);
-  position: relative;
-  overflow: hidden;
+  position: relative; overflow: hidden;
 }
-
 .flash-sale-section::before {
-  content: "";
-  position: absolute;
-  top: -50%;
-  right: -10%;
-  width: 500px;
-  height: 500px;
-  background: rgba(255, 193, 7, 0.1);
-  border-radius: 50%;
+  content: ""; position: absolute; top: -50%; right: -10%;
+  width: 500px; height: 500px; background: rgba(255,193,7,0.1); border-radius: 50%;
 }
-
 .flash-sale-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 20px;
-  position: relative;
-  z-index: 1;
+  display: flex; justify-content: space-between;
+  align-items: center; flex-wrap: wrap; gap: 20px; position: relative; z-index: 1;
 }
-
-.flash-sale-title {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-}
-
+.flash-sale-title { display: flex; align-items: center; gap: 15px; }
 .flash-badge {
-  display: inline-block;
-  background: linear-gradient(135deg, #ef4444, #f97316);
-  color: white;
-  padding: 8px 16px;
-  border-radius: 50px;
-  font-weight: 700;
-  font-size: 0.9rem;
-  animation: pulse 1.5s infinite;
+  display: inline-block; background: linear-gradient(135deg, #ef4444, #f97316);
+  color: white; padding: 8px 16px; border-radius: 50px;
+  font-weight: 700; font-size: 0.9rem; animation: pulse 1.5s infinite;
 }
-
-@keyframes pulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.05); }
-}
-
+@keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
 .countdown-timer {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: white;
-  padding: 15px 25px;
-  border-radius: 50px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  display: flex; align-items: center; gap: 8px;
+  background: white; padding: 15px 25px; border-radius: 50px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
 }
-
-.timer-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  min-width: 50px;
-}
-
-.timer-value {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #ef4444;
-}
-
-.timer-label {
-  font-size: 0.7rem;
-  color: #666;
-  margin-top: 2px;
-}
-
-.timer-separator {
-  font-size: 1.5rem;
-  color: #ef4444;
-  font-weight: 700;
-  margin: 0 5px;
-}
-
-.flash-sale-card {
-  position: relative;
-  height: 100%;
-}
-
-.flash-sale-card a {
-  text-decoration: none;
-  color: inherit;
-}
-
+.timer-item { display: flex; flex-direction: column; align-items: center; min-width: 50px; }
+.timer-value { font-size: 1.5rem; font-weight: 700; color: #ef4444; }
+.timer-label { font-size: 0.7rem; color: #666; margin-top: 2px; }
+.timer-separator { font-size: 1.5rem; color: #ef4444; font-weight: 700; margin: 0 5px; }
+.flash-sale-card a { text-decoration: none; color: inherit; }
 .flash-sale-image-wrapper {
-  position: relative;
-  overflow: hidden;
-  border-radius: 12px;
-  background: white;
-  margin-bottom: 12px;
+  position: relative; overflow: hidden; border-radius: 12px;
+  background: white; margin-bottom: 12px;
 }
-
-.flash-sale-image {
-  width: 100%;
-  height: 220px;
-  object-fit: cover;
-  transition: transform 0.3s;
-}
-
-.flash-sale-card:hover .flash-sale-image {
-  transform: scale(1.1);
-}
-
+.flash-sale-image { width: 100%; height: 220px; object-fit: cover; transition: transform 0.3s; }
+.flash-sale-card:hover .flash-sale-image { transform: scale(1.1); }
 .discount-badge {
-  position: absolute;
-  top: 10px;
-  right: 10px;
+  position: absolute; top: 10px; right: 10px;
   background: linear-gradient(135deg, #ef4444, #f97316);
-  color: white;
-  padding: 6px 12px;
-  border-radius: 8px;
-  font-weight: 700;
-  font-size: 0.85rem;
+  color: white; padding: 6px 12px; border-radius: 8px; font-weight: 700; font-size: 0.85rem;
 }
-
-.flash-sale-info {
-  padding: 12px;
-}
-
-.price-wrapper {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  margin: 8px 0;
-}
-
-.original-price {
-  text-decoration: line-through;
-  color: #999;
-  font-size: 0.9rem;
-}
-
-.sale-price {
-  color: #ef4444;
-  font-weight: 700;
-  font-size: 1.1rem;
-}
-
+.flash-sale-info { padding: 12px; }
+.price-wrapper { display: flex; gap: 8px; align-items: center; margin: 8px 0; }
+.original-price { text-decoration: line-through; color: #999; font-size: 0.9rem; }
+.sale-price { color: #ef4444; font-weight: 700; font-size: 1.1rem; }
 .btn-add-cart {
-  width: 100%;
-  padding: 10px;
-  border: none;
+  width: 100%; padding: 10px; border: none;
   background: linear-gradient(135deg, #fbbf24, #f59e0b);
-  color: white;
-  border-radius: 8px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s;
-  margin-top: 8px;
+  color: white; border-radius: 8px; font-weight: 600; cursor: pointer;
+  transition: all 0.3s; margin-top: 8px;
 }
+.btn-add-cart:hover { transform: scale(1.02); box-shadow: 0 4px 12px rgba(245,158,11,0.4); }
 
-.btn-add-cart:hover {
-  transform: scale(1.02);
-  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
-}
-
-/* ========== REVIEWS SECTION ========== */
-.reviews-section {
-  background: white;
-  position: relative;
-}
-
+/* ✅ REVIEWS THẬT */
+.reviews-section { background: white; position: relative; }
 .reviews-container {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 24px;
-  margin-bottom: 30px;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 24px; margin-bottom: 30px;
 }
-
 .review-card {
-  background: #f9fafb;
-  border: 1px solid #e5e7eb;
-  border-radius: 16px;
-  padding: 24px;
-  transition: all 0.3s;
+  background: #f9fafb; border: 1px solid #e5e7eb;
+  border-radius: 16px; padding: 24px; transition: all 0.3s;
 }
-
 .review-card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
-  border-color: #d1d5db;
+  box-shadow: 0 12px 24px rgba(0,0,0,0.1); border-color: #d1d5db;
 }
-
 .review-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 16px;
+  display: flex; justify-content: space-between;
+  align-items: flex-start; margin-bottom: 16px;
 }
+.reviewer-info { display: flex; gap: 12px; align-items: center; }
 
-.reviewer-info {
-  display: flex;
-  gap: 12px;
+/* Avatar chữ cái — đồng bộ với ReviewSection */
+.reviewer-avatar-text {
+  width: 48px; height: 48px; border-radius: 50%;
+  background: linear-gradient(135deg, #2563eb, #7c3aed);
+  color: white; font-weight: 700; font-size: 18px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
 }
-
-.reviewer-avatar {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  object-fit: cover;
-}
-
-.reviewer-name {
-  font-weight: 600;
-  margin-bottom: 4px;
-  color: #111827;
-}
-
-.reviewer-date {
-  font-size: 0.85rem;
-  color: #9ca3af;
-}
-
-.review-stars {
-  display: flex;
-  gap: 4px;
-}
-
-.star {
-  font-size: 1.2rem;
-  color: #d1d5db;
-  transition: color 0.2s;
-}
-
-.star.filled {
-  color: #fbbf24;
-}
-
-.review-text {
-  color: #4b5563;
-  line-height: 1.6;
-  margin-bottom: 12px;
-  font-size: 0.95rem;
-}
-
+.reviewer-name { font-weight: 600; margin-bottom: 4px; color: #111827; }
+.reviewer-date { font-size: 0.85rem; color: #9ca3af; }
+.review-stars { display: flex; gap: 4px; }
+.star { font-size: 1.2rem; color: #d1d5db; }
+.star.filled { color: #fbbf24; }
+.review-title-text { font-weight: 600; font-size: 0.95rem; margin-bottom: 6px; color: #111827; }
+.review-text { color: #4b5563; line-height: 1.6; margin-bottom: 12px; font-size: 0.95rem; }
 .review-product {
-  display: inline-block;
-  background: #dbeafe;
-  color: #1e40af;
-  padding: 6px 12px;
-  border-radius: 20px;
-  font-size: 0.85rem;
-  font-weight: 500;
+  display: inline-block; background: #dbeafe; color: #1e40af;
+  padding: 6px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 500;
 }
 
-/* ========== NEW ARRIVALS SECTION ========== */
-.new-arrivals-section {
-  background: linear-gradient(135deg, #f3f4f6 0%, #ffffff 100%);
-  position: relative;
-}
-
-.new-arrivals-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 20px;
-}
-
-.new-arrival-item {
-  perspective: 1000px;
-}
-
-.arrival-card {
-  display: block;
-  text-decoration: none;
-  color: inherit;
-  height: 100%;
-  transition: all 0.3s;
-}
-
+/* NEW ARRIVALS */
+.new-arrivals-section { background: linear-gradient(135deg, #f3f4f6 0%, #ffffff 100%); }
+.new-arrivals-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px; }
+.arrival-card { display: block; text-decoration: none; color: inherit; height: 100%; transition: all 0.3s; }
 .arrival-image-wrapper {
-  position: relative;
-  overflow: hidden;
-  border-radius: 12px;
-  background: white;
-  margin-bottom: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  position: relative; overflow: hidden; border-radius: 12px;
+  background: white; margin-bottom: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08);
 }
-
-.arrival-image {
-  width: 100%;
-  height: 200px;
-  object-fit: cover;
-  transition: transform 0.3s;
-}
-
-.new-arrival-item:hover .arrival-image {
-  transform: scale(1.15) rotate(2deg);
-}
-
+.arrival-image { width: 100%; height: 200px; object-fit: cover; transition: transform 0.3s; }
+.new-arrival-item:hover .arrival-image { transform: scale(1.15) rotate(2deg); }
 .new-badge {
-  position: absolute;
-  top: 10px;
-  left: 10px;
+  position: absolute; top: 10px; left: 10px;
   background: linear-gradient(135deg, #10b981, #059669);
-  color: white;
-  padding: 6px 12px;
-  border-radius: 50px;
-  font-weight: 700;
-  font-size: 0.75rem;
-  animation: fadeInOut 2s infinite;
+  color: white; padding: 6px 12px; border-radius: 50px;
+  font-weight: 700; font-size: 0.75rem; animation: fadeInOut 2s infinite;
 }
-
-@keyframes fadeInOut {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; }
-}
-
-.arrival-info {
-  padding: 12px;
-}
-
-.product-rating {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin: 8px 0;
-  font-size: 0.9rem;
-}
-
-.stars {
-  color: #fbbf24;
-  font-weight: 600;
-}
-
-.rating-count {
-  color: #9ca3af;
-  font-size: 0.85rem;
-}
-
+@keyframes fadeInOut { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+.arrival-info { padding: 12px; }
+.product-rating { display: flex; align-items: center; gap: 6px; margin: 8px 0; font-size: 0.9rem; }
+.stars { color: #fbbf24; font-weight: 600; }
+.rating-count { color: #9ca3af; font-size: 0.85rem; }
 .button-group {
-  display: flex;
-  gap: 8px;
-  margin-top: 12px;
-  opacity: 0;
-  transform: translateY(10px);
-  transition: all 0.3s;
+  display: flex; gap: 8px; margin-top: 12px;
+  opacity: 0; transform: translateY(10px); transition: all 0.3s;
 }
-
-.new-arrival-item:hover .button-group {
-  opacity: 1;
-  transform: translateY(0);
+.new-arrival-item:hover .button-group { opacity: 1; transform: translateY(0); }
+.btn-like, .btn-cart {
+  flex: 1; padding: 8px; border: 1px solid #e5e7eb;
+  background: white; border-radius: 8px; cursor: pointer; font-size: 1.2rem; transition: all 0.3s;
 }
-
-.btn-like,
-.btn-cart {
-  flex: 1;
-  padding: 8px;
-  border: 1px solid #e5e7eb;
-  background: white;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 1.2rem;
-  transition: all 0.3s;
-}
-
-.btn-like:hover {
-  background: #fee2e2;
-  border-color: #ef4444;
-}
-
-.btn-cart:hover {
-  background: #dbeafe;
-  border-color: #3b82f6;
-}
+.btn-like:hover { background: #fee2e2; border-color: #ef4444; }
+.btn-cart:hover { background: #dbeafe; border-color: #3b82f6; }
 
 /* Responsive */
 @media (max-width: 768px) {
-  .flash-sale-header {
-    flex-direction: column;
-  }
-
-  .countdown-timer {
-    padding: 12px 20px;
-  }
-
-  .timer-value {
-    font-size: 1.2rem;
-  }
-
-  .reviews-container {
-    grid-template-columns: 1fr;
-  }
-
-  .new-arrivals-grid {
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  }
+  .flash-sale-header { flex-direction: column; }
+  .countdown-timer { padding: 12px 20px; }
+  .timer-value { font-size: 1.2rem; }
+  .reviews-container { grid-template-columns: 1fr; }
+  .new-arrivals-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
 }
 </style>

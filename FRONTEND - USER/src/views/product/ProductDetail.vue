@@ -108,7 +108,7 @@
     <!-- ================= SHOP ================= -->
     <div class="shop-card">
       <div>
-        <b>Laptop Nhựt Anh Store</b>
+        <b>Nhựt Anh Store</b>
         <p>⭐ 4.9 | 1.2k sản phẩm</p>
       </div>
       <div>
@@ -147,7 +147,6 @@
         </div>
       </div>
 
-      <!-- ✅ REVIEW — dùng ReviewSection thật -->
       <div v-if="tab === 'Đánh giá'" class="tab-content">
         <ProductReview
           :product-id="product._id"
