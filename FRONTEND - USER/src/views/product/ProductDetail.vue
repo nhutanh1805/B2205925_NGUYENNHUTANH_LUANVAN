@@ -1,13 +1,29 @@
 <template>
   <div v-if="product" class="page">
 
-    <!-- ================= TOP ================= -->
-    <div class="product-layout">
+    <!-- ═══════════ HERO BANNER ═══════════ -->
+    <div class="hero-banner">
+      <div class="hero-mesh"></div>
+      <div class="hero-orb hero-orb-1"></div>
+      <div class="hero-orb hero-orb-2"></div>
+      <nav class="breadcrumb">
+        <span>Trang chủ</span>
+        <span class="sep">›</span>
+        <span>Sản phẩm</span>
+        <span class="sep">›</span>
+        <span class="current">{{ product.name }}</span>
+      </nav>
+    </div>
 
-      <!-- ================= GALLERY ================= -->
-      <div>
-        <div class="main-image">
-          <img :src="currentImage" />
+    <!-- ═══════════ PRODUCT LAYOUT ═══════════ -->
+    <div class="product-shell">
+
+      <!-- GALLERY -->
+      <div class="gallery-col">
+        <div class="main-image-wrap">
+          <span v-if="discountPercent" class="badge-sale">-{{ discountPercent }}%</span>
+          <img :src="currentImage" class="main-image" />
+          <div class="image-glow"></div>
         </div>
 
         <div class="thumb-list">
@@ -23,106 +39,124 @@
         </div>
       </div>
 
-      <!-- ================= BUY BOX ================= -->
+      <!-- BUYBOX -->
       <div class="buybox">
 
+        <div class="brand-tag">{{ product.brand || 'Chính hãng' }}</div>
         <h1 class="title">{{ product.name }}</h1>
 
-        <!-- sold -->
-        <div class="sold">
-          ⭐ {{ product.rating || 4.8 }}
-          | Đã bán {{ product.sold }}
+        <div class="meta-row">
+          <div class="stars">
+            <span v-for="i in 5" :key="i" class="star" :class="{ lit: i <= Math.round(product.rating || 4.8) }">★</span>
+            <span class="rating-val">{{ product.rating || 4.8 }}</span>
+          </div>
+          <span class="divider-dot">·</span>
+          <span class="sold-count">Đã bán <b>{{ product.sold }}</b></span>
         </div>
 
-        <!-- price -->
-        <div class="price-box">
-          <span class="sale">
-            {{ formatPrice(product.salePrice || product.price) }}₫
+        <!-- PRICE -->
+        <div class="price-card">
+          <div class="price-inner">
+            <span class="price-sale">{{ formatPrice(product.salePrice || product.price) }}₫</span>
+            <div class="price-right" v-if="product.salePrice">
+              <span class="price-origin">{{ formatPrice(product.price) }}₫</span>
+              <span class="price-badge">Tiết kiệm {{ formatPrice(product.price - product.salePrice) }}₫</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- PERKS -->
+        <div class="perks">
+          <div class="perk">
+            <span class="perk-icon">🎫</span>
+            <span>Giảm thêm <b>50K</b> cho đơn từ 1 triệu</span>
+          </div>
+          <div class="perk">
+            <span class="perk-icon">🚚</span>
+            <span>Giao từ <b>Cần Thơ</b> · Nhận trong <b>2-4 ngày</b></span>
+          </div>
+          <div class="perk">
+            <span class="perk-icon">🛡️</span>
+            <span>Bảo hành <b>{{ product.warrantyMonths }} tháng</b> chính hãng</span>
+          </div>
+        </div>
+
+        <!-- STOCK -->
+        <div class="stock-row">
+          <span class="stock-dot" :class="{ out: product.stock === 0 }"></span>
+          <span class="stock-txt" :class="{ out: product.stock === 0 }">
+            {{ product.stock > 0 ? `Còn ${product.stock} sản phẩm` : 'Hết hàng' }}
           </span>
-
-          <span v-if="product.salePrice" class="origin">
-            {{ formatPrice(product.price) }}₫
-          </span>
-
-          <span v-if="discountPercent" class="discount">
-            -{{ discountPercent }}%
-          </span>
         </div>
 
-        <!-- voucher -->
-        <div class="voucher">
-          🎫 Giảm 50K đơn từ 1tr
+        <!-- QTY -->
+        <div class="qty-row">
+          <span class="qty-label">Số lượng</span>
+          <div class="qty-control">
+            <button class="qty-btn" @click="decrease">−</button>
+            <span class="qty-num">{{ quantity }}</span>
+            <button class="qty-btn" @click="increase">+</button>
+          </div>
         </div>
 
-        <!-- shipping -->
-        <div class="shipping">
-          🚚 Giao từ Cần Thơ • 2-4 ngày
-        </div>
-
-        <!-- stock -->
-        <div class="stock" :class="{ out: product.stock === 0 }">
-          {{ product.stock > 0 ? "Còn hàng" : "Hết hàng" }}
-        </div>
-
-        <!-- quantity -->
-        <div class="qty">
-          <span>Số lượng</span>
-          <button @click="decrease">-</button>
-          <b>{{ quantity }}</b>
-          <button @click="increase">+</button>
-        </div>
-
-        <!-- actions -->
+        <!-- ACTIONS -->
         <div class="actions">
           <button
-            class="btn-primary"
+            class="btn-cart"
             :disabled="product.stock === 0"
             @click="addToCart"
           >
-            🛒 Thêm vào giỏ
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" class="btn-icon">
+              <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
+              <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+            </svg>
+            Thêm vào giỏ
+            <span class="btn-shine"></span>
           </button>
 
-          <button class="btn-success" @click="buyNow">
+          <button class="btn-buy" @click="buyNow">
             ⚡ Mua ngay
           </button>
-
-          <button
-            class="btn-outline"
-            :class="{ favorited: isFavorited }"
-            @click="toggleFavorite"
-          >
-            {{ isFavorited ? "❤️" : "🤍" }} Yêu thích
-          </button>
         </div>
 
-        <!-- trust -->
-        <div class="trust">
-          ✔ Hàng chính hãng &nbsp;
-          ✔ 7 ngày đổi trả &nbsp;
-          ✔ Bảo hành {{ product.warrantyMonths }} tháng
+        <button
+          class="btn-fav"
+          :class="{ favorited: isFavorited }"
+          @click="toggleFavorite"
+        >
+          {{ isFavorited ? '❤️ Đã yêu thích' : '🤍 Thêm vào yêu thích' }}
+        </button>
+
+        <!-- TRUST -->
+        <div class="trust-strip">
+          <div class="trust-item"><span>✔</span> Hàng chính hãng</div>
+          <div class="trust-item"><span>✔</span> 7 ngày đổi trả</div>
+          <div class="trust-item"><span>✔</span> Hỗ trợ 24/7</div>
         </div>
 
       </div>
     </div>
 
-    <!-- ================= SHOP ================= -->
+    <!-- ═══════════ SHOP CARD ═══════════ -->
     <div class="shop-card">
-      <div>
-        <b>Nhựt Anh Store</b>
-        <p>⭐ 4.9 | 1.2k sản phẩm</p>
+      <div class="shop-avatar">NA</div>
+      <div class="shop-info">
+        <b class="shop-name">Nhựt Anh Store</b>
+        <p class="shop-meta">⭐ 4.9 &nbsp;·&nbsp; 1.2k sản phẩm &nbsp;·&nbsp; 98% phản hồi tốt</p>
       </div>
-      <div>
-        <button class="btn-outline">Xem shop</button>
-        <button class="btn-outline">💬 Chat</button>
+      <div class="shop-actions">
+        <button class="shop-btn">Xem shop</button>
+        <button class="shop-btn primary">💬 Chat ngay</button>
       </div>
     </div>
 
-    <!-- ================= TABS ================= -->
-    <div class="tabs">
+    <!-- ═══════════ TABS ═══════════ -->
+    <div class="tabs-block">
       <div class="tab-header">
         <button
           v-for="t in tabs"
           :key="t"
+          class="tab-btn"
           :class="{ active: tab === t }"
           @click="tab = t"
         >
@@ -130,51 +164,66 @@
         </button>
       </div>
 
-      <!-- DESCRIPTION -->
-      <div v-if="tab === 'Mô tả'" class="tab-content">
-        <p>{{ product.description }}</p>
-      </div>
+      <div class="tab-body">
+        <div v-if="tab === 'Mô tả'" class="tab-desc">
+          <p>{{ product.description }}</p>
+        </div>
 
-      <!-- SPECS -->
-      <div v-if="tab === 'Thông số'" class="tab-content">
-        <div
-          v-for="([key, value]) in specEntries"
-          :key="key"
-          class="spec-row"
-        >
-          <span>{{ formatKey(key) }}</span>
-          <b>{{ value }}</b>
+        <div v-if="tab === 'Thông số'" class="tab-specs">
+          <div
+            v-for="([key, value]) in specEntries"
+            :key="key"
+            class="spec-row"
+          >
+            <span class="spec-key">{{ formatKey(key) }}</span>
+            <span class="spec-val">{{ value }}</span>
+          </div>
+        </div>
+
+        <div v-if="tab === 'Đánh giá'" class="tab-content">
+          <ProductReview
+            :product-id="product._id"
+            :current-user-id="currentUserId"
+          />
         </div>
       </div>
+    </div>
 
-      <div v-if="tab === 'Đánh giá'" class="tab-content">
-        <ProductReview
-          :product-id="product._id"
-          :current-user-id="currentUserId"
-        />
+    <!-- ═══════════ RELATED ═══════════ -->
+    <div class="related-section">
+      <div class="section-header">
+        <h2 class="section-title">Có thể bạn cũng thích</h2>
+        <div class="section-line"></div>
+      </div>
+
+      <div class="related-grid">
+        <div
+          v-for="(item, idx) in related"
+          :key="item._id"
+          class="rcard"
+          :style="`--delay:${idx * 0.06}s`"
+          @click="goProduct(item._id)"
+        >
+          <div class="rcard-img-wrap">
+            <img :src="item.images[0]" class="rcard-img" />
+            <div class="rcard-overlay"></div>
+          </div>
+          <div class="rcard-body">
+            <p class="rcard-name">{{ item.name }}</p>
+            <b class="rcard-price">{{ formatPrice(item.salePrice || item.price) }}₫</b>
+          </div>
+        </div>
       </div>
     </div>
 
-    <!-- ================= RELATED ================= -->
-    <h2 class="related-title">Có thể bạn cũng thích</h2>
-
-    <div class="related">
-      <div
-        v-for="item in related"
-        :key="item._id"
-        class="card"
-        @click="goProduct(item._id)"
-      >
-        <img :src="item.images[0]" />
-        <p>{{ item.name }}</p>
-        <b>{{ formatPrice(item.price) }}₫</b>
-      </div>
-    </div>
-
-    <!-- toast -->
+    <!-- TOAST -->
     <transition name="toast">
       <div v-if="showToast" class="toast">
-        ✅ Đã thêm vào giỏ hàng
+        <div class="toast-icon">✓</div>
+        <div class="toast-text">
+          <span class="toast-title">Đã thêm vào giỏ</span>
+          <span class="toast-name">{{ product.name }}</span>
+        </div>
       </div>
     </transition>
 
@@ -186,14 +235,13 @@ import { ref, onMounted, computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import ProductService from "@/services/product.service";
 import CartService from "@/services/cart.service";
-import ProductReview from "@/components/ProductReview.vue"; 
+import ProductReview from "@/components/ProductReview.vue";
 
 const route = useRoute();
 const router = useRouter();
 
 const product = ref(null);
 const related = ref([]);
-
 const currentImage = ref("");
 const quantity = ref(1);
 const showToast = ref(false);
@@ -202,14 +250,11 @@ const isFavorited = ref(false);
 const tabs = ["Mô tả", "Thông số", "Đánh giá"];
 const tab = ref("Mô tả");
 
-// ✅ Lấy userId từ localStorage (hoặc thay bằng store nếu dùng Pinia/Vuex)
 const currentUserId = computed(() => {
   try {
     const user = JSON.parse(localStorage.getItem("user") || "{}");
     return user._id || user.id || "";
-  } catch {
-    return "";
-  }
+  } catch { return ""; }
 });
 
 const discountPercent = computed(() => {
@@ -223,22 +268,15 @@ const specEntries = computed(() => {
 });
 
 const formatPrice = (v) => new Intl.NumberFormat("vi-VN").format(v);
+const formatKey = (k) => k.replace(/([A-Z])/g, " $1").replace(/^./, (s) => s.toUpperCase());
 
-const formatKey = (k) =>
-  k.replace(/([A-Z])/g, " $1").replace(/^./, (s) => s.toUpperCase());
-
-function increase() {
-  if (quantity.value < product.value.stock) quantity.value++;
-}
-
-function decrease() {
-  if (quantity.value > 1) quantity.value--;
-}
+function increase() { if (quantity.value < product.value.stock) quantity.value++; }
+function decrease() { if (quantity.value > 1) quantity.value--; }
 
 async function addToCart() {
   await CartService.addToCart(product.value._id, quantity.value);
   showToast.value = true;
-  setTimeout(() => (showToast.value = false), 2500);
+  setTimeout(() => (showToast.value = false), 2800);
 }
 
 async function buyNow() {
@@ -248,7 +286,6 @@ async function buyNow() {
 
 function toggleFavorite() {
   let fav = JSON.parse(localStorage.getItem("favorite") || "[]");
-
   if (fav.includes(product.value._id)) {
     fav = fav.filter((id) => id !== product.value._id);
     isFavorited.value = false;
@@ -256,225 +293,447 @@ function toggleFavorite() {
     fav.push(product.value._id);
     isFavorited.value = true;
   }
-
   localStorage.setItem("favorite", JSON.stringify(fav));
 }
 
-function goProduct(id) {
-  router.push(`/product/${id}`);
-}
+function goProduct(id) { router.push(`/product/${id}`); }
 
 onMounted(async () => {
   const res = await ProductService.get(route.params.id);
   product.value = res;
-
   currentImage.value = res.images?.[0] || "https://via.placeholder.com/600";
-
   related.value = await ProductService.getRelated(res.category);
-
-  // ✅ Kiểm tra trạng thái yêu thích
   const fav = JSON.parse(localStorage.getItem("favorite") || "[]");
   isFavorited.value = fav.includes(res._id);
 });
 </script>
 
 <style scoped>
-.page { max-width: 1200px; margin: auto; padding: 30px; }
+/* ═══ BASE ═══ */
+.page {
+  min-height: 100vh;
+  background: #f0f4ff;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+}
 
-.product-layout {
+/* ═══ HERO BANNER ═══ */
+.hero-banner {
+  position: relative; overflow: hidden;
+  background: #0a0f1e;
+  padding: 28px 40px 64px;
+}
+.hero-mesh {
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(ellipse 80% 60% at 10% 0%, rgba(37,99,235,.35), transparent),
+    radial-gradient(ellipse 60% 50% at 90% 100%, rgba(124,58,237,.3), transparent),
+    radial-gradient(ellipse 40% 40% at 50% 50%, rgba(16,185,129,.08), transparent);
+}
+.hero-orb { position: absolute; border-radius: 50%; filter: blur(60px); pointer-events: none; }
+.hero-orb-1 { width: 280px; height: 280px; background: rgba(37,99,235,.25); top: -80px; left: -40px; }
+.hero-orb-2 { width: 220px; height: 220px; background: rgba(124,58,237,.2); bottom: -50px; right: -30px; }
+
+.breadcrumb {
+  position: relative; z-index: 2;
+  font-size: .8rem; color: rgba(255,255,255,.45);
+  display: flex; align-items: center; gap: 6px;
+  max-width: 1200px; margin: 0 auto;
+}
+.breadcrumb .sep { color: rgba(255,255,255,.25); }
+.breadcrumb .current { color: rgba(255,255,255,.8); font-weight: 600; }
+
+/* ═══ SHELL ═══ */
+.product-shell {
   display: grid;
   grid-template-columns: 1.1fr 1fr;
-  gap: 40px;
+  gap: 32px;
+  max-width: 1200px;
+  margin: -32px auto 0;
+  padding: 0 24px;
+  position: relative; z-index: 10;
 }
 
-/* gallery */
-.main-image img {
-  width: 100%;
-  height: 450px;
-  object-fit: contain;
-  border: 1px solid #eee;
-  border-radius: 12px;
+/* ═══ GALLERY ═══ */
+.gallery-col { display: flex; flex-direction: column; gap: 14px; }
+
+.main-image-wrap {
+  position: relative;
+  background: white;
+  border-radius: 24px;
+  overflow: hidden;
+  border: 1.5px solid #e8edf8;
+  box-shadow: 0 20px 60px rgba(10,15,30,.1);
+}
+.main-image {
+  width: 100%; height: 440px;
+  object-fit: contain; display: block;
+  transition: transform .4s ease;
+}
+.main-image-wrap:hover .main-image { transform: scale(1.04); }
+.image-glow {
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse 60% 50% at 50% 100%, rgba(37,99,235,.06), transparent);
+  pointer-events: none;
+}
+.badge-sale {
+  position: absolute; top: 14px; left: 14px; z-index: 3;
+  background: linear-gradient(135deg, #e11d48, #f97316);
+  color: white; font-size: .7rem; font-weight: 800;
+  padding: 4px 12px; border-radius: 999px;
+  box-shadow: 0 4px 14px rgba(225,29,72,.4);
+  letter-spacing: .04em;
 }
 
-.thumb-list { display: flex; gap: 10px; margin-top: 10px; }
-
+.thumb-list { display: flex; gap: 10px; }
 .thumb {
-  width: 70px; height: 70px;
+  width: 72px; height: 72px;
   cursor: pointer;
   border: 2px solid transparent;
-  border-radius: 8px;
-  overflow: hidden;
+  border-radius: 14px; overflow: hidden;
+  background: white;
+  box-shadow: 0 4px 14px rgba(10,15,30,.08);
+  transition: all .2s;
 }
-.thumb.active { border-color: #2563eb; }
+.thumb:hover { border-color: #a5b4fc; transform: translateY(-2px); }
+.thumb.active { border-color: #2563eb; box-shadow: 0 4px 18px rgba(37,99,235,.3); }
 .thumb img { width: 100%; height: 100%; object-fit: cover; }
 
-/* buybox */
+/* ═══ BUYBOX ═══ */
 .buybox {
-  border: 1px solid #eee;
-  padding: 24px;
-  border-radius: 12px;
   background: white;
+  border-radius: 24px;
+  padding: 28px;
+  border: 1.5px solid #e8edf8;
+  box-shadow: 0 20px 60px rgba(10,15,30,.1);
+  display: flex; flex-direction: column; gap: 16px;
 }
 
-.title { font-size: 26px; font-weight: 700; }
-
-.sold { color: #6b7280; font-size: 14px; margin: 8px 0; }
-
-.price-box { display: flex; gap: 10px; align-items: center; margin: 12px 0; }
-
-.sale { font-size: 28px; color: #ef4444; font-weight: bold; }
-.origin { text-decoration: line-through; color: #999; }
-.discount {
-  background: #ef4444; color: white;
-  padding: 3px 8px; border-radius: 6px;
-  font-size: 13px; font-weight: 600;
+.brand-tag {
+  display: inline-flex;
+  background: linear-gradient(135deg, #eff6ff, #f5f3ff);
+  border: 1px solid #e0e7ff;
+  color: #4f46e5; font-size: .72rem; font-weight: 800;
+  padding: 4px 14px; border-radius: 999px;
+  letter-spacing: .07em; text-transform: uppercase;
+  align-self: flex-start;
 }
 
-.voucher { font-size: 14px; margin: 8px 0; }
-.shipping { font-size: 14px; margin: 8px 0; color: #374151; }
-
-.stock { font-size: 14px; font-weight: 600; color: #16a34a; margin: 8px 0; }
-.stock.out { color: #ef4444; }
-
-.qty {
-  display: flex; gap: 10px;
-  align-items: center; margin: 15px 0;
-}
-.qty button {
-  width: 32px; height: 32px;
-  border: 1px solid #ddd; background: white;
-  cursor: pointer; border-radius: 6px;
-  font-size: 18px; font-weight: 600;
-}
-.qty button:hover { border-color: #2563eb; color: #2563eb; }
-
-.actions { display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap; }
-
-.btn-primary {
-  flex: 1; padding: 12px;
-  background: #2563eb; color: white;
-  border: none; border-radius: 8px;
-  cursor: pointer; font-weight: 600;
-  transition: opacity 0.2s;
-}
-.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
-.btn-primary:not(:disabled):hover { background: #1d4ed8; }
-
-.btn-success {
-  flex: 1; padding: 12px;
-  background: #16a34a; color: white;
-  border: none; border-radius: 8px;
-  cursor: pointer; font-weight: 600;
-}
-.btn-success:hover { background: #15803d; }
-
-.btn-outline {
-  padding: 10px 16px;
-  border: 1px solid #ddd;
-  background: white; border-radius: 8px;
-  cursor: pointer; transition: all 0.2s;
-}
-.btn-outline:hover { border-color: #2563eb; color: #2563eb; }
-.btn-outline.favorited { border-color: #ef4444; color: #ef4444; }
-
-.trust {
-  margin-top: 15px;
-  font-size: 13px; color: #555;
-  line-height: 2;
+.title {
+  font-size: 1.6rem; font-weight: 800;
+  color: #0f172a; line-height: 1.25;
+  margin: 0;
 }
 
-/* shop */
+.meta-row {
+  display: flex; align-items: center; gap: 10px;
+  font-size: .85rem;
+}
+.stars { display: flex; align-items: center; gap: 3px; }
+.star { color: #e2e8f0; font-size: 1rem; }
+.star.lit { color: #f59e0b; }
+.rating-val { margin-left: 4px; font-weight: 700; color: #374151; }
+.divider-dot { color: #cbd5e1; }
+.sold-count { color: #6b7280; }
+.sold-count b { color: #374151; }
+
+/* PRICE */
+.price-card {
+  background: linear-gradient(135deg, #0a0f1e 0%, #1e1b4b 100%);
+  border-radius: 18px;
+  padding: 20px 22px;
+  border: 1px solid rgba(255,255,255,.08);
+}
+.price-inner { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+.price-sale { font-size: 2rem; font-weight: 900; color: #f87171; line-height: 1; }
+.price-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.price-origin { font-size: .85rem; color: rgba(255,255,255,.35); text-decoration: line-through; }
+.price-badge {
+  background: rgba(16,185,129,.15); border: 1px solid rgba(16,185,129,.25);
+  color: #34d399; font-size: .7rem; font-weight: 700;
+  padding: 3px 10px; border-radius: 999px;
+}
+
+/* PERKS */
+.perks { display: flex; flex-direction: column; gap: 10px; }
+.perk {
+  display: flex; align-items: center; gap: 10px;
+  font-size: .85rem; color: #374151;
+  background: #f8faff; border-radius: 12px;
+  padding: 10px 14px;
+  border: 1px solid #e8edf8;
+}
+.perk-icon { font-size: 1rem; flex-shrink: 0; }
+.perk b { color: #2563eb; }
+
+/* STOCK */
+.stock-row { display: flex; align-items: center; gap: 8px; }
+.stock-dot {
+  width: 9px; height: 9px; border-radius: 50%;
+  background: #10b981; box-shadow: 0 0 8px #10b981;
+  animation: blink 2s ease-in-out infinite;
+  flex-shrink: 0;
+}
+.stock-dot.out { background: #94a3b8; box-shadow: none; animation: none; }
+.stock-txt { font-size: .85rem; font-weight: 700; color: #10b981; }
+.stock-txt.out { color: #94a3b8; }
+@keyframes blink {
+  0%,100% { opacity:1; transform:scale(1); }
+  50%      { opacity:.4; transform:scale(1.5); }
+}
+
+/* QTY */
+.qty-row { display: flex; align-items: center; gap: 14px; }
+.qty-label { font-size: .85rem; color: #6b7280; font-weight: 600; }
+.qty-control {
+  display: flex; align-items: center; gap: 0;
+  background: #f1f5f9; border-radius: 12px; overflow: hidden;
+  border: 1.5px solid #e2e8f0;
+}
+.qty-btn {
+  width: 36px; height: 36px;
+  background: transparent; border: none;
+  cursor: pointer; font-size: 1.2rem; font-weight: 700;
+  color: #4f46e5; transition: background .15s;
+}
+.qty-btn:hover { background: #e0e7ff; }
+.qty-num { width: 40px; text-align: center; font-weight: 800; color: #0f172a; font-size: .95rem; }
+
+/* ACTIONS */
+.actions { display: flex; gap: 10px; }
+
+.btn-cart {
+  flex: 1.5; padding: 14px 16px;
+  background: linear-gradient(135deg, #2563eb, #4f46e5);
+  color: white; border: none; border-radius: 14px;
+  font-size: .9rem; font-weight: 700; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  position: relative; overflow: hidden;
+  box-shadow: 0 6px 20px rgba(37,99,235,.35);
+  transition: transform .2s, box-shadow .2s;
+}
+.btn-cart:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 28px rgba(37,99,235,.45);
+}
+.btn-cart:disabled { background: #e2e8f0; color: #94a3b8; box-shadow: none; cursor: not-allowed; }
+.btn-icon { width: 16px; height: 16px; flex-shrink: 0; }
+.btn-shine {
+  position: absolute; top: 0; left: -80%; width: 60%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.25), transparent);
+  transform: skewX(-20deg); transition: left .55s;
+}
+.btn-cart:hover:not(:disabled) .btn-shine { left: 130%; }
+
+.btn-buy {
+  flex: 1; padding: 14px 16px;
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white; border: none; border-radius: 14px;
+  font-size: .9rem; font-weight: 700; cursor: pointer;
+  box-shadow: 0 6px 20px rgba(16,185,129,.35);
+  transition: transform .2s, box-shadow .2s;
+}
+.btn-buy:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 28px rgba(16,185,129,.45);
+}
+
+.btn-fav {
+  width: 100%; padding: 11px;
+  border: 1.5px solid #e0e7ff; background: white;
+  border-radius: 14px; cursor: pointer;
+  font-size: .85rem; font-weight: 600; color: #6b7280;
+  transition: all .2s;
+}
+.btn-fav:hover { border-color: #fca5a5; color: #e11d48; background: #fff5f5; }
+.btn-fav.favorited { border-color: #fca5a5; color: #e11d48; background: #fff5f5; }
+
+/* TRUST */
+.trust-strip {
+  display: flex; gap: 6px; flex-wrap: wrap;
+  border-top: 1px solid #f1f5f9;
+  padding-top: 14px;
+}
+.trust-item {
+  flex: 1; min-width: 100px;
+  font-size: .75rem; color: #6b7280;
+  background: #f8faff; border-radius: 10px;
+  padding: 8px 10px; text-align: center;
+  border: 1px solid #e8edf8;
+}
+.trust-item span { color: #10b981; font-weight: 700; margin-right: 4px; }
+
+/* ═══ SHOP CARD ═══ */
 .shop-card {
-  margin-top: 30px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border: 1px solid #eee;
-  padding: 20px; border-radius: 12px;
-  background: white;
-  gap: 12px;
+  max-width: 1200px; margin: 24px auto;
+  padding: 0 24px;
+  display: flex; align-items: center; gap: 18px;
+  background: white; border-radius: 20px;
+  padding: 20px 28px;
+  border: 1.5px solid #e8edf8;
+  box-shadow: 0 8px 30px rgba(10,15,30,.08);
+  margin: 24px auto;
+  max-width: 1200px;
 }
-.shop-card > div:last-child { display: flex; gap: 10px; }
-
-/* tabs */
-.tabs {
-  margin-top: 30px;
-  background: white;
-  padding: 20px; border-radius: 12px;
-  border: 1px solid #eee;
+/* override margin/padding conflict */
+.shop-card {
+  margin-left: auto; margin-right: auto;
+  padding: 20px 28px;
 }
-
-.tab-header { display: flex; gap: 4px; margin-bottom: 20px; }
-.tab-header button {
-  padding: 10px 20px;
-  border: none; background: #f3f4f6;
-  cursor: pointer; border-radius: 8px;
-  font-size: 14px; font-weight: 500;
-  transition: all 0.2s;
+.shop-avatar {
+  width: 52px; height: 52px; border-radius: 14px;
+  background: linear-gradient(135deg, #2563eb, #4f46e5);
+  color: white; font-size: .9rem; font-weight: 900;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 6px 16px rgba(37,99,235,.3);
 }
-.tab-header button:hover { background: #e5e7eb; }
-.tab-header .active { background: #2563eb; color: white; }
-
-.tab-content { padding-top: 4px; }
-
-.spec-row {
-  display: flex;
-  justify-content: space-between;
-  border-bottom: 1px solid #f3f4f6;
-  padding: 12px 0;
-  font-size: 14px;
+.shop-info { flex: 1; }
+.shop-name { font-size: 1rem; font-weight: 800; color: #0f172a; display: block; }
+.shop-meta { font-size: .78rem; color: #6b7280; margin: 2px 0 0; }
+.shop-actions { display: flex; gap: 10px; }
+.shop-btn {
+  padding: 9px 18px; border-radius: 10px;
+  border: 1.5px solid #e0e7ff; background: white;
+  color: #4f46e5; font-weight: 700; font-size: .82rem;
+  cursor: pointer; transition: all .2s;
 }
-.spec-row span { color: #6b7280; }
-
-/* related */
-.related-title { margin-top: 40px; font-size: 20px; font-weight: 700; }
-
-.related {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 20px;
-  margin-top: 16px;
+.shop-btn:hover { background: #eff6ff; border-color: #a5b4fc; }
+.shop-btn.primary {
+  background: linear-gradient(135deg, #2563eb, #4f46e5);
+  color: white; border-color: transparent;
+  box-shadow: 0 4px 14px rgba(37,99,235,.3);
 }
+.shop-btn.primary:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(37,99,235,.4); }
 
-.card {
-  border: 1px solid #eee;
-  padding: 12px; border-radius: 12px;
-  cursor: pointer; background: white;
-  transition: box-shadow 0.2s;
-}
-.card:hover { box-shadow: 0 4px 20px rgba(37, 99, 235, 0.1); }
-.card img {
-  width: 100%; height: 150px;
-  object-fit: contain;
-}
-.card p {
-  font-size: 13px; margin: 8px 0 4px;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
+/* ═══ TABS ═══ */
+.tabs-block {
+  max-width: 1200px; margin: 0 auto 24px;
+  padding: 0 24px;
+  background: white; border-radius: 20px;
+  border: 1.5px solid #e8edf8;
+  box-shadow: 0 8px 30px rgba(10,15,30,.07);
   overflow: hidden;
 }
-.card b { color: #ef4444; font-size: 14px; }
+/* fix padding */
+.tabs-block { padding: 0; }
+.tab-header {
+  display: flex; gap: 0;
+  border-bottom: 1.5px solid #f1f5f9;
+  padding: 0 20px;
+}
+.tab-btn {
+  padding: 16px 24px;
+  border: none; background: transparent;
+  cursor: pointer; font-size: .88rem; font-weight: 600;
+  color: #94a3b8; position: relative;
+  transition: color .2s;
+}
+.tab-btn::after {
+  content: ''; position: absolute; bottom: -2px; left: 0; right: 0; height: 2px;
+  background: #2563eb; border-radius: 2px;
+  transform: scaleX(0); transition: transform .25s;
+}
+.tab-btn:hover { color: #4f46e5; }
+.tab-btn.active { color: #2563eb; }
+.tab-btn.active::after { transform: scaleX(1); }
 
-/* toast */
+.tab-body { padding: 24px 28px; }
+
+.tab-desc p { font-size: .92rem; color: #374151; line-height: 1.8; }
+
+.tab-specs { display: flex; flex-direction: column; }
+.spec-row {
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #f1f5f9;
+  padding: 13px 0; font-size: .88rem;
+}
+.spec-row:last-child { border-bottom: none; }
+.spec-key { color: #94a3b8; font-weight: 500; }
+.spec-val { color: #0f172a; font-weight: 700; text-align: right; }
+
+/* ═══ RELATED ═══ */
+.related-section {
+  max-width: 1200px; margin: 0 auto 48px;
+  padding: 0 24px;
+}
+.section-header { display: flex; align-items: center; gap: 16px; margin-bottom: 20px; }
+.section-title { font-size: 1.2rem; font-weight: 800; color: #0f172a; white-space: nowrap; }
+.section-line { flex: 1; height: 2px; background: linear-gradient(90deg, #e0e7ff, transparent); }
+
+.related-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 16px;
+}
+.rcard {
+  background: white; border-radius: 20px; overflow: hidden;
+  border: 1.5px solid #e8edf8; cursor: pointer;
+  transition: transform .3s cubic-bezier(.175,.885,.32,1.275), box-shadow .3s, border-color .3s;
+  animation: cardIn .4s ease both;
+  animation-delay: var(--delay, 0s);
+}
+@keyframes cardIn {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.rcard:hover {
+  transform: translateY(-6px) scale(1.02);
+  box-shadow: 0 20px 44px rgba(37,99,235,.14);
+  border-color: #a5b4fc;
+}
+.rcard-img-wrap { position: relative; height: 160px; overflow: hidden; background: #f8faff; }
+.rcard-img { width: 100%; height: 100%; object-fit: cover; transition: transform .4s ease; }
+.rcard:hover .rcard-img { transform: scale(1.08); }
+.rcard-overlay {
+  position: absolute; inset: 0;
+  background: linear-gradient(to bottom, transparent 50%, rgba(10,15,30,.06));
+}
+.rcard-body { padding: 12px 14px 16px; }
+.rcard-name {
+  font-size: .82rem; font-weight: 600; color: #0f172a;
+  line-height: 1.35; height: 2.7em; overflow: hidden;
+  margin-bottom: 6px;
+}
+.rcard-price { font-size: .9rem; font-weight: 800; color: #e11d48; }
+
+/* ═══ TOAST ═══ */
 .toast {
-  position: fixed;
-  top: 20px; right: 20px;
-  background: #111827;
-  color: white;
-  padding: 14px 22px;
-  border-radius: 10px;
-  z-index: 9999;
-  font-size: 14px;
+  position: fixed; top: 24px; right: 24px; z-index: 200;
+  background: #0a0f1e; color: white;
+  border-radius: 16px; padding: 14px 20px;
+  display: flex; align-items: center; gap: 14px;
+  box-shadow: 0 12px 40px rgba(0,0,0,.3);
+  border: 1px solid rgba(255,255,255,.08);
+  min-width: 260px;
 }
-.toast-enter-active, .toast-leave-active { transition: all 0.3s ease; }
-.toast-enter-from, .toast-leave-to { opacity: 0; transform: translateY(-12px); }
+.toast-icon {
+  width: 34px; height: 34px; border-radius: 50%;
+  background: linear-gradient(135deg, #10b981, #059669);
+  display: flex; align-items: center; justify-content: center;
+  font-size: .9rem; font-weight: 900; flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(16,185,129,.4);
+}
+.toast-text { display: flex; flex-direction: column; gap: 2px; }
+.toast-title { font-size: .72rem; font-weight: 700; color: #10b981; letter-spacing: .04em; text-transform: uppercase; }
+.toast-name { font-size: .86rem; color: rgba(255,255,255,.8); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
+.toast-enter-active { animation: toastSlide .4s cubic-bezier(.175,.885,.32,1.275); }
+.toast-leave-active { animation: toastSlide .3s ease reverse; }
+@keyframes toastSlide {
+  from { opacity: 0; transform: translateX(40px) scale(.9); }
+  to   { opacity: 1; transform: translateX(0) scale(1); }
+}
 
+/* ═══ RESPONSIVE ═══ */
 @media (max-width: 900px) {
-  .product-layout { grid-template-columns: 1fr; }
+  .product-shell { grid-template-columns: 1fr; }
 }
-@media (max-width: 600px) {
+@media (max-width: 640px) {
+  .hero-banner { padding: 20px 20px 50px; }
+  .product-shell { margin: -20px auto 0; padding: 0 14px; }
+  .shop-card { flex-direction: column; align-items: flex-start; margin: 14px; padding: 18px; }
+  .tabs-block, .related-section { margin: 0 0 16px; }
+  .related-grid { grid-template-columns: repeat(2, 1fr); }
   .actions { flex-direction: column; }
-  .btn-primary, .btn-success { width: 100%; }
+  .btn-cart, .btn-buy { width: 100%; }
 }
 </style>

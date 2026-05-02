@@ -1,40 +1,65 @@
 <template>
-  <div v-if="product" class="page">
+  <!-- LOADING -->
+  <div v-if="!product" class="loading-screen">
+    <div class="spinner"></div>
+    <p>Đang tải sản phẩm…</p>
+  </div>
 
-    <!-- ── ADMIN TOOLBAR ── -->
-    <div class="admin-toolbar">
-      <button class="btn-back" @click="router.push('/products')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
-        Quay lại
-      </button>
+  <div v-else class="page">
 
-      <div class="toolbar-actions">
-        <router-link :to="`/products/edit/${product._id}`" class="btn-edit">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-          </svg>
-          Sửa sản phẩm
-        </router-link>
+    <!-- ═══════════ HERO BANNER ═══════════ -->
+    <div class="hero-banner">
+      <div class="hero-mesh"></div>
+      <div class="hero-orb hero-orb-1"></div>
+      <div class="hero-orb hero-orb-2"></div>
 
-        <button class="btn-delete" @click="confirmDelete" :disabled="isDeleting">
-          <svg v-if="!isDeleting" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-            <polyline points="3 6 5 6 21 6"/>
-            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-            <path d="M10 11v6M14 11v6"/>
-            <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
-          </svg>
-          <span v-if="isDeleting" class="spinner-sm"></span>
-          {{ isDeleting ? 'Đang xóa…' : 'Xóa sản phẩm' }}
-        </button>
+      <div class="hero-content">
+        <nav class="breadcrumb">
+          <span>Quản trị</span>
+          <span class="sep">›</span>
+          <span>Sản phẩm</span>
+          <span class="sep">›</span>
+          <span class="current">{{ product.name }}</span>
+        </nav>
+
+        <!-- ADMIN TOOLBAR inside hero -->
+        <div class="admin-toolbar">
+          <button class="btn-back" @click="router.push('/products')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <polyline points="15 18 9 12 15 6"/>
+            </svg>
+            Quay lại
+          </button>
+
+          <div class="toolbar-actions">
+            <router-link :to="`/products/edit/${product._id}`" class="btn-edit">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+              </svg>
+              Sửa sản phẩm
+            </router-link>
+
+            <button class="btn-delete" @click="confirmDelete" :disabled="isDeleting">
+              <svg v-if="!isDeleting" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                <polyline points="3 6 5 6 21 6"/>
+                <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                <path d="M10 11v6M14 11v6"/>
+                <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+              </svg>
+              <span v-if="isDeleting" class="spinner-sm"></span>
+              {{ isDeleting ? 'Đang xóa…' : 'Xóa sản phẩm' }}
+            </button>
+          </div>
+        </div>
       </div>
     </div>
 
-    <!-- ── CONFIRM MODAL ── -->
+    <!-- ═══════════ CONFIRM MODAL ═══════════ -->
     <Transition name="modal">
       <div v-if="showConfirm" class="modal-overlay" @click.self="showConfirm = false">
         <div class="modal-box">
-          <div class="modal-icon">🗑️</div>
+          <div class="modal-icon-wrap">🗑️</div>
           <h3 class="modal-title">Xóa sản phẩm?</h3>
           <p class="modal-desc">
             Hành động này sẽ gỡ <strong>{{ product.name }}</strong> khỏi hệ thống.
@@ -48,21 +73,19 @@
       </div>
     </Transition>
 
-    <!-- ── MAIN LAYOUT ── -->
-    <div class="product-layout">
+    <!-- ═══════════ PRODUCT LAYOUT ═══════════ -->
+    <div class="product-shell">
 
-      <!-- LEFT: GALLERY -->
-      <div class="product-gallery">
-        <div class="main-image">
+      <!-- GALLERY -->
+      <div class="gallery-col">
+        <div class="main-image-wrap">
+          <span v-if="product.salePrice" class="badge-sale">-{{ discountPercent }}%</span>
+          <span v-else-if="product.stock === 0" class="badge-out">Hết hàng</span>
+
           <Transition name="fade" mode="out-in">
-            <img :src="currentImage" :key="currentImage" />
+            <img :src="currentImage" :key="currentImage" class="main-image" />
           </Transition>
-          <span v-if="product.salePrice" class="img-badge sale-badge">
-            -{{ discountPercent }}%
-          </span>
-          <span v-else-if="product.stock === 0" class="img-badge out-badge">
-            Hết hàng
-          </span>
+          <div class="image-glow"></div>
         </div>
 
         <div class="thumb-list" v-if="product.images?.length > 1">
@@ -78,7 +101,7 @@
         </div>
       </div>
 
-      <!-- RIGHT: BUYBOX -->
+      <!-- BUYBOX -->
       <div class="buybox">
 
         <div class="product-meta">
@@ -90,22 +113,20 @@
         <h1 class="title">{{ product.name }}</h1>
 
         <!-- PRICE -->
-        <div class="price-box">
-          <span class="sale-price">
-            {{ formatPrice(product.salePrice || product.price) }}₫
-          </span>
-          <span v-if="product.salePrice" class="origin-price">
-            {{ formatPrice(product.price) }}₫
-          </span>
-          <span v-if="product.salePrice" class="discount-tag">
-            Tiết kiệm {{ formatPrice(product.price - product.salePrice) }}₫
-          </span>
+        <div class="price-card">
+          <div class="price-inner">
+            <span class="price-sale">{{ formatPrice(product.salePrice || product.price) }}₫</span>
+            <div class="price-right" v-if="product.salePrice">
+              <span class="price-origin">{{ formatPrice(product.price) }}₫</span>
+              <span class="price-badge">Tiết kiệm {{ formatPrice(product.price - product.salePrice) }}₫</span>
+            </div>
+          </div>
         </div>
 
         <!-- STOCK -->
         <div class="stock-row">
           <span class="stock-dot" :class="{ out: product.stock === 0 }"></span>
-          <span class="stock-text" :class="{ out: product.stock === 0 }">
+          <span class="stock-txt" :class="{ out: product.stock === 0 }">
             {{ product.stock > 0 ? `Còn ${product.stock} sản phẩm` : 'Hết hàng' }}
           </span>
         </div>
@@ -130,44 +151,53 @@
           </div>
         </div>
 
-        <!-- BUY ACTIONS -->
+        <!-- BUY ACTIONS (preview only for admin) -->
         <div class="buy-actions">
           <button class="btn-cart" :disabled="product.stock === 0">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" class="btn-icon">
               <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
               <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
             </svg>
             Thêm vào giỏ
+            <span class="btn-shine"></span>
           </button>
           <button class="btn-buy" :disabled="product.stock === 0">
-            Mua ngay
+            ⚡ Mua ngay
           </button>
+        </div>
+
+        <!-- ADMIN NOTE -->
+        <div class="admin-note">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="note-icon">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="8" x2="12" y2="12"/>
+            <line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          Chế độ xem trước — hành động mua hàng chỉ hiển thị cho khách.
         </div>
 
       </div>
     </div>
 
-    <!-- ── SPEC TABLE ── -->
-    <div v-if="specEntries.length" class="spec-table">
-      <h2 class="spec-title">Thông số kỹ thuật</h2>
+    <!-- ═══════════ SPEC TABLE ═══════════ -->
+    <div v-if="specEntries.length" class="spec-block">
+      <div class="section-header">
+        <h2 class="section-title">Thông số kỹ thuật</h2>
+        <div class="section-line"></div>
+      </div>
+
       <div class="spec-grid">
         <div
           v-for="([key, value]) in specEntries"
           :key="key"
           class="spec-row"
         >
-          <span class="spec-row-key">{{ formatKey(key) }}</span>
-          <b class="spec-row-val">{{ value }}</b>
+          <span class="spec-key">{{ formatKey(key) }}</span>
+          <span class="spec-val">{{ value }}</span>
         </div>
       </div>
     </div>
 
-  </div>
-
-  <!-- LOADING -->
-  <div v-else class="loading-screen">
-    <div class="spinner"></div>
-    <p>Đang tải sản phẩm…</p>
   </div>
 </template>
 
@@ -184,7 +214,6 @@ const currentImage = ref("");
 const isDeleting = ref(false);
 const showConfirm = ref(false);
 
-/* ── COMPUTED ── */
 const discountPercent = computed(() => {
   if (!product.value?.salePrice) return 0;
   return Math.round(100 - (product.value.salePrice / product.value.price) * 100);
@@ -195,18 +224,11 @@ const specEntries = computed(() => {
   return Object.entries(product.value.specs).filter(([, v]) => v);
 });
 
-/* ── HELPERS ── */
 const formatPrice = v => new Intl.NumberFormat("vi-VN").format(v);
-
 const formatKey = k =>
-  k.replace(/_/g, " ")
-   .replace(/([A-Z])/g, " $1")
-   .replace(/^./, s => s.toUpperCase());
+  k.replace(/_/g, " ").replace(/([A-Z])/g, " $1").replace(/^./, s => s.toUpperCase());
 
-/* ── DELETE ── */
-function confirmDelete() {
-  showConfirm.value = true;
-}
+function confirmDelete() { showConfirm.value = true; }
 
 async function deleteProduct() {
   showConfirm.value = false;
@@ -221,396 +243,337 @@ async function deleteProduct() {
   }
 }
 
-/* ── LOAD ── */
 onMounted(async () => {
   const res = await ProductService.get(route.params.id);
   product.value = res;
-  currentImage.value = res.images?.length
-    ? res.images[0]
-    : "https://via.placeholder.com/600x400";
+  currentImage.value = res.images?.length ? res.images[0] : "https://via.placeholder.com/600x400";
 });
 </script>
 
 <style scoped>
-/* ── BASE ── */
+/* ═══ BASE ═══ */
 .page {
-  max-width: 1200px;
-  margin: auto;
-  padding: 24px 30px 60px;
+  min-height: 100vh;
+  background: #f0f4ff;
+  font-family: 'Segoe UI', system-ui, sans-serif;
 }
 
-/* ── ADMIN TOOLBAR ── */
+/* ═══ HERO BANNER ═══ */
+.hero-banner {
+  position: relative; overflow: hidden;
+  background: #0a0f1e;
+  padding: 0 0 64px;
+}
+.hero-mesh {
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(ellipse 80% 60% at 10% 0%, rgba(37,99,235,.35), transparent),
+    radial-gradient(ellipse 60% 50% at 90% 100%, rgba(124,58,237,.3), transparent),
+    radial-gradient(ellipse 40% 40% at 50% 50%, rgba(220,38,38,.06), transparent);
+}
+.hero-orb { position: absolute; border-radius: 50%; filter: blur(60px); pointer-events: none; }
+.hero-orb-1 { width: 280px; height: 280px; background: rgba(37,99,235,.25); top: -80px; left: -40px; }
+.hero-orb-2 { width: 220px; height: 220px; background: rgba(124,58,237,.2); bottom: -50px; right: -30px; }
+
+.hero-content {
+  position: relative; z-index: 2;
+  max-width: 1200px; margin: 0 auto;
+  padding: 28px 24px 0;
+  display: flex; flex-direction: column; gap: 20px;
+}
+
+.breadcrumb {
+  font-size: .8rem; color: rgba(255,255,255,.45);
+  display: flex; align-items: center; gap: 6px;
+}
+.breadcrumb .sep { color: rgba(255,255,255,.2); }
+.breadcrumb .current { color: rgba(255,255,255,.8); font-weight: 600; }
+
+/* ═══ ADMIN TOOLBAR ═══ */
 .admin-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin-bottom: 28px;
-  padding: 14px 18px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 14px;
+  display: flex; align-items: center;
+  justify-content: space-between; flex-wrap: wrap; gap: 12px;
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 18px;
+  padding: 14px 20px;
+  backdrop-filter: blur(12px);
 }
 
 .btn-back {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 16px;
-  border-radius: 10px;
-  font-size: .85rem;
-  font-weight: 600;
-  color: #475569;
-  background: white;
-  border: 1.5px solid #e2e8f0;
-  cursor: pointer;
-  transition: all .2s;
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 9px 18px; border-radius: 11px;
+  font-size: .85rem; font-weight: 600;
+  color: rgba(255,255,255,.75);
+  background: rgba(255,255,255,.08);
+  border: 1px solid rgba(255,255,255,.12);
+  cursor: pointer; transition: all .2s;
 }
 .btn-back svg { width: 16px; height: 16px; }
-.btn-back:hover { background: #f1f5f9; border-color: #cbd5e1; color: #334155; }
+.btn-back:hover { background: rgba(255,255,255,.14); color: white; }
 
 .toolbar-actions { display: flex; gap: 10px; flex-wrap: wrap; }
 
-/* Edit button */
 .btn-edit {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 20px;
-  border-radius: 11px;
-  font-size: .88rem;
-  font-weight: 700;
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 20px; border-radius: 12px;
+  font-size: .88rem; font-weight: 700;
   color: white;
   background: linear-gradient(135deg, #2563eb, #4f46e5);
-  border: none;
-  text-decoration: none;
-  cursor: pointer;
-  box-shadow: 0 4px 14px rgba(37,99,235,.3);
+  border: none; text-decoration: none; cursor: pointer;
+  box-shadow: 0 4px 16px rgba(37,99,235,.4);
   transition: transform .2s, box-shadow .2s;
 }
 .btn-edit svg { width: 15px; height: 15px; }
-.btn-edit:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(37,99,235,.4);
-}
-.btn-edit:active { transform: translateY(0); }
+.btn-edit:hover { transform: translateY(-2px); box-shadow: 0 8px 22px rgba(37,99,235,.5); }
 
-/* Delete button */
 .btn-delete {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 20px;
-  border-radius: 11px;
-  font-size: .88rem;
-  font-weight: 700;
-  color: #dc2626;
-  background: #fef2f2;
-  border: 1.5px solid #fecaca;
-  cursor: pointer;
-  transition: all .2s;
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 20px; border-radius: 12px;
+  font-size: .88rem; font-weight: 700;
+  color: #fca5a5;
+  background: rgba(220,38,38,.15);
+  border: 1px solid rgba(220,38,38,.3);
+  cursor: pointer; transition: all .2s;
 }
 .btn-delete svg { width: 15px; height: 15px; }
 .btn-delete:hover:not(:disabled) {
-  background: #dc2626;
+  background: rgba(220,38,38,.3);
   color: white;
-  border-color: #dc2626;
-  box-shadow: 0 4px 14px rgba(220,38,38,.3);
+  border-color: rgba(220,38,38,.5);
+  box-shadow: 0 4px 16px rgba(220,38,38,.3);
   transform: translateY(-2px);
 }
-.btn-delete:disabled { opacity: .6; cursor: not-allowed; }
+.btn-delete:disabled { opacity: .5; cursor: not-allowed; }
 
-/* ── MODAL ── */
+/* ═══ MODAL ═══ */
 .modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(15,23,42,.5);
-  backdrop-filter: blur(4px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 100;
+  position: fixed; inset: 0; z-index: 100;
+  background: rgba(10,15,30,.7);
+  backdrop-filter: blur(8px);
+  display: flex; align-items: center; justify-content: center; padding: 20px;
 }
 .modal-box {
-  background: white;
-  border-radius: 20px;
-  padding: 36px 32px;
-  max-width: 400px;
-  width: 90%;
+  background: white; border-radius: 24px;
+  padding: 36px 32px; max-width: 400px; width: 100%;
   text-align: center;
-  box-shadow: 0 25px 60px rgba(0,0,0,.2);
+  box-shadow: 0 30px 70px rgba(0,0,0,.3);
+  animation: modalPop .3s cubic-bezier(.175,.885,.32,1.275);
 }
-.modal-icon { font-size: 2.5rem; margin-bottom: 12px; }
-.modal-title { font-size: 1.25rem; font-weight: 800; color: #0f172a; margin-bottom: 8px; }
-.modal-desc { font-size: .9rem; color: #64748b; line-height: 1.6; margin-bottom: 24px; }
+@keyframes modalPop { from { opacity:0; transform:scale(.9); } to { opacity:1; transform:scale(1); } }
+.modal-icon-wrap { font-size: 2.8rem; margin-bottom: 14px; }
+.modal-title { font-size: 1.2rem; font-weight: 800; color: #0f172a; margin-bottom: 8px; }
+.modal-desc { font-size: .9rem; color: #64748b; line-height: 1.7; margin-bottom: 26px; }
 .modal-actions { display: flex; gap: 12px; }
 .modal-cancel {
-  flex: 1; padding: 11px;
-  border-radius: 10px;
-  background: #f1f5f9;
-  color: #475569;
-  font-weight: 600;
-  border: none; cursor: pointer;
-  transition: background .2s;
+  flex: 1; padding: 12px; border-radius: 12px;
+  background: #f1f5f9; color: #475569;
+  font-weight: 700; border: none; cursor: pointer; transition: background .2s;
 }
 .modal-cancel:hover { background: #e2e8f0; }
 .modal-confirm {
-  flex: 1; padding: 11px;
-  border-radius: 10px;
+  flex: 1; padding: 12px; border-radius: 12px;
   background: linear-gradient(135deg, #dc2626, #b91c1c);
-  color: white;
-  font-weight: 700;
-  border: none; cursor: pointer;
-  box-shadow: 0 4px 12px rgba(220,38,38,.35);
+  color: white; font-weight: 700; border: none; cursor: pointer;
+  box-shadow: 0 4px 14px rgba(220,38,38,.35);
   transition: all .2s;
 }
-.modal-confirm:hover {
-  box-shadow: 0 6px 18px rgba(220,38,38,.45);
-  transform: translateY(-1px);
-}
+.modal-confirm:hover { transform: translateY(-1px); box-shadow: 0 8px 22px rgba(220,38,38,.45); }
+.modal-enter-active, .modal-leave-active { transition: opacity .25s; }
+.modal-enter-from, .modal-leave-to { opacity: 0; }
 
-/* modal transitions */
-.modal-enter-active, .modal-leave-active { transition: opacity .2s, transform .2s; }
-.modal-enter-from, .modal-leave-to { opacity: 0; transform: scale(.95); }
-
-/* ── LAYOUT ── */
-.product-layout {
+/* ═══ PRODUCT SHELL ═══ */
+.product-shell {
   display: grid;
   grid-template-columns: 1.1fr 1fr;
-  gap: 40px;
-  align-items: start;
+  gap: 32px;
+  max-width: 1200px; margin: -32px auto 0;
+  padding: 0 24px;
+  position: relative; z-index: 10;
 }
 
-/* ── GALLERY ── */
-.product-gallery { display: flex; flex-direction: column; gap: 14px; }
+/* ═══ GALLERY ═══ */
+.gallery-col { display: flex; flex-direction: column; gap: 14px; }
 
-.main-image {
+.main-image-wrap {
   position: relative;
-  border: 1px solid #e5e7eb;
-  border-radius: 16px;
-  overflow: hidden;
-  background: #fafbff;
+  background: white; border-radius: 24px; overflow: hidden;
+  border: 1.5px solid #e8edf8;
+  box-shadow: 0 20px 60px rgba(10,15,30,.1);
 }
-.main-image img {
-  width: 100%;
-  height: 460px;
-  object-fit: contain;
-  display: block;
+.main-image {
+  width: 100%; height: 440px;
+  object-fit: contain; display: block;
+  transition: transform .4s ease;
+}
+.main-image-wrap:hover .main-image { transform: scale(1.03); }
+.image-glow {
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse 60% 50% at 50% 100%, rgba(37,99,235,.05), transparent);
+  pointer-events: none;
 }
 
-.img-badge {
-  position: absolute;
-  top: 14px; left: 14px;
-  font-size: .75rem;
-  font-weight: 800;
-  padding: 4px 12px;
-  border-radius: 999px;
-  color: white;
-  letter-spacing: .04em;
+.badge-sale, .badge-out {
+  position: absolute; top: 14px; left: 14px; z-index: 3;
+  font-size: .7rem; font-weight: 800;
+  padding: 4px 12px; border-radius: 999px; color: white; letter-spacing: .04em;
 }
-.sale-badge  { background: linear-gradient(135deg, #ef4444, #f97316); box-shadow: 0 3px 10px rgba(239,68,68,.4); }
-.out-badge   { background: #94a3b8; }
+.badge-sale { background: linear-gradient(135deg, #e11d48, #f97316); box-shadow: 0 4px 14px rgba(225,29,72,.4); }
+.badge-out  { background: #94a3b8; }
 
 .thumb-list { display: flex; gap: 10px; flex-wrap: wrap; }
 .thumb {
-  width: 70px; height: 70px;
-  border: 2px solid transparent;
-  cursor: pointer;
-  border-radius: 10px;
-  overflow: hidden;
-  transition: border-color .2s, transform .2s;
+  width: 72px; height: 72px; cursor: pointer;
+  border: 2px solid transparent; border-radius: 14px; overflow: hidden;
+  background: white; box-shadow: 0 4px 14px rgba(10,15,30,.08);
+  transition: all .2s;
 }
-.thumb:hover { transform: scale(1.05); }
-.thumb.active { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,.15); }
+.thumb:hover { border-color: #a5b4fc; transform: translateY(-2px); }
+.thumb.active { border-color: #2563eb; box-shadow: 0 4px 18px rgba(37,99,235,.3); }
 .thumb img { width: 100%; height: 100%; object-fit: cover; }
 
-/* fade transition for image swap */
 .fade-enter-active, .fade-leave-active { transition: opacity .2s; }
 .fade-enter-from, .fade-leave-to { opacity: 0; }
 
-/* ── BUYBOX ── */
+/* ═══ BUYBOX ═══ */
 .buybox {
-  border: 1px solid #e5e7eb;
-  padding: 28px;
-  border-radius: 18px;
-  background: white;
-  box-shadow: 0 4px 20px rgba(0,0,0,.05);
+  background: white; border-radius: 24px; padding: 28px;
+  border: 1.5px solid #e8edf8;
+  box-shadow: 0 20px 60px rgba(10,15,30,.1);
+  display: flex; flex-direction: column; gap: 16px;
 }
 
 .product-meta {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-bottom: 10px;
+  display: flex; align-items: center; gap: 6px;
 }
-.meta-brand { font-size: .78rem; font-weight: 700; color: #2563eb; text-transform: uppercase; letter-spacing: .06em; }
+.meta-brand { font-size: .72rem; font-weight: 800; color: #4f46e5; text-transform: uppercase; letter-spacing: .07em; }
 .meta-dot   { color: #cbd5e1; }
-.meta-category { font-size: .78rem; color: #94a3b8; }
+.meta-category { font-size: .72rem; color: #94a3b8; }
 
-.title {
-  font-size: 1.6rem;
-  font-weight: 800;
-  color: #0f172a;
-  line-height: 1.3;
-  margin-bottom: 18px;
-}
+.title { font-size: 1.6rem; font-weight: 800; color: #0f172a; line-height: 1.25; margin: 0; }
 
 /* PRICE */
-.price-box {
-  display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-bottom: 14px;
+.price-card {
+  background: linear-gradient(135deg, #0a0f1e 0%, #1e1b4b 100%);
+  border-radius: 18px; padding: 20px 22px;
+  border: 1px solid rgba(255,255,255,.08);
 }
-.sale-price {
-  font-size: 2rem;
-  font-weight: 800;
-  color: #dc2626;
-  line-height: 1;
-}
-.origin-price {
-  font-size: 1rem;
-  color: #94a3b8;
-  text-decoration: line-through;
-}
-.discount-tag {
-  font-size: .75rem;
-  font-weight: 700;
-  background: #fef2f2;
-  color: #dc2626;
-  border: 1px solid #fecaca;
-  padding: 3px 10px;
-  border-radius: 999px;
+.price-inner { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+.price-sale { font-size: 2rem; font-weight: 900; color: #f87171; line-height: 1; }
+.price-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.price-origin { font-size: .85rem; color: rgba(255,255,255,.35); text-decoration: line-through; }
+.price-badge {
+  background: rgba(16,185,129,.15); border: 1px solid rgba(16,185,129,.25);
+  color: #34d399; font-size: .7rem; font-weight: 700;
+  padding: 3px 10px; border-radius: 999px;
 }
 
 /* STOCK */
-.stock-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 20px;
-}
+.stock-row { display: flex; align-items: center; gap: 8px; }
 .stock-dot {
-  width: 9px; height: 9px;
-  border-radius: 50%;
-  background: #22c55e;
-  box-shadow: 0 0 6px #22c55e;
-  animation: pulse-dot 1.8s ease-in-out infinite;
+  width: 9px; height: 9px; border-radius: 50%;
+  background: #10b981; box-shadow: 0 0 8px #10b981;
+  animation: blink 2s ease-in-out infinite; flex-shrink: 0;
 }
 .stock-dot.out { background: #94a3b8; box-shadow: none; animation: none; }
-.stock-text { font-size: .88rem; font-weight: 600; color: #16a34a; }
-.stock-text.out { color: #94a3b8; }
-@keyframes pulse-dot {
-  0%,100% { opacity: 1; transform: scale(1); }
-  50%      { opacity: .5; transform: scale(1.4); }
+.stock-txt { font-size: .85rem; font-weight: 700; color: #10b981; }
+.stock-txt.out { color: #94a3b8; }
+@keyframes blink {
+  0%,100% { opacity:1; transform:scale(1); }
+  50%      { opacity:.4; transform:scale(1.5); }
 }
 
 /* MINI SPECS */
 .specs-mini {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-  border: 1px solid #f1f5f9;
-  border-radius: 12px;
-  overflow: hidden;
-  margin-bottom: 24px;
+  border: 1.5px solid #e8edf8; border-radius: 16px; overflow: hidden;
 }
 .spec-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 10px 14px;
-  background: #fafbff;
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 11px 16px; background: #f8faff;
   border-bottom: 1px solid #f1f5f9;
+  transition: background .15s;
 }
 .spec-item:last-child { border-bottom: none; }
 .spec-item:nth-child(even) { background: white; }
+.spec-item:hover { background: #eff6ff; }
 .spec-label { font-size: .82rem; color: #64748b; }
-.spec-val   { font-size: .88rem; font-weight: 700; color: #0f172a; }
+.spec-val   { font-size: .86rem; font-weight: 700; color: #0f172a; }
 
 /* BUY ACTIONS */
-.buy-actions {
-  display: flex;
-  gap: 12px;
-}
-.btn-cart, .btn-buy {
-  flex: 1;
-  padding: 13px 12px;
-  border-radius: 12px;
-  font-size: .92rem;
-  font-weight: 700;
-  border: none;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  transition: all .2s;
-}
-.btn-cart svg { width: 17px; height: 17px; }
+.buy-actions { display: flex; gap: 10px; }
+
 .btn-cart {
-  background: #eff6ff;
-  color: #2563eb;
-  border: 1.5px solid #bfdbfe;
+  flex: 1.5; padding: 13px 16px;
+  background: linear-gradient(135deg, #2563eb, #4f46e5);
+  color: white; border: none; border-radius: 14px;
+  font-size: .88rem; font-weight: 700; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  position: relative; overflow: hidden;
+  box-shadow: 0 6px 20px rgba(37,99,235,.35);
+  transition: transform .2s, box-shadow .2s;
 }
-.btn-cart:hover:not(:disabled) {
-  background: #dbeafe;
-  border-color: #93c5fd;
-  transform: translateY(-2px);
+.btn-cart:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(37,99,235,.45); }
+.btn-cart:disabled { background: #e2e8f0; color: #94a3b8; box-shadow: none; cursor: not-allowed; }
+.btn-icon { width: 16px; height: 16px; flex-shrink: 0; }
+.btn-shine {
+  position: absolute; top: 0; left: -80%; width: 60%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.25), transparent);
+  transform: skewX(-20deg); transition: left .55s;
 }
+.btn-cart:hover:not(:disabled) .btn-shine { left: 130%; }
+
 .btn-buy {
-  background: linear-gradient(135deg, #16a34a, #15803d);
-  color: white;
-  box-shadow: 0 4px 14px rgba(22,163,74,.3);
+  flex: 1; padding: 13px 16px;
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white; border: none; border-radius: 14px;
+  font-size: .88rem; font-weight: 700; cursor: pointer;
+  box-shadow: 0 6px 20px rgba(16,185,129,.35);
+  transition: transform .2s, box-shadow .2s;
 }
-.btn-buy:hover:not(:disabled) {
-  box-shadow: 0 8px 22px rgba(22,163,74,.4);
-  transform: translateY(-2px);
-}
-.btn-cart:disabled, .btn-buy:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+.btn-buy:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(16,185,129,.45); }
+.btn-buy:disabled { background: #e2e8f0; color: #94a3b8; box-shadow: none; cursor: not-allowed; }
 
-/* ── SPEC TABLE ── */
-.spec-table {
-  margin-top: 50px;
-  background: white;
-  padding: 30px;
-  border: 1px solid #e5e7eb;
-  border-radius: 18px;
-  box-shadow: 0 4px 20px rgba(0,0,0,.04);
+/* ADMIN NOTE */
+.admin-note {
+  display: flex; align-items: center; gap: 10px;
+  background: linear-gradient(135deg, #fffbeb, #fef3c7);
+  border: 1px solid #fde68a;
+  border-radius: 12px; padding: 12px 16px;
+  font-size: .8rem; color: #92400e; font-weight: 500;
 }
-.spec-title {
-  font-size: 1.2rem;
-  font-weight: 800;
-  color: #0f172a;
-  margin-bottom: 20px;
-  padding-bottom: 14px;
-  border-bottom: 2px solid #f1f5f9;
+.note-icon { width: 16px; height: 16px; flex-shrink: 0; color: #d97706; }
+
+/* ═══ SPEC BLOCK ═══ */
+.spec-block {
+  max-width: 1200px; margin: 24px auto 48px;
+  padding: 0 24px;
 }
-.spec-grid { display: flex; flex-direction: column; gap: 0; }
+.section-header { display: flex; align-items: center; gap: 16px; margin-bottom: 18px; }
+.section-title { font-size: 1.15rem; font-weight: 800; color: #0f172a; white-space: nowrap; }
+.section-line { flex: 1; height: 2px; background: linear-gradient(90deg, #e0e7ff, transparent); }
+
+.spec-grid {
+  background: white; border-radius: 20px;
+  border: 1.5px solid #e8edf8;
+  box-shadow: 0 8px 30px rgba(10,15,30,.07);
+  overflow: hidden;
+}
 .spec-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 11px 14px;
-  border-radius: 8px;
-  transition: background .15s;
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 13px 22px; border-bottom: 1px solid #f1f5f9;
+  font-size: .88rem; transition: background .15s;
 }
-.spec-row:hover { background: #f8fafc; }
-.spec-row:not(:last-child) { border-bottom: 1px solid #f3f4f6; }
-.spec-row-key { font-size: .87rem; color: #64748b; }
-.spec-row-val { font-size: .9rem; font-weight: 700; color: #1e293b; text-align: right; max-width: 55%; }
+.spec-row:last-child { border-bottom: none; }
+.spec-row:hover { background: #f8faff; }
+.spec-key { color: #94a3b8; font-weight: 500; }
+.spec-val { color: #0f172a; font-weight: 700; text-align: right; max-width: 55%; }
 
-/* ── LOADING ── */
+/* ═══ LOADING ═══ */
 .loading-screen {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 60vh;
-  gap: 16px;
-  color: #94a3b8;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  height: 60vh; gap: 16px; color: #94a3b8;
+  font-size: .9rem;
 }
 .spinner {
   width: 40px; height: 40px;
@@ -622,19 +585,25 @@ onMounted(async () => {
 .spinner-sm {
   width: 14px; height: 14px;
   border: 2px solid rgba(220,38,38,.3);
-  border-top-color: #dc2626;
+  border-top-color: #fca5a5;
   border-radius: 50%;
   display: inline-block;
   animation: spin .6s linear infinite;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* ── MOBILE ── */
+/* ═══ RESPONSIVE ═══ */
 @media (max-width: 900px) {
-  .product-layout { grid-template-columns: 1fr; }
-  .main-image img { height: 320px; }
-  .admin-toolbar { flex-direction: column; align-items: stretch; }
-  .toolbar-actions { justify-content: stretch; }
+  .product-shell { grid-template-columns: 1fr; }
+  .main-image { height: 300px; }
+}
+@media (max-width: 640px) {
+  .hero-banner { padding-bottom: 50px; }
+  .hero-content { padding: 20px 14px 0; }
+  .product-shell { margin: -20px auto 0; padding: 0 14px; }
+  .spec-block { padding: 0 14px; }
+  .toolbar-actions { width: 100%; }
   .btn-edit, .btn-delete { flex: 1; justify-content: center; }
+  .buy-actions { flex-direction: column; }
 }
 </style>
