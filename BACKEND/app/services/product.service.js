@@ -252,31 +252,31 @@ class ProductService {
   }
 
   async update(id, payload) {
-    const filter = {
-      _id: ObjectId.isValid(id) ? new ObjectId(id) : null
-    };
+  const filter = {
+    _id: ObjectId.isValid(id) ? new ObjectId(id) : null
+  };
 
-    const update = this.extractProductData(payload);
-    update.updatedAt = new Date();
+  const update = this.extractProductData(payload);
+  update.updatedAt = new Date();
 
-    const result = await this.Product.findOneAndUpdate(
-      filter,
-      { $set: update },
-      { returnDocument: "after" }
-    );
+  const result = await this.Product.findOneAndUpdate(
+    filter,
+    { $set: update },
+    { returnDocument: "after" }
+  );
 
-    return result.value;
-  }
+  return result; 
+}
 
-  async delete(id) {
-    const result = await this.Product.findOneAndUpdate(
-      { _id: ObjectId.isValid(id) ? new ObjectId(id) : null },
-      { $set: { isActive: false, deletedAt: new Date() } },
-      { returnDocument: "after" }
-    );
+async delete(id) {
+  const result = await this.Product.findOneAndUpdate(
+    { _id: ObjectId.isValid(id) ? new ObjectId(id) : null },
+    { $set: { isActive: false, deletedAt: new Date() } },
+    { returnDocument: "after" }
+  );
 
-    return result.value;
-  }
+  return result; 
+}
 
   /* ================= HELPER ================= */
 
