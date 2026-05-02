@@ -53,6 +53,19 @@
         </div>
       </div>
 
+      <!-- Filter danh mục -->
+      <div class="category-wrap">
+        <button
+          v-for="cat in categories"
+          :key="cat.value"
+          class="cat-btn"
+          :class="{ active: selectedCategory === cat.value }"
+          @click="selectedCategory = cat.value"
+        >
+          {{ cat.label }}
+        </button>
+      </div>
+
       <!-- Grid -->
       <div v-if="filteredProductsCount" class="product-grid">
         <div
@@ -162,11 +175,23 @@ const router = useRouter();
 
 const products = ref([]);
 const searchText = ref("");
+const selectedCategory = ref("");
 const placeholder = "https://via.placeholder.com/200x260?text=No+Image";
 const showConfirm = ref(false);
 const pendingProduct = ref(null);
 const showToast = ref(false);
 const toastMessage = ref("");
+
+const categories = [
+  { value: "", label: "Tất cả" },
+  { value: "tai_nghe", label: "Tai nghe" },
+  { value: "cap_sac", label: "Cáp sạc" },
+  { value: "cu_sac", label: "Củ sạc" },
+  { value: "sac_khong_day", label: "Sạc không dây" },
+  { value: "pin_du_phong", label: "Pin dự phòng" },
+  { value: "kinh_cuong_luc", label: "Kính cường lực" },
+  { value: "op_lung", label: "Ốp lưng" },
+];
 
 onMounted(async () => {
   await refreshList();
@@ -182,13 +207,15 @@ async function refreshList() {
 const productStrings = computed(() =>
   products.value.map(p => `${p.name}${p.brand}${p.imei || ""}`.toLowerCase())
 );
-const filteredProducts = computed(() =>
-  !searchText.value
-    ? products.value
-    : products.value.filter((_, i) =>
-        productStrings.value[i].includes(searchText.value.toLowerCase())
-      )
-);
+
+const filteredProducts = computed(() => {
+  return products.value.filter((p, i) => {
+    const matchCategory = !selectedCategory.value || p.category === selectedCategory.value;
+    const matchSearch = !searchText.value || productStrings.value[i].includes(searchText.value.toLowerCase());
+    return matchCategory && matchSearch;
+  });
+});
+
 const filteredProductsCount = computed(() => filteredProducts.value.length);
 const formatPrice = v => new Intl.NumberFormat("vi-VN").format(v);
 const calcDiscount = p => p.salePrice ? Math.round(100 - (p.salePrice / p.price) * 100) : 0;
@@ -286,11 +313,12 @@ async function executeAddToCart() {
   padding: 0 24px 60px; position: relative; z-index: 10;
 }
 
+/* ══ SEARCH ══ */
 .search-wrap {
   display: flex; align-items: center; gap: 14px;
   background: white; border-radius: 20px; padding: 16px 20px;
   box-shadow: 0 8px 40px rgba(10,15,30,.12);
-  margin-bottom: 28px; border: 1px solid rgba(37,99,235,.1);
+  margin-bottom: 16px; border: 1px solid rgba(37,99,235,.1);
 }
 .search-box { flex: 1; display: flex; align-items: center; gap: 10px; }
 .search-icon { width: 18px; height: 18px; color: #94a3b8; flex-shrink: 0; }
@@ -303,7 +331,37 @@ async function executeAddToCart() {
 }
 .result-num { font-size: 1rem; }
 
-/* ══ GRID (thay thế scroll ngang) ══ */
+/* ══ CATEGORY FILTER ══ */
+.category-wrap {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+.cat-btn {
+  padding: 8px 18px;
+  border-radius: 999px;
+  border: 1.5px solid #e0e7ff;
+  background: white;
+  color: #4f46e5;
+  font-weight: 600;
+  font-size: .85rem;
+  cursor: pointer;
+  transition: all .2s;
+  box-shadow: 0 2px 8px rgba(37,99,235,.06);
+}
+.cat-btn:hover {
+  background: #eff6ff;
+  border-color: #a5b4fc;
+}
+.cat-btn.active {
+  background: linear-gradient(135deg, #2563eb, #4f46e5);
+  color: white;
+  border-color: transparent;
+  box-shadow: 0 4px 12px rgba(37,99,235,.3);
+}
+
+/* ══ GRID ══ */
 .product-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -422,5 +480,7 @@ async function executeAddToCart() {
   .hero-stats { gap: 16px; padding: 14px 20px; }
   .main-panel { padding: 0 14px 40px; }
   .product-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .category-wrap { gap: 8px; }
+  .cat-btn { padding: 6px 14px; font-size: .78rem; }
 }
 </style>
