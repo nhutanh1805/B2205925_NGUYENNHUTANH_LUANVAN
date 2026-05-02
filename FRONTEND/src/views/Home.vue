@@ -204,7 +204,7 @@ import { ref, onMounted } from "vue";
 import productService from "@/services/product.service";
 import mainVideo from "@/assets/video/Banner Chính.mp4";
 import CommunitySidebar from "@/components/sidebar/CommunitySidebar.vue";
-import heroImage from "@/assets/img/BannerPhone.jpg";
+import heroImage from "@/assets/img/Banner Hero.png";
 /* Video phụ */
 const smallVideos = Array(12).fill(mainVideo);
 
