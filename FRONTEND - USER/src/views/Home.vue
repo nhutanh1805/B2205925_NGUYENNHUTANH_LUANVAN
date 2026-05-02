@@ -188,7 +188,6 @@
       </div>
     </section>
 
-    <!-- ✅ REVIEWS THẬT — lấy từ API -->
     <section class="py-6 reviews-section">
       <div class="container">
         <div class="text-center mb-5">
@@ -294,7 +293,7 @@ import { ref, onMounted, onUnmounted } from "vue";
 import productService from "@/services/product.service";
 import ReviewService from "@/services/review.service";
 import mainVideo from "@/assets/video/Banner Chính.mp4";
-import heroImage from "@/assets/img/BannerPhone.jpg";
+import heroImage from "@/assets/img/Ảnh chính.jpg";
 
 import TaiNghe from "@/assets/img/Tai nghe.jpg";
 import CuSac from "@/assets/img/Củ sạc.jpg";
@@ -334,7 +333,6 @@ const hotProducts = ref([]);
 const flashSaleProducts = ref([]);
 const newArrivals = ref([]);
 
-/* ✅ Reviews thật */
 const latestReviews = ref([]);
 const reviewsLoading = ref(false);
 
@@ -353,7 +351,6 @@ const startCountdown = () => {
   }, 1000);
 };
 
-/* ✅ Load reviews thật từ nhiều sản phẩm bán chạy */
 async function loadLatestReviews(products = []) {
   reviewsLoading.value = true;
   try {
@@ -377,7 +374,7 @@ async function loadLatestReviews(products = []) {
 
     // Chỉ lấy review 5 sao + sắp xếp mới nhất, giới hạn 8 cái
     latestReviews.value = collected
-      .filter((r) => r.rating >= 4)
+      .filter((r) => r.rating >= 3)
       .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
       .slice(0, 8);
   } catch (_) {
@@ -421,7 +418,7 @@ onMounted(async () => {
     flashSaleProducts.value = products.slice(0, 4);
     newArrivals.value = products.slice(4, 12);
 
-    // ✅ Load reviews thật sau khi có danh sách sản phẩm
+    // Load reviews thật sau khi có danh sách sản phẩm
     await loadLatestReviews(products);
   } catch (err) {
     console.log(err);

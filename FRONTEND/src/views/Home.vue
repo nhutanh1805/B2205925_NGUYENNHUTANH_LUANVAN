@@ -10,7 +10,7 @@
       </button>
     </div>
 
-    <CommunitySidebar />
+    <!--<CommunitySidebar />-->
 
     <!-- HERO -->
     <section
