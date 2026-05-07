@@ -138,17 +138,20 @@ const router = useRouter()
 const orders = ref([])
 const loading = ref(true)
 
+// ✅ Thêm "paid" vào pendingCount
 const pendingCount = computed(() =>
-  orders.value.filter(o => ['pending','confirmed','shipping'].includes(o.status)).length
+  orders.value.filter(o => ['pending', 'confirmed', 'paid', 'shipping'].includes(o.status)).length
 )
 const deliveredCount = computed(() =>
   orders.value.filter(o => o.status === 'delivered').length
 )
 
+// ✅ Thêm "paid" vào statusText
 const statusText = (s) => ({
-  pending: "Chờ xác nhận",
+  pending:   "Chờ xác nhận",
   confirmed: "Đã xác nhận",
-  shipping: "Đang giao",
+  paid:      "Đã thanh toán",
+  shipping:  "Đang giao",
   delivered: "Hoàn thành",
   cancelled: "Đã hủy",
 }[s] || s)
@@ -424,6 +427,7 @@ onMounted(loadOrders)
 }
 .accent-pending   { background: linear-gradient(180deg, #fbbf24, #f59e0b); }
 .accent-confirmed { background: linear-gradient(180deg, #60a5fa, #2563eb); }
+.accent-paid      { background: linear-gradient(180deg, #34d399, #059669); } /* ✅ thêm */
 .accent-shipping  { background: linear-gradient(180deg, #c084fc, #7c3aed); }
 .accent-delivered { background: linear-gradient(180deg, #34d399, #10b981); }
 .accent-cancelled { background: linear-gradient(180deg, #fca5a5, #ef4444); }
@@ -459,6 +463,7 @@ onMounted(loadOrders)
 .dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
 .badge-pending   { background: #fef3c7; color: #d97706; border: 1px solid #fde68a; }
 .badge-confirmed { background: #dbeafe; color: #2563eb; border: 1px solid #bfdbfe; }
+.badge-paid      { background: #d1fae5; color: #059669; border: 1px solid #6ee7b7; } /* ✅ thêm */
 .badge-shipping  { background: #f3e8ff; color: #7c3aed; border: 1px solid #ddd6fe; }
 .badge-delivered { background: #d1fae5; color: #059669; border: 1px solid #a7f3d0; }
 .badge-cancelled { background: #fee2e2; color: #dc2626; border: 1px solid #fecaca; }

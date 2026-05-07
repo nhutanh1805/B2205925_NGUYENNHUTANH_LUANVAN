@@ -122,7 +122,7 @@
 
             <div class="timeline">
               <div
-                v-for="step in statusSteps"
+                v-for="step in currentStatusSteps"
                 :key="step.key"
                 class="timeline-step"
                 :class="{
@@ -204,7 +204,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue"
+import { ref, computed, onMounted } from "vue"
 import { useRoute, useRouter } from "vue-router"
 import OrderService from "@/services/order.service"
 
@@ -215,19 +215,43 @@ const order = ref(null)
 const loading = ref(true)
 const placeholder = "https://via.placeholder.com/120x160?text=No+Image"
 
-const statusSteps = [
+// ✅ 2 bộ steps riêng cho COD và VNPAY
+const codSteps = [
   { key: "pending",   label: "Chờ xác nhận", icon: "🕐" },
   { key: "confirmed", label: "Đã xác nhận",  icon: "✅" },
   { key: "shipping",  label: "Đang giao",    icon: "🚚" },
   { key: "delivered", label: "Hoàn thành",   icon: "🎉" },
 ]
 
-const statusOrder = ["pending", "confirmed", "shipping", "delivered"]
+const vnpaySteps = [
+  { key: "pending",   label: "Chờ thanh toán",  icon: "🕐" },
+  { key: "paid",      label: "Đã thanh toán",   icon: "💳" },
+  { key: "shipping",  label: "Đang giao",       icon: "🚚" },
+  { key: "delivered", label: "Hoàn thành",      icon: "🎉" },
+]
+
+// ✅ Tự động chọn đúng bộ steps dựa vào status của đơn
+const currentStatusSteps = computed(() => {
+  const s = order.value?.status
+  if (s === "paid" || (s === "shipping" && !codSteps.find(st => st.key === "confirmed"))) {
+    return vnpaySteps
+  }
+  // Nếu đơn đã từng qua "paid" thì dùng vnpaySteps
+  // Đơn COD sẽ có status "confirmed", đơn VNPAY sẽ có "paid"
+  if (s === "confirmed") return codSteps
+  return codSteps // mặc định COD cho pending, shipping, delivered, cancelled
+})
+
+// ✅ statusOrder tương ứng với từng luồng
+const codOrder   = ["pending", "confirmed", "shipping", "delivered"]
+const vnpayOrder = ["pending", "paid",      "shipping", "delivered"]
 
 const isStepActive = (key) => {
   if (order.value?.status === "cancelled") return false
-  const cur = statusOrder.indexOf(order.value?.status)
-  const step = statusOrder.indexOf(key)
+  const steps = currentStatusSteps.value
+  const orderArr = steps === vnpaySteps ? vnpayOrder : codOrder
+  const cur  = orderArr.indexOf(order.value?.status)
+  const step = orderArr.indexOf(key)
   return step <= cur
 }
 
@@ -238,10 +262,12 @@ const formatDate = d =>
     hour: "2-digit", minute: "2-digit",
   })
 
+// ✅ Thêm "paid" vào getStatusLabel
 const getStatusLabel = (s) => ({
-  pending: "Chờ xác nhận",
+  pending:   "Chờ xác nhận",
   confirmed: "Đã xác nhận",
-  shipping: "Đang giao",
+  paid:      "Đã thanh toán",
+  shipping:  "Đang giao",
   delivered: "Hoàn thành",
   cancelled: "Đã hủy",
 }[s] || s)
@@ -335,6 +361,7 @@ onMounted(loadOrder)
 }
 .pill-pending   { background: #fef3c7; color: #d97706; }
 .pill-confirmed { background: #dbeafe; color: #2563eb; }
+.pill-paid      { background: #d1fae5; color: #059669; } /* ✅ thêm */
 .pill-shipping  { background: #f3e8ff; color: #7c3aed; }
 .pill-delivered { background: #d1fae5; color: #059669; }
 .pill-cancelled { background: #fee2e2; color: #dc2626; }

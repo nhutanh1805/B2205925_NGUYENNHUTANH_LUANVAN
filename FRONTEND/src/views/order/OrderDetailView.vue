@@ -130,6 +130,7 @@
                 >
                   <option value="pending">🕐 Chờ xác nhận</option>
                   <option value="confirmed">✅ Đã xác nhận</option>
+                  <option value="paid">💳 Đã thanh toán</option>
                   <option value="shipping">🚚 Đang giao</option>
                   <option value="delivered">🎉 Hoàn thành</option>
                   <option value="cancelled">❌ Đã hủy</option>
@@ -254,13 +255,17 @@ const order = ref(null)
 const loading = ref(true)
 const placeholder = "https://via.placeholder.com/120x160?text=No+Image"
 
+// ✅ Thêm "paid" vào statusSteps
 const statusSteps = [
-  { key: "pending",   label: "Chờ xác nhận", icon: "🕐" },
-  { key: "confirmed", label: "Đã xác nhận",  icon: "✅" },
-  { key: "shipping",  label: "Đang giao",    icon: "🚚" },
-  { key: "delivered", label: "Hoàn thành",   icon: "🎉" },
+  { key: "pending",   label: "Chờ xác nhận",   icon: "🕐" },
+  { key: "confirmed", label: "Đã xác nhận",     icon: "✅" },
+  { key: "paid",      label: "Đã thanh toán",   icon: "💳" },
+  { key: "shipping",  label: "Đang giao",       icon: "🚚" },
+  { key: "delivered", label: "Hoàn thành",      icon: "🎉" },
 ]
-const statusOrder = ["pending", "confirmed", "shipping", "delivered"]
+
+// ✅ Thêm "paid" vào statusOrder
+const statusOrder = ["pending", "confirmed", "paid", "shipping", "delivered"]
 
 const isStepActive = (key) => {
   if (order.value?.status === "cancelled") return false
@@ -278,9 +283,11 @@ const formatDate = d =>
     hour: "2-digit", minute: "2-digit",
   })
 
+// ✅ Thêm "paid" vào getStatusLabel
 const getStatusLabel = (s) => ({
   pending:   "Chờ xác nhận",
   confirmed: "Đã xác nhận",
+  paid:      "Đã thanh toán",
   shipping:  "Đang giao",
   delivered: "Hoàn thành",
   cancelled: "Đã hủy",
@@ -393,6 +400,7 @@ onMounted(loadOrder)
 }
 .pill-pending   { background: #fef3c7; color: #d97706; }
 .pill-confirmed { background: #dbeafe; color: #2563eb; }
+.pill-paid      { background: #d1fae5; color: #059669; } /* ✅ thêm */
 .pill-shipping  { background: #f3e8ff; color: #7c3aed; }
 .pill-delivered { background: #d1fae5; color: #059669; }
 .pill-cancelled { background: #fee2e2; color: #dc2626; }
@@ -501,6 +509,7 @@ onMounted(loadOrder)
 .status-select:disabled { opacity: .5; cursor: not-allowed; background: #f1f5f9; }
 .select-pending   { color: #d97706; border-color: #fde68a; background: #fffbeb; }
 .select-confirmed { color: #2563eb; border-color: #bfdbfe; background: #eff6ff; }
+.select-paid      { color: #059669; border-color: #6ee7b7; background: #f0fdf4; } /* ✅ thêm */
 .select-shipping  { color: #7c3aed; border-color: #ddd6fe; background: #f5f3ff; }
 .select-delivered { color: #059669; border-color: #a7f3d0; background: #f0fdf4; }
 .select-cancelled { color: #dc2626; border-color: #fecaca; background: #fff1f2; }

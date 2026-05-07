@@ -14,7 +14,6 @@ class OrderService {
     const user = await this.User.findOne({ _id: new ObjectId(orderData.userId) });
     if (user) userName = user.name;
 
-    // Kiểm tra stock từng sản phẩm và trừ ngay
     for (const item of orderData.items) {
       const result = await this.productService.Product.updateOne(
         {
@@ -30,7 +29,6 @@ class OrderService {
       }
     }
 
-    // Tạo order
     const order = {
       userId: orderData.userId,
       userName,
@@ -46,7 +44,7 @@ class OrderService {
       shippingAddress: orderData.shippingAddress,
       phone: orderData.phone,
       note: orderData.note,
-      status: "pending", // bắt đầu là pending
+      status: "pending",
       createdAt: new Date(),
       updatedAt: new Date()
     };
@@ -182,23 +180,22 @@ class OrderService {
 
     const currentStatus = order.status;
 
-    // Nếu đã hủy hoặc đã giao → không sửa
     if (currentStatus === "cancelled" || currentStatus === "delivered") {
       throw new Error(`Không thể thay đổi trạng thái từ "${currentStatus}"`);
     }
 
-    // Tiến trình hợp lệ
+    // ✅ THÊM "paid" cho luồng VNPAY
     const allowedTransitions = {
-  pending: ["confirmed", "cancelled"], // chỉ giai đoạn này được hủy
-  confirmed: ["shipping"],             // ❌ không cho hủy nữa
-  shipping: ["delivered"],
-};
+      pending:   ["confirmed", "paid", "cancelled"], // COD → confirmed, VNPAY → paid
+      confirmed: ["shipping"],                        // COD flow
+      paid:      ["shipping"],                        // VNPAY flow
+      shipping:  ["delivered"],
+    };
 
     if (!allowedTransitions[currentStatus]?.includes(newStatus)) {
       throw new Error(`Không thể chuyển từ "${currentStatus}" sang "${newStatus}"`);
     }
 
-    // Nếu hủy order → cộng lại stock
     if (newStatus === "cancelled") {
       for (const item of order.items) {
         await this.productService.Product.updateOne(
@@ -208,7 +205,6 @@ class OrderService {
       }
     }
 
-    // Cập nhật trạng thái
     await this.Order.updateOne(
       { _id: new ObjectId(orderId) },
       { $set: { status: newStatus, updatedAt: new Date() } }
@@ -216,7 +212,6 @@ class OrderService {
 
     return await this.findById(orderId);
   }
-  
 }
 
 module.exports = OrderService;

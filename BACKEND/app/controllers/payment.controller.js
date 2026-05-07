@@ -118,8 +118,8 @@ exports.vnpayReturn = async (req, res) => {
     // =========================
     if (responseCode === "00") {
       try {
-        // 🔥 UPDATE ORDER STATUS
-        await orderService.updateStatus(orderId, "confirmed");
+        // ✅ Đổi "confirmed" → "paid" cho luồng VNPAY
+        await orderService.updateStatus(orderId, "paid");
 
         return res.redirect(
           "http://localhost:3002/payment-success"
