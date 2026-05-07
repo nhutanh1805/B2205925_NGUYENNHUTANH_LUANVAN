@@ -44,6 +44,7 @@ class OrderService {
       shippingAddress: orderData.shippingAddress,
       phone: orderData.phone,
       note: orderData.note,
+      paymentMethod: orderData.paymentMethod || "COD", 
       status: "pending",
       createdAt: new Date(),
       updatedAt: new Date()
@@ -77,6 +78,7 @@ class OrderService {
           phone: 1,
           note: 1,
           status: 1,
+          paymentMethod: 1, 
           createdAt: 1,
           updatedAt: 1,
           userName: { $ifNull: ["$userInfo.name", "$userName"] }
@@ -120,6 +122,7 @@ class OrderService {
           phone: 1,
           note: 1,
           status: 1,
+          paymentMethod: 1, 
           createdAt: 1,
           updatedAt: 1,
           userName: { $ifNull: ["$userInfo.name", "$userName"] }
@@ -162,6 +165,7 @@ class OrderService {
           phone: 1,
           note: 1,
           status: 1,
+          paymentMethod: 1, 
           createdAt: 1,
           updatedAt: 1,
           userName: { $ifNull: ["$userInfo.name", "$userName"] }
@@ -184,11 +188,10 @@ class OrderService {
       throw new Error(`Không thể thay đổi trạng thái từ "${currentStatus}"`);
     }
 
-    // ✅ THÊM "paid" cho luồng VNPAY
     const allowedTransitions = {
-      pending:   ["confirmed", "paid", "cancelled"], // COD → confirmed, VNPAY → paid
-      confirmed: ["shipping"],                        // COD flow
-      paid:      ["shipping"],                        // VNPAY flow
+      pending:   ["confirmed", "paid", "cancelled"],
+      confirmed: ["shipping"],
+      paid:      ["shipping"],
       shipping:  ["delivered"],
     };
 

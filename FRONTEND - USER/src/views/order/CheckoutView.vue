@@ -119,6 +119,7 @@ const placeOrder = async () => {
   try {
     const res = await OrderService.createOrder({
       ...form.value,
+      paymentMethod: "COD",             
       items: cart.value.items,
       totalPrice: cart.value.totalPrice,
       totalQuantity: cart.value.totalQuantity,
@@ -146,6 +147,7 @@ const payVNPay = async () => {
   try {
     const res = await OrderService.createOrder({
       ...form.value,
+      paymentMethod: "VNPAY",           
       items: cart.value.items,
       totalPrice: cart.value.totalPrice,
       totalQuantity: cart.value.totalQuantity,

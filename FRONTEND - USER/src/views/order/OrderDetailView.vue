@@ -102,6 +102,17 @@
                 <span class="info-lbl">Ngày đặt</span>
                 <span class="info-val date">{{ formatDate(order.createdAt) }}</span>
               </div>
+
+              <!-- Phương thức thanh toán -->
+              <div class="info-item">
+                <span class="info-lbl">Thanh toán</span>
+                <span class="info-val">
+                  <span class="payment-badge" :class="order.paymentMethod === 'VNPAY' ? 'pay-vnpay' : 'pay-cod'">
+                    {{ order.paymentMethod === 'VNPAY' ? 'THANH TOÁN VNPAY' : 'THANH TOÁN COD' }}
+                  </span>
+                </span>
+              </div>
+
               <div class="info-item full">
                 <span class="info-lbl">Địa chỉ giao hàng</span>
                 <span class="info-val">{{ order.shippingAddress }}</span>
@@ -215,7 +226,6 @@ const order = ref(null)
 const loading = ref(true)
 const placeholder = "https://via.placeholder.com/120x160?text=No+Image"
 
-// ✅ 2 bộ steps riêng cho COD và VNPAY
 const codSteps = [
   { key: "pending",   label: "Chờ xác nhận", icon: "🕐" },
   { key: "confirmed", label: "Đã xác nhận",  icon: "✅" },
@@ -224,32 +234,24 @@ const codSteps = [
 ]
 
 const vnpaySteps = [
-  { key: "pending",   label: "Chờ thanh toán",  icon: "🕐" },
-  { key: "paid",      label: "Đã thanh toán",   icon: "💳" },
-  { key: "shipping",  label: "Đang giao",       icon: "🚚" },
-  { key: "delivered", label: "Hoàn thành",      icon: "🎉" },
+  { key: "pending",   label: "Chờ thanh toán", icon: "🕐" },
+  { key: "paid",      label: "Đã thanh toán",  icon: "💳" },
+  { key: "shipping",  label: "Đang giao",      icon: "🚚" },
+  { key: "delivered", label: "Hoàn thành",     icon: "🎉" },
 ]
 
-// ✅ Tự động chọn đúng bộ steps dựa vào status của đơn
-const currentStatusSteps = computed(() => {
-  const s = order.value?.status
-  if (s === "paid" || (s === "shipping" && !codSteps.find(st => st.key === "confirmed"))) {
-    return vnpaySteps
-  }
-  // Nếu đơn đã từng qua "paid" thì dùng vnpaySteps
-  // Đơn COD sẽ có status "confirmed", đơn VNPAY sẽ có "paid"
-  if (s === "confirmed") return codSteps
-  return codSteps // mặc định COD cho pending, shipping, delivered, cancelled
-})
+// Dùng paymentMethod để chọn đúng bộ steps
+const currentStatusSteps = computed(() =>
+  order.value?.paymentMethod === "VNPAY" ? vnpaySteps : codSteps
+)
 
-// ✅ statusOrder tương ứng với từng luồng
 const codOrder   = ["pending", "confirmed", "shipping", "delivered"]
 const vnpayOrder = ["pending", "paid",      "shipping", "delivered"]
 
+// Dùng paymentMethod để chọn đúng orderArr
 const isStepActive = (key) => {
   if (order.value?.status === "cancelled") return false
-  const steps = currentStatusSteps.value
-  const orderArr = steps === vnpaySteps ? vnpayOrder : codOrder
+  const orderArr = order.value?.paymentMethod === "VNPAY" ? vnpayOrder : codOrder
   const cur  = orderArr.indexOf(order.value?.status)
   const step = orderArr.indexOf(key)
   return step <= cur
@@ -262,7 +264,6 @@ const formatDate = d =>
     hour: "2-digit", minute: "2-digit",
   })
 
-// ✅ Thêm "paid" vào getStatusLabel
 const getStatusLabel = (s) => ({
   pending:   "Chờ xác nhận",
   confirmed: "Đã xác nhận",
@@ -361,7 +362,7 @@ onMounted(loadOrder)
 }
 .pill-pending   { background: #fef3c7; color: #d97706; }
 .pill-confirmed { background: #dbeafe; color: #2563eb; }
-.pill-paid      { background: #d1fae5; color: #059669; } /* ✅ thêm */
+.pill-paid      { background: #d1fae5; color: #059669; }
 .pill-shipping  { background: #f3e8ff; color: #7c3aed; }
 .pill-delivered { background: #d1fae5; color: #059669; }
 .pill-cancelled { background: #fee2e2; color: #dc2626; }
@@ -462,6 +463,14 @@ onMounted(loadOrder)
   color: #92400e; font-size: .82rem;
 }
 
+.payment-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 4px 11px; border-radius: 999px;
+  font-size: .75rem; font-weight: 700;
+}
+.pay-cod   { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
+.pay-vnpay { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+
 /* ══ TIMELINE ══ */
 .timeline {
   display: flex; align-items: flex-start;
@@ -498,8 +507,7 @@ onMounted(loadOrder)
 .step-line {
   position: absolute; top: 20px; left: 60%;
   width: calc(100% - 20px); height: 2px;
-  background: #e0e7ff;
-  z-index: 0;
+  background: #e0e7ff; z-index: 0;
 }
 .timeline-step.active .step-line {
   background: linear-gradient(90deg, #2563eb, #4f46e5);

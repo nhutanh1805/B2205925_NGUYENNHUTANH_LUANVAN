@@ -100,6 +100,17 @@
                 <span class="info-lbl">Ngày đặt</span>
                 <span class="info-val date">{{ formatDate(order.createdAt) }}</span>
               </div>
+
+              <!-- Phương thức thanh toán -->
+              <div class="info-item">
+                <span class="info-lbl">Thanh toán</span>
+                <span class="info-val">
+                  <span class="payment-badge" :class="order.paymentMethod === 'VNPAY' ? 'pay-vnpay' : 'pay-cod'">
+                    {{ order.paymentMethod === 'VNPAY' ? 'THANH TOÁN VNPAY' : 'THANH TOÁN COD' }}
+                  </span>
+                </span>
+              </div>
+
               <div class="info-item full">
                 <span class="info-lbl">Địa chỉ giao hàng</span>
                 <span class="info-val">{{ order.shippingAddress }}</span>
@@ -163,7 +174,7 @@
 
             <div class="timeline">
               <div
-                v-for="step in statusSteps"
+                v-for="step in currentStatusSteps"
                 :key="step.key"
                 class="timeline-step"
                 :class="{
@@ -244,7 +255,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue"
+import { ref, computed, onMounted } from "vue"
 import { useRoute, useRouter } from "vue-router"
 import OrderService from "@/services/order.service"
 
@@ -255,22 +266,35 @@ const order = ref(null)
 const loading = ref(true)
 const placeholder = "https://via.placeholder.com/120x160?text=No+Image"
 
-// ✅ Thêm "paid" vào statusSteps
-const statusSteps = [
-  { key: "pending",   label: "Chờ xác nhận",   icon: "🕐" },
-  { key: "confirmed", label: "Đã xác nhận",     icon: "✅" },
-  { key: "paid",      label: "Đã thanh toán",   icon: "💳" },
-  { key: "shipping",  label: "Đang giao",       icon: "🚚" },
-  { key: "delivered", label: "Hoàn thành",      icon: "🎉" },
+// 2 bộ steps riêng cho COD và VNPAY
+const codSteps = [
+  { key: "pending",   label: "Chờ xác nhận", icon: "🕐" },
+  { key: "confirmed", label: "Đã xác nhận",  icon: "✅" },
+  { key: "shipping",  label: "Đang giao",    icon: "🚚" },
+  { key: "delivered", label: "Hoàn thành",   icon: "🎉" },
 ]
 
-// ✅ Thêm "paid" vào statusOrder
-const statusOrder = ["pending", "confirmed", "paid", "shipping", "delivered"]
+const vnpaySteps = [
+  { key: "pending",   label: "Chờ thanh toán", icon: "🕐" },
+  { key: "paid",      label: "Đã thanh toán",  icon: "💳" },
+  { key: "shipping",  label: "Đang giao",      icon: "🚚" },
+  { key: "delivered", label: "Hoàn thành",     icon: "🎉" },
+]
 
+const codOrder   = ["pending", "confirmed", "shipping", "delivered"]
+const vnpayOrder = ["pending", "paid",      "shipping", "delivered"]
+
+// Dùng paymentMethod để chọn đúng bộ steps
+const currentStatusSteps = computed(() =>
+  order.value?.paymentMethod === "VNPAY" ? vnpaySteps : codSteps
+)
+
+// Dùng paymentMethod để chọn đúng orderArr
 const isStepActive = (key) => {
   if (order.value?.status === "cancelled") return false
-  const cur = statusOrder.indexOf(order.value?.status)
-  const step = statusOrder.indexOf(key)
+  const orderArr = order.value?.paymentMethod === "VNPAY" ? vnpayOrder : codOrder
+  const cur  = orderArr.indexOf(order.value?.status)
+  const step = orderArr.indexOf(key)
   return step <= cur
 }
 
@@ -283,7 +307,6 @@ const formatDate = d =>
     hour: "2-digit", minute: "2-digit",
   })
 
-// ✅ Thêm "paid" vào getStatusLabel
 const getStatusLabel = (s) => ({
   pending:   "Chờ xác nhận",
   confirmed: "Đã xác nhận",
@@ -400,7 +423,7 @@ onMounted(loadOrder)
 }
 .pill-pending   { background: #fef3c7; color: #d97706; }
 .pill-confirmed { background: #dbeafe; color: #2563eb; }
-.pill-paid      { background: #d1fae5; color: #059669; } /* ✅ thêm */
+.pill-paid      { background: #d1fae5; color: #059669; }
 .pill-shipping  { background: #f3e8ff; color: #7c3aed; }
 .pill-delivered { background: #d1fae5; color: #059669; }
 .pill-cancelled { background: #fee2e2; color: #dc2626; }
@@ -493,6 +516,15 @@ onMounted(loadOrder)
   color: #92400e; font-size: .82rem;
 }
 
+
+.payment-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 4px 11px; border-radius: 999px;
+  font-size: .75rem; font-weight: 700;
+}
+.pay-cod   { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
+.pay-vnpay { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+
 /* ══ ADMIN CARD ══ */
 .admin-card { margin-bottom: 16px; border-color: #e0e7ff; }
 .admin-body { padding: 20px 24px; display: flex; flex-direction: column; gap: 14px; }
@@ -509,7 +541,7 @@ onMounted(loadOrder)
 .status-select:disabled { opacity: .5; cursor: not-allowed; background: #f1f5f9; }
 .select-pending   { color: #d97706; border-color: #fde68a; background: #fffbeb; }
 .select-confirmed { color: #2563eb; border-color: #bfdbfe; background: #eff6ff; }
-.select-paid      { color: #059669; border-color: #6ee7b7; background: #f0fdf4; } /* ✅ thêm */
+.select-paid      { color: #059669; border-color: #6ee7b7; background: #f0fdf4; }
 .select-shipping  { color: #7c3aed; border-color: #ddd6fe; background: #f5f3ff; }
 .select-delivered { color: #059669; border-color: #a7f3d0; background: #f0fdf4; }
 .select-cancelled { color: #dc2626; border-color: #fecaca; background: #fff1f2; }

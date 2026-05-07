@@ -92,6 +92,10 @@
               <span class="status-badge" :class="`badge-${order.status}`">
                 <i class="dot"></i>{{ statusText(order.status) }}
               </span>
+              <!-- THÊM: Badge phương thức thanh toán -->
+              <span class="payment-badge" :class="order.paymentMethod === 'VNPAY' ? 'pay-vnpay' : 'pay-cod'">
+                {{ order.paymentMethod === 'VNPAY' ? 'THANH TOÁN VNPAY' : 'THANH TOÁN COD' }}
+              </span>
             </div>
 
             <div class="ocard-stats">
@@ -138,7 +142,6 @@ const router = useRouter()
 const orders = ref([])
 const loading = ref(true)
 
-// ✅ Thêm "paid" vào pendingCount
 const pendingCount = computed(() =>
   orders.value.filter(o => ['pending', 'confirmed', 'paid', 'shipping'].includes(o.status)).length
 )
@@ -146,7 +149,6 @@ const deliveredCount = computed(() =>
   orders.value.filter(o => o.status === 'delivered').length
 )
 
-// ✅ Thêm "paid" vào statusText
 const statusText = (s) => ({
   pending:   "Chờ xác nhận",
   confirmed: "Đã xác nhận",
@@ -427,7 +429,7 @@ onMounted(loadOrders)
 }
 .accent-pending   { background: linear-gradient(180deg, #fbbf24, #f59e0b); }
 .accent-confirmed { background: linear-gradient(180deg, #60a5fa, #2563eb); }
-.accent-paid      { background: linear-gradient(180deg, #34d399, #059669); } /* ✅ thêm */
+.accent-paid      { background: linear-gradient(180deg, #34d399, #059669); }
 .accent-shipping  { background: linear-gradient(180deg, #c084fc, #7c3aed); }
 .accent-delivered { background: linear-gradient(180deg, #34d399, #10b981); }
 .accent-cancelled { background: linear-gradient(180deg, #fca5a5, #ef4444); }
@@ -463,10 +465,23 @@ onMounted(loadOrders)
 .dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
 .badge-pending   { background: #fef3c7; color: #d97706; border: 1px solid #fde68a; }
 .badge-confirmed { background: #dbeafe; color: #2563eb; border: 1px solid #bfdbfe; }
-.badge-paid      { background: #d1fae5; color: #059669; border: 1px solid #6ee7b7; } /* ✅ thêm */
+.badge-paid      { background: #d1fae5; color: #059669; border: 1px solid #6ee7b7; }
 .badge-shipping  { background: #f3e8ff; color: #7c3aed; border: 1px solid #ddd6fe; }
 .badge-delivered { background: #d1fae5; color: #059669; border: 1px solid #a7f3d0; }
 .badge-cancelled { background: #fee2e2; color: #dc2626; border: 1px solid #fecaca; }
+
+.payment-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 11px;
+  border-radius: 999px;
+  font-size: .7rem;
+  font-weight: 700;
+  letter-spacing: .04em;
+}
+.pay-cod   { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
+.pay-vnpay { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
 
 .ocard-stats { display: flex; gap: 28px; flex-wrap: wrap; }
 .ostat { display: flex; flex-direction: column; gap: 2px; }

@@ -31,20 +31,21 @@ class OrderService {
       shippingAddress: data.shippingAddress,
       phone: data.phone,
       note: data.note,
+      paymentMethod: data.paymentMethod || "COD", 
     };
 
     const res = await this.api.post("/create", payload);
     return res.data;
   }
 
-  // ✅ HỦY / UPDATE STATUS
+  // HỦY / UPDATE STATUS
   async updateOrderStatus(orderId, status) {
-  return (
-    await this.api.patch(`/${orderId}/status`, {
-      status,
-    })
-  ).data;
-}
+    return (
+      await this.api.patch(`/${orderId}/status`, {
+        status,
+      })
+    ).data;
+  }
 }
 
 export default new OrderService();
