@@ -20,7 +20,7 @@
 
         <div class="hero-stats">
           <div class="hero-stat">
-            <span class="stat-num">{{ products.length }}</span>
+            <span class="stat-num">{{ totalProducts }}</span>
             <span class="stat-lbl">Sản phẩm</span>
           </div>
           <div class="stat-divider"></div>
@@ -46,30 +46,45 @@
           <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
           </svg>
-          <InputSearch v-model="searchText" @submit="refreshList" class="search-input-inner" />
+          <InputSearch v-model="searchText" @submit="onSearch" class="search-input-inner" />
         </div>
         <div class="result-pill">
-          <span class="result-num">{{ filteredProductsCount }}</span> sản phẩm
+          <span class="result-num">{{ totalProducts }}</span> sản phẩm
         </div>
       </div>
 
-      <!-- Filter danh mục -->
-      <div class="category-wrap">
-        <button
-          v-for="cat in categories"
-          :key="cat.value"
-          class="cat-btn"
-          :class="{ active: selectedCategory === cat.value }"
-          @click="selectedCategory = cat.value"
-        >
-          {{ cat.label }}
-        </button>
+      <!-- Filter danh mục + Sort -->
+      <div class="filter-bar">
+        <!-- Danh mục -->
+        <div class="category-wrap">
+          <button
+            v-for="cat in categories"
+            :key="cat.value"
+            class="cat-btn"
+            :class="{ active: selectedCategory === cat.value }"
+            @click="selectCategory(cat.value)"
+          >
+            {{ cat.label }}
+          </button>
+        </div>
+
+        <div class="sort-wrap">
+          <svg class="sort-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 6h18M7 12h10M11 18h2"/>
+          </svg>
+          <select v-model="sortOption" @change="onSortChange" class="sort-select">
+            <option value="createdAt-desc">Mới nhất</option>
+            <option value="price-asc">Giá: Thấp → Cao</option>
+            <option value="price-desc">Giá: Cao → Thấp</option>
+            <option value="sold-desc">Bán chạy nhất</option>
+          </select>
+        </div>
       </div>
 
       <!-- Grid -->
-      <div v-if="filteredProductsCount" class="product-grid">
+      <div v-if="products.length" class="product-grid">
         <div
-          v-for="(product, idx) in filteredProducts"
+          v-for="(product, idx) in products"
           :key="product._id"
           class="pcard"
           :style="`--delay:${idx * 0.04}s`"
@@ -173,14 +188,18 @@ import InputSearch from "@/components/InputSearch.vue";
 
 const router = useRouter();
 
-const products = ref([]);
-const searchText = ref("");
+const products    = ref([]);
+const totalProducts = ref(0);
+const searchText  = ref("");
 const selectedCategory = ref("");
 const placeholder = "https://via.placeholder.com/200x260?text=No+Image";
 const showConfirm = ref(false);
 const pendingProduct = ref(null);
-const showToast = ref(false);
+const showToast   = ref(false);
 const toastMessage = ref("");
+
+// Sort: giá trị = "sortBy-sortOrder"
+const sortOption  = ref("createdAt-desc");
 
 const categories = [
   { value: "", label: "Tất cả" },
@@ -193,31 +212,42 @@ const categories = [
   { value: "op_lung", label: "Ốp lưng" },
 ];
 
-onMounted(async () => {
-  await refreshList();
-});
+// Tách "price-asc" → sortBy="price", sortOrder="asc"
+const buildParams = () => {
+  const [sortBy, sortOrder] = sortOption.value.split("-");
+  return {
+    page: 1,
+    limit: 999,
+    search: searchText.value || undefined,
+    category: selectedCategory.value || undefined,
+    sortBy,
+    sortOrder,
+  };
+};
+
+const refreshList = async () => {
+  const res = await ProductService.getAll(buildParams());
+  products.value = res.products || res;
+  totalProducts.value = res.pagination?.total ?? products.value.length;
+};
+
+// Khi bấm danh mục → reset về trang 1 → gọi lại
+const selectCategory = (val) => {
+  selectedCategory.value = val;
+  refreshList();
+};
+
+// Khi thay sort → gọi lại
+const onSortChange = () => refreshList();
+
+// Khi search → gọi lại
+const onSearch = () => refreshList();
+
+onMounted(refreshList);
 
 function goDetail(id) { router.push(`/products/${id}`); }
 
-async function refreshList() {
-  const res = await ProductService.getAll({ page: 1, limit: 999 });
-  products.value = res.products || res;
-}
-
-const productStrings = computed(() =>
-  products.value.map(p => `${p.name}${p.brand}${p.imei || ""}`.toLowerCase())
-);
-
-const filteredProducts = computed(() => {
-  return products.value.filter((p, i) => {
-    const matchCategory = !selectedCategory.value || p.category === selectedCategory.value;
-    const matchSearch = !searchText.value || productStrings.value[i].includes(searchText.value.toLowerCase());
-    return matchCategory && matchSearch;
-  });
-});
-
-const filteredProductsCount = computed(() => filteredProducts.value.length);
-const formatPrice = v => new Intl.NumberFormat("vi-VN").format(v);
+const formatPrice  = v => new Intl.NumberFormat("vi-VN").format(v);
 const calcDiscount = p => p.salePrice ? Math.round(100 - (p.salePrice / p.price) * 100) : 0;
 
 function confirmAddToCart(product) {
@@ -331,34 +361,42 @@ async function executeAddToCart() {
 }
 .result-num { font-size: 1rem; }
 
-/* ══ CATEGORY FILTER ══ */
-.category-wrap {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  margin-bottom: 24px;
+/* ══ FILTER BAR ══ */
+.filter-bar {
+  display: flex; align-items: center;
+  justify-content: space-between; flex-wrap: wrap;
+  gap: 12px; margin-bottom: 24px;
 }
+
+/* ══ CATEGORY ══ */
+.category-wrap { display: flex; gap: 10px; flex-wrap: wrap; }
 .cat-btn {
-  padding: 8px 18px;
-  border-radius: 999px;
-  border: 1.5px solid #e0e7ff;
-  background: white;
-  color: #4f46e5;
-  font-weight: 600;
-  font-size: .85rem;
-  cursor: pointer;
-  transition: all .2s;
+  padding: 8px 18px; border-radius: 999px;
+  border: 1.5px solid #e0e7ff; background: white;
+  color: #4f46e5; font-weight: 600; font-size: .85rem;
+  cursor: pointer; transition: all .2s;
   box-shadow: 0 2px 8px rgba(37,99,235,.06);
 }
-.cat-btn:hover {
-  background: #eff6ff;
-  border-color: #a5b4fc;
-}
+.cat-btn:hover { background: #eff6ff; border-color: #a5b4fc; }
 .cat-btn.active {
   background: linear-gradient(135deg, #2563eb, #4f46e5);
-  color: white;
-  border-color: transparent;
+  color: white; border-color: transparent;
   box-shadow: 0 4px 12px rgba(37,99,235,.3);
+}
+
+.sort-wrap {
+  display: flex; align-items: center; gap: 8px;
+  background: white; border: 1.5px solid #e0e7ff;
+  border-radius: 12px; padding: 8px 14px;
+  box-shadow: 0 2px 8px rgba(37,99,235,.06);
+  flex-shrink: 0;
+}
+.sort-icon { width: 16px; height: 16px; color: #4f46e5; flex-shrink: 0; }
+.sort-select {
+  border: none; outline: none; background: transparent;
+  font-size: .85rem; font-weight: 700; color: #4f46e5;
+  cursor: pointer; appearance: none;
+  padding-right: 4px;
 }
 
 /* ══ GRID ══ */
@@ -480,6 +518,8 @@ async function executeAddToCart() {
   .hero-stats { gap: 16px; padding: 14px 20px; }
   .main-panel { padding: 0 14px 40px; }
   .product-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .filter-bar { flex-direction: column; align-items: stretch; }
+  .sort-wrap { justify-content: center; }
   .category-wrap { gap: 8px; }
   .cat-btn { padding: 6px 14px; font-size: .78rem; }
 }
