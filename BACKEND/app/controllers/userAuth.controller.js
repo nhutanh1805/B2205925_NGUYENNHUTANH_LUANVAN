@@ -78,3 +78,60 @@ exports.delete = async (req, res, next) => {
     return next(new ApiError(500, "Không thể xóa user"));
   }
 };
+
+// Vô hiệu hóa vĩnh viễn (không thể kích hoạt lại)
+exports.deactivate = async (req, res, next) => {
+  try {
+    const service = new UserAuthService(MongoDB.client);
+    const user = await service.deactivate(req.params.id);
+
+    if (!user) {
+      return next(new ApiError(404, "Không tìm thấy user"));
+    }
+
+    return res.json({
+      message: "Vô hiệu hóa tài khoản thành công",
+      data: user,
+    });
+  } catch (error) {
+    return next(new ApiError(400, error.message));
+  }
+};
+
+// Cấm tài khoản
+exports.ban = async (req, res, next) => {
+  try {
+    const service = new UserAuthService(MongoDB.client);
+    const user = await service.ban(req.params.id);
+
+    if (!user) {
+      return next(new ApiError(404, "Không tìm thấy user"));
+    }
+
+    return res.json({
+      message: "Cấm tài khoản thành công",
+      data: user,
+    });
+  } catch (error) {
+    return next(new ApiError(400, error.message));
+  }
+};
+
+// Bỏ cấm tài khoản
+exports.unban = async (req, res, next) => {
+  try {
+    const service = new UserAuthService(MongoDB.client);
+    const user = await service.unban(req.params.id);
+
+    if (!user) {
+      return next(new ApiError(404, "Không tìm thấy user"));
+    }
+
+    return res.json({
+      message: "Bỏ cấm tài khoản thành công",
+      data: user,
+    });
+  } catch (error) {
+    return next(new ApiError(400, error.message));
+  }
+};

@@ -17,6 +17,8 @@ class UserAuthService {
       birthday: payload.birthday ? new Date(payload.birthday) : null,
       role: "user",
       isActive: payload.isActive !== false,
+      isDeactivated: false,
+      isBanned: false,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -50,8 +52,11 @@ class UserAuthService {
   }
 
   async login(email, password) {
-    const user = await this.User.findOne({ email, isActive: true });
+    const user = await this.User.findOne({ email });
     if (!user) throw new Error("User không tồn tại");
+
+    if (user.isDeactivated) throw new Error("Tài khoản đã bị vô hiệu hóa");
+    if (user.isBanned) throw new Error("Tài khoản đã bị cấm");
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) throw new Error("Sai mật khẩu");
@@ -69,10 +74,10 @@ class UserAuthService {
   }
 
   async findAll() {
-    return await this.User.find({ isActive: true })
-      .project({ password: 0 })
-      .toArray();
-  }
+  return await this.User.find({ isDeactivated: { $ne: true } })  
+    .project({ password: 0 })
+    .toArray();
+}
 
   async updateProfile(id, payload) {
     if (!ObjectId.isValid(id)) return null;
@@ -123,6 +128,102 @@ class UserAuthService {
 
     return result.value;
   }
+
+  // Vô hiệu hóa vĩnh viễn (không thể kích hoạt lại)
+  async deactivate(id) {
+    if (!ObjectId.isValid(id)) return null;
+
+    const user = await this.User.findOne({ _id: new ObjectId(id) });
+    if (!user) return null;
+    if (user.isDeactivated) throw new Error("Tài khoản đã bị vô hiệu hóa trước đó");
+
+    const result = await this.User.findOneAndUpdate(
+      { _id: new ObjectId(id) },
+      {
+        $set: {
+          isActive: false,
+          isDeactivated: true,
+          deactivatedAt: new Date(),
+          updatedAt: new Date(),
+        },
+      },
+      { returnDocument: "after", projection: { password: 0 } }
+    );
+
+    return result.value;
+  }
+
+  // Cấm tài khoản (có thể bỏ cấm)
+  async ban(id) {
+  if (!ObjectId.isValid(id)) return null;
+
+  const user = await this.User.findOne({ _id: new ObjectId(id) });
+  if (!user) return null;
+  if (user.isDeactivated) throw new Error("Tài khoản đã bị vô hiệu hóa, không thể thao tác");
+  if (user.isBanned) throw new Error("Tài khoản đã bị cấm trước đó");
+
+  const result = await this.User.findOneAndUpdate(
+    { _id: new ObjectId(id) },
+    {
+      $set: {
+        isActive: false,
+        isBanned: true,
+        bannedAt: new Date(),
+        updatedAt: new Date(),
+      },
+    },
+    { returnDocument: "after", projection: { password: 0 } }
+  );
+
+  return result;  // ← bỏ .value
+}
+
+async deactivate(id) {
+  if (!ObjectId.isValid(id)) return null;
+
+  const user = await this.User.findOne({ _id: new ObjectId(id) });
+  if (!user) return null;
+  if (user.isDeactivated) throw new Error("Tài khoản đã bị vô hiệu hóa trước đó");
+
+  const result = await this.User.findOneAndUpdate(
+    { _id: new ObjectId(id) },
+    {
+      $set: {
+        isActive: false,
+        isDeactivated: true,
+        deactivatedAt: new Date(),
+        updatedAt: new Date(),
+      },
+    },
+    { returnDocument: "after", projection: { password: 0 } }
+  );
+
+  return result;  // ← bỏ .value
+}
+
+async unban(id) {
+  if (!ObjectId.isValid(id)) return null;
+
+  const user = await this.User.findOne({ _id: new ObjectId(id) });
+  if (!user) return null;
+  if (user.isDeactivated) throw new Error("Tài khoản đã bị vô hiệu hóa, không thể thao tác");
+  if (!user.isBanned) throw new Error("Tài khoản chưa bị cấm");
+
+  const result = await this.User.findOneAndUpdate(
+    { _id: new ObjectId(id) },
+    {
+      $set: {
+        isActive: true,
+        isBanned: false,
+        bannedAt: null,
+        updatedAt: new Date(),
+      },
+    },
+    { returnDocument: "after", projection: { password: 0 } }
+  );
+
+  return result;  // ← bỏ .value
+}
 }
 
 module.exports = UserAuthService;
