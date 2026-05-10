@@ -23,7 +23,7 @@
       <!-- DYNAMIC ISLAND & STATUS BAR LUÔN HIỆN Ở TRÊN CÙNG -->
       <div class="status-bar-wrapper">
         <StatusBar />
-        <DynamicIsland />
+        <DynamicIsland :face-id-callback="faceIdCallback" />
       </div>
 
       <!-- LOCK SCREEN -->
@@ -33,6 +33,7 @@
           :time="time"
           :date="date"
           @unlock="unlock"
+          @start-face-id="onStartFaceId"
         />
       </transition>
 
@@ -60,28 +61,31 @@ import BottomIcons from "./BottomIcons.vue";
 import HomeIndicator from "./HomeIndicator.vue";
 import HomeScreen from "./HomeScreen.vue";
 
-import homeBgImg from "@/assets/img/BackIphone.jpg"; 
+import homeBgImg from "@/assets/img/BackIphone.jpg";
 
 const time = ref("");
 const date = ref("");
 const isUnlocked = ref(false);
 
-// Mở khóa
+// ── Face ID bridge ──
+const faceIdCallback = ref(null);
+
+const onStartFaceId = (cb) => {
+  faceIdCallback.value = cb;
+  setTimeout(() => { faceIdCallback.value = null; }, 50);
+};
+
 const unlock = () => {
   isUnlocked.value = true;
 };
 
-// Khóa màn hình
 const lockScreen = () => {
   isUnlocked.value = false;
 };
 
 const updateDateTime = () => {
   const now = new Date();
-  time.value = now.toLocaleTimeString([], {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  time.value = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   date.value = now.toLocaleDateString(undefined, {
     weekday: "long",
     month: "long",
@@ -117,7 +121,6 @@ onMounted(() => {
   box-shadow: 0 6px 20px rgba(0,0,0,.5);
 }
 
-/* VIDEO BACKGROUND khi khóa */
 .bg-video {
   position: absolute;
   inset: 0;
@@ -127,7 +130,6 @@ onMounted(() => {
   z-index: 0;
 }
 
-/* IMAGE BACKGROUND khi mở khóa */
 .bg-image {
   position: absolute;
   inset: 0;
@@ -138,40 +140,30 @@ onMounted(() => {
   z-index: 0;
 }
 
-/* STATUS BAR & DYNAMIC ISLAND LUÔN Ở TRÊN CÙNG */
 .status-bar-wrapper {
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
-  z-index: 9999; /* Cao nhất để không bị app che */
+  z-index: 9999;
 }
 
-/* === THÊM STYLE ĐỂ HOME INDICATOR LUÔN NẰM TRÊN CÙNG === */
 .home-indicator-overlay {
   position: absolute !important;
   bottom: 4px !important;
   left: 50%;
   transform: translateX(-50%);
-  z-index: 99999 !important; /* Cao hơn tất cả, kể cả app-screen có z-index 50 */
-  pointer-events: none; /* Không chặn tương tác với app bên dưới */
+  z-index: 99999 !important;
+  pointer-events: none;
 }
 
-/* Transitions */
-.unlock-leave-active {
-  transition: all 0.35s ease;
-}
+.unlock-leave-active { transition: all 0.35s ease; }
 .unlock-leave-to {
   opacity: 0;
   transform: translateY(-32px) scale(1.06);
   filter: blur(6px);
 }
 
-.home-enter-active {
-  transition: all 0.35s ease;
-}
-.home-enter-from {
-  opacity: 0;
-  transform: scale(1.08);
-}
+.home-enter-active { transition: all 0.35s ease; }
+.home-enter-from { opacity: 0; transform: scale(1.08); }
 </style>

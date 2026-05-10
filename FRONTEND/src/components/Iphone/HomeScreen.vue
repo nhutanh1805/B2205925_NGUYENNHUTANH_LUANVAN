@@ -52,7 +52,7 @@
       <div v-if="activeApp" class="app-screen">
         <button class="back-button" @click="closeApp">←</button>
 
-        <div v-if="activeApp.name !== 'TikTok'" class="app-header">
+        <div v-if="activeApp.name !== 'TikTok' && activeApp.name !== 'Settings'" class="app-header">
           <button @click="closeApp">←</button>
           <span>{{ activeApp.name }}</span>
         </div>
@@ -87,12 +87,7 @@
           </template>
 
           <template v-else-if="activeApp.name === 'Settings'">
-            <div class="no-scrollbar">
-              <label>
-                <input type="checkbox" v-model="darkMode" /> Dark Mode
-              </label>
-              <p v-for="i in 20" :key="i">Setting option {{ i }}</p>
-            </div>
+            <SettingsApp @close="closeApp" />
           </template>
 
           <template v-else-if="activeApp.name === 'YouTube'">
@@ -127,7 +122,8 @@ import { ref } from 'vue'
 import TikTokApp from './TikTokApp.vue'
 import PinterestApp from './PinterestApp.vue'
 import YoutubeApp from './YoutubeApp.vue'
-import ShipperApp from './ShipperApp.vue' 
+import ShipperApp from './ShipperApp.vue'
+import SettingsApp from './SettingsApp.vue'
 
 const emit = defineEmits(['lock'])
 
@@ -135,25 +131,24 @@ const activeApp = ref(null)
 const jiggleMode = ref(false)
 let holdTimer = null
 const isPlaying = ref(false)
-const darkMode = ref(false)
 
 const apps = [
-  { name: 'Phone',    icon: 'bi bi-telephone-fill',      bg: '#34c759', badge: 2 },
-  { name: 'Safari',   icon: 'bi bi-compass-fill',        bg: '#0a84ff' },
-  { name: 'Music',    icon: 'bi bi-music-note-beamed',   bg: '#ff375f' },
-  { name: 'Settings', icon: 'bi bi-gear-fill',           bg: '#8e8e93' },
-  { name: 'TikTok',   icon: '',                          bg: '#000000' },
-  { name: 'Pinterest', icon: 'bi bi-grid-3x3-gap-fill',  bg: '#e60023' },
-  { name: 'YouTube',  icon: 'bi bi-youtube',             bg: '#FF0000' },
-  { name: 'Lock',     icon: 'bi bi-lock-fill',           bg: '#333333' },
-  { name: 'Shipper',  icon: 'bi bi-bicycle',             bg: 'linear-gradient(135deg, #1a1f3c, #4f46e5)' },
+  { name: 'Phone',     icon: 'bi bi-telephone-fill',      bg: '#34c759', badge: 2 },
+  { name: 'Safari',    icon: 'bi bi-compass-fill',         bg: '#0a84ff' },
+  { name: 'Music',     icon: 'bi bi-music-note-beamed',    bg: '#ff375f' },
+  { name: 'Settings',  icon: 'bi bi-gear-fill',            bg: '#8e8e93' },
+  { name: 'TikTok',    icon: '',                           bg: '#000000' },
+  { name: 'Pinterest', icon: 'bi bi-grid-3x3-gap-fill',    bg: '#e60023' },
+  { name: 'YouTube',   icon: 'bi bi-youtube',              bg: '#FF0000' },
+  { name: 'Lock',      icon: 'bi bi-lock-fill',            bg: '#333333' },
+  { name: 'Shipper',   icon: 'bi bi-bicycle',              bg: 'linear-gradient(135deg, #1a1f3c, #4f46e5)' },
 ]
 
 const dockApps = [
   { name: 'Phone',    icon: 'bi bi-telephone-fill',    bg: '#34c759' },
   { name: 'Safari',   icon: 'bi bi-compass-fill',      bg: '#0a84ff' },
   { name: 'Music',    icon: 'bi bi-music-note-beamed', bg: '#ff375f' },
-  { name: 'Settings', icon: 'bi bi-gear-fill',         bg: '#8e8e93' }
+  { name: 'Settings', icon: 'bi bi-gear-fill',         bg: '#8e8e93' },
 ]
 
 const openApp = (app) => {

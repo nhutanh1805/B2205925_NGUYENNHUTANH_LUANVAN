@@ -9,16 +9,13 @@
     @touchmove="onMove"
     @touchend="onEnd"
   >
-    <div
-      class="lock-screen"
-      :style="lockStyle"
-    >
+    <div class="lock-screen" :style="lockStyle">
       <div class="time">{{ time }}</div>
       <div class="date">{{ date }}</div>
     </div>
 
-    <div class="unlock-hint">
-      ↑ Vuốt lên để mở khóa
+    <div class="unlock-hint" :style="hintStyle">
+      <span class="hint-arrow">↑</span> Vuốt lên để mở khoá
     </div>
   </div>
 </template>
@@ -26,29 +23,34 @@
 <script setup>
 import { ref, computed } from "vue";
 
-const emit = defineEmits(["unlock"]);
+// 'start-face-id' truyền kèm unlockCallback để DynamicIsland gọi lại khi xong
+const emit = defineEmits(["unlock", "start-face-id"]);
 
-defineProps({
-  time: String,
-  date: String,
-});
+defineProps({ time: String, date: String });
 
-const startY = ref(0);
+const startY  = ref(0);
 const offsetY = ref(0);
 const dragging = ref(false);
+const pending  = ref(false); // đang chờ Face ID → khoá swipe
 
-/* ===== style động ===== */
+/* ── Style động ── */
 const lockStyle = computed(() => ({
   transform: `translateY(${-offsetY.value}px) scale(${1 - offsetY.value / 900})`,
   opacity: 1 - offsetY.value / 220,
+  transition: dragging.value ? "none" : "transform 0.3s ease, opacity 0.3s ease",
 }));
 
-/* ===== helpers ===== */
-const getY = (e) =>
-  e.touches ? e.touches[0].clientY : e.clientY;
+const hintStyle = computed(() => ({
+  opacity: Math.max(0, 0.65 - offsetY.value / 100),
+  transition: dragging.value ? "none" : "opacity 0.3s ease",
+}));
 
-/* ===== events ===== */
+/* ── Helpers ── */
+const getY = (e) => e.touches ? e.touches[0].clientY : e.clientY;
+
+/* ── Events ── */
 const onStart = (e) => {
+  if (pending.value) return;
   dragging.value = true;
   startY.value = getY(e);
 };
@@ -64,7 +66,15 @@ const onEnd = () => {
   dragging.value = false;
 
   if (offsetY.value > 140) {
-    emit("unlock");
+    pending.value = true;
+
+    // Emit lên LeftSidebar kèm callback:
+    // DynamicIsland sẽ gọi callback này khi Face ID thành công → unlock
+    emit("start-face-id", () => {
+      emit("unlock");
+      pending.value = false;
+      offsetY.value = 0;
+    });
   } else {
     offsetY.value = 0;
   }
@@ -83,7 +93,6 @@ const onEnd = () => {
   margin-top: 70px;
   text-align: center;
   color: white;
-  transition: transform 0.25s ease, opacity 0.25s ease;
   will-change: transform;
 }
 
@@ -106,13 +115,19 @@ const onEnd = () => {
   left: 50%;
   transform: translateX(-50%);
   font-size: 0.75rem;
-  opacity: 0.65;
-  animation: hintPulse 1.6s infinite;
+  color: white;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
-@keyframes hintPulse {
-  0% { opacity: .35; }
-  50% { opacity: .9; }
-  100% { opacity: .35; }
+.hint-arrow {
+  animation: hintBounce 1.6s ease-in-out infinite;
+}
+
+@keyframes hintBounce {
+  0%,100% { opacity: 0.35; transform: translateY(0); }
+  50%     { opacity: 0.9;  transform: translateY(-4px); }
 }
 </style>
