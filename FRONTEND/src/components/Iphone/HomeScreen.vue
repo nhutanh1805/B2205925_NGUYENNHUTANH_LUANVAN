@@ -13,10 +13,8 @@
         @mouseleave="cancelHold"
       >
         <div class="icon-bg" :style="{ background: app.bg }">
-          <!-- Icon thường dùng Bootstrap Icons -->
           <i v-if="app.name !== 'TikTok'" :class="app.icon"></i>
 
-          <!-- Logo TikTok chính thức (SVG inline) -->
           <svg v-else viewBox="0 0 48 48" class="tiktok-logo">
             <defs>
               <linearGradient id="tiktokGradient" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -97,9 +95,13 @@
             </div>
           </template>
 
-<template v-else-if="activeApp.name === 'YouTube'">
-  <YoutubeApp @close="closeApp" />
-</template>
+          <template v-else-if="activeApp.name === 'YouTube'">
+            <YoutubeApp @close="closeApp" />
+          </template>
+
+          <template v-else-if="activeApp.name === 'Shipper'">
+            <ShipperApp @close="closeApp" />
+          </template>
 
           <template v-else-if="activeApp.name === 'Lock'">
             <div class="lock-app-content">
@@ -123,8 +125,9 @@
 <script setup>
 import { ref } from 'vue'
 import TikTokApp from './TikTokApp.vue'
-import PinterestApp from './PinterestApp.vue'  // <-- Thêm dòng này
+import PinterestApp from './PinterestApp.vue'
 import YoutubeApp from './YoutubeApp.vue'
+import ShipperApp from './ShipperApp.vue' 
 
 const emit = defineEmits(['lock'])
 
@@ -135,21 +138,22 @@ const isPlaying = ref(false)
 const darkMode = ref(false)
 
 const apps = [
-  { name: 'Phone', icon: 'bi bi-telephone-fill', bg: '#34c759', badge: 2 },
-  { name: 'Safari', icon: 'bi bi-compass-fill', bg: '#0a84ff' },
-  { name: 'Music', icon: 'bi bi-music-note-beamed', bg: '#ff375f' },
-  { name: 'Settings', icon: 'bi bi-gear-fill', bg: '#8e8e93' },
-  { name: 'TikTok', icon: '', bg: '#000000' },
-  { name: 'Pinterest', icon: 'bi bi-grid-3x3-gap-fill', bg: '#e60023' }, // <-- Thêm Pinterest đây
-  { name: 'Lock', icon: 'bi bi-lock-fill', bg: '#333333' },
-  { name: 'YouTube', icon: 'bi bi-youtube', bg: '#FF0000' }
+  { name: 'Phone',    icon: 'bi bi-telephone-fill',      bg: '#34c759', badge: 2 },
+  { name: 'Safari',   icon: 'bi bi-compass-fill',        bg: '#0a84ff' },
+  { name: 'Music',    icon: 'bi bi-music-note-beamed',   bg: '#ff375f' },
+  { name: 'Settings', icon: 'bi bi-gear-fill',           bg: '#8e8e93' },
+  { name: 'TikTok',   icon: '',                          bg: '#000000' },
+  { name: 'Pinterest', icon: 'bi bi-grid-3x3-gap-fill',  bg: '#e60023' },
+  { name: 'YouTube',  icon: 'bi bi-youtube',             bg: '#FF0000' },
+  { name: 'Lock',     icon: 'bi bi-lock-fill',           bg: '#333333' },
+  { name: 'Shipper',  icon: 'bi bi-bicycle',             bg: 'linear-gradient(135deg, #1a1f3c, #4f46e5)' },
 ]
 
 const dockApps = [
-  { name: 'Phone', icon: 'bi bi-telephone-fill', bg: '#34c759' },
-  { name: 'Safari', icon: 'bi bi-compass-fill', bg: '#0a84ff' },
-  { name: 'Music', icon: 'bi bi-music-note-beamed', bg: '#ff375f' },
-  { name: 'Settings', icon: 'bi bi-gear-fill', bg: '#8e8e93' }
+  { name: 'Phone',    icon: 'bi bi-telephone-fill',    bg: '#34c759' },
+  { name: 'Safari',   icon: 'bi bi-compass-fill',      bg: '#0a84ff' },
+  { name: 'Music',    icon: 'bi bi-music-note-beamed', bg: '#ff375f' },
+  { name: 'Settings', icon: 'bi bi-gear-fill',         bg: '#8e8e93' }
 ]
 
 const openApp = (app) => {
@@ -182,16 +186,12 @@ const toggleMusic = () => {
 </script>
 
 <style scoped>
-/* Toàn bộ style giữ nguyên như cũ */
-
-/* Chỉ thêm style cho logo TikTok */
 .tiktok-logo {
   width: 32px;
   height: 32px;
   filter: drop-shadow(0 0 8px rgba(255, 0, 80, 0.6));
 }
 
-/* Các style khác giữ nguyên */
 .home-screen {
   width: 100%;
   height: 100%;
@@ -231,6 +231,7 @@ const toggleMusic = () => {
 
 .icon-bg i {
   font-size: 1.4rem;
+  color: white;
 }
 
 .badge {
@@ -266,6 +267,7 @@ const toggleMusic = () => {
 
 .dock-icon i {
   font-size: 1.5rem;
+  color: white;
 }
 
 .app-screen {
@@ -367,6 +369,6 @@ const toggleMusic = () => {
 
 @keyframes jiggle {
   from { transform: rotate(-1deg); }
-  to { transform: rotate(1deg); }
+  to   { transform: rotate(1deg); }
 }
 </style>
