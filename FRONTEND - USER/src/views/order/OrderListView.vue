@@ -92,7 +92,6 @@
               <span class="status-badge" :class="`badge-${order.status}`">
                 <i class="dot"></i>{{ statusText(order.status) }}
               </span>
-              <!-- THÊM: Badge phương thức thanh toán -->
               <span class="payment-badge" :class="order.paymentMethod === 'VNPAY' ? 'pay-vnpay' : 'pay-cod'">
                 {{ order.paymentMethod === 'VNPAY' ? 'THANH TOÁN VNPAY' : 'THANH TOÁN COD' }}
               </span>
@@ -115,6 +114,16 @@
           </div>
 
           <div class="ocard-actions" @click.stop>
+            <!-- Nút thanh toán lại cho đơn VNPAY còn pending -->
+            <button
+              v-if="order.paymentMethod === 'VNPAY' && order.status === 'pending'"
+              @click="retryVNPay(order)"
+              class="btn-vnpay"
+              :disabled="retryingId === order._id"
+            >
+              {{ retryingId === order._id ? '...' : 'Thanh toán lại' }}
+            </button>
+
             <button
               v-if="order.status === 'pending'"
               @click="confirmCancel(order._id)"
@@ -141,6 +150,7 @@ import OrderService from "@/services/order.service"
 const router = useRouter()
 const orders = ref([])
 const loading = ref(true)
+const retryingId = ref(null) 
 
 const pendingCount = computed(() =>
   orders.value.filter(o => ['pending', 'confirmed', 'paid', 'shipping'].includes(o.status)).length
@@ -150,7 +160,7 @@ const deliveredCount = computed(() =>
 )
 
 const statusText = (s) => ({
-  pending:   "Chờ xác nhận",
+  pending:   "Chờ",
   confirmed: "Đã xác nhận",
   paid:      "Đã thanh toán",
   shipping:  "Đang giao",
@@ -186,6 +196,30 @@ const cancelOrder = async (id) => {
     await loadOrders()
   } catch (err) {
     alert(err.message)
+  }
+}
+
+// ✅ THÊM: Thanh toán lại đơn VNPAY
+const retryVNPay = async (order) => {
+  retryingId.value = order._id
+  try {
+    const res = await fetch("http://localhost:3000/api/payment/create-vnpay", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        orderId: order._id,
+        amount: order.totalPrice,
+      }),
+    })
+
+    const data = await res.json()
+    if (!data?.payment_url) throw new Error("Không lấy được link thanh toán")
+
+    window.location.href = data.payment_url
+  } catch (err) {
+    alert(err.message)
+  } finally {
+    retryingId.value = null
   }
 }
 
@@ -508,6 +542,23 @@ onMounted(loadOrders)
   padding: 20px 20px 20px 0;
   flex-shrink: 0;
 }
+
+/* ✅ THÊM: Style nút thanh toán lại */
+.btn-vnpay {
+  padding: 8px 16px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #22c55e, #10b981);
+  border: none;
+  color: white;
+  font-size: .78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all .2s;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(16,185,129,.3);
+}
+.btn-vnpay:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(16,185,129,.4); }
+.btn-vnpay:disabled { opacity: .6; cursor: not-allowed; }
 
 .btn-cancel {
   padding: 8px 16px;

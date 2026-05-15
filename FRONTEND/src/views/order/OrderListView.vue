@@ -144,7 +144,7 @@
               :class="`select-${order.status}`"
               :disabled="isStatusLocked(order.status)"
             >
-              <option value="pending">Chờ xác nhận</option>
+              <option value="pending">Chờ</option>
               <option value="confirmed">Đã xác nhận</option>
               <option value="paid">Đã thanh toán</option>
               <option value="shipping">Đang giao</option>
@@ -216,7 +216,7 @@ const shippingCount = computed(() => orders.value.filter(o => o.status === 'ship
 const deliveredCount = computed(() => orders.value.filter(o => o.status === 'delivered').length)
 
 const statusText = (s) => ({
-  pending:   "Chờ xác nhận",
+  pending:   "Chờ",
   confirmed: "Đã xác nhận",
   paid:      "Đã thanh toán",
   shipping:  "Đang giao",
