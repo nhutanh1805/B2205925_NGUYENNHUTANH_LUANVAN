@@ -31,6 +31,14 @@
           Người dùng
         </router-link>
 
+        <router-link
+          to="/statistics"
+          class="nav-link stats-link"
+          active-class="stats-active"
+        >
+          Thống kê
+        </router-link>
+
         <AdminMenu v-if="admin" :admin="admin" @logout="handleLogout" />
 
         <button v-else class="login-btn" @click="router.push('/admin/login')">

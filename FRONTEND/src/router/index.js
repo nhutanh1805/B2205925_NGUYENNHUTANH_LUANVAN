@@ -2,6 +2,7 @@ import { createWebHistory, createRouter } from "vue-router";
 import adminRoutes from "./admin.router";
 import orderRoutes from "./order.router";
 import userRoutes from "./userAuth.router";
+import statisticRoutes from "./statistic.router";
 
 const routes = [
   {
@@ -41,6 +42,9 @@ const routes = [
     // ===== order =====
  ...orderRoutes,
  
+ // ===== STATISTIC =====
+  ...statisticRoutes, 
+
   ...userRoutes,
   // ===== NOT FOUND =====
   {
