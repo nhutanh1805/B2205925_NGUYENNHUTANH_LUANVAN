@@ -4,6 +4,7 @@ const querystring = require("qs");
 
 const MongoDB = require("../utils/mongodb.util");
 const OrderService = require("../services/order.service");
+const PaymentService = require("../services/payment.service"); // ✅ THÊM
 const vnpayConfig = require("../config/vnpay.config");
 
 // =========================
@@ -27,6 +28,11 @@ exports.createVNPayPayment = async (req, res) => {
     if (!orderId || !amount) {
       return res.status(400).json({ message: "Thiếu orderId hoặc amount" });
     }
+
+    // THÊM: Lưu payment "pending" vào DB
+    const client = await MongoDB.connect();
+    const paymentService = new PaymentService(client);
+    await paymentService.createPayment({ orderId, amount, ipAddr: "127.0.0.1" });
 
     let vnp_Params = {};
 
@@ -80,7 +86,7 @@ exports.createVNPayPayment = async (req, res) => {
 // =========================
 exports.vnpayReturn = async (req, res) => {
   try {
-    let vnp_Params = req.query;
+    let vnp_Params = { ...req.query }; // THÊM: spread tránh mutate req.query
 
     const secureHash = vnp_Params["vnp_SecureHash"];
 
@@ -112,13 +118,17 @@ exports.vnpayReturn = async (req, res) => {
 
     const client = await MongoDB.connect();
     const orderService = new OrderService(client);
+    const paymentService = new PaymentService(client); // ✅ THÊM
+
+    // THÊM: Cập nhật payment record dù success hay failed
+    await paymentService.updatePaymentByTxnRef(orderId, vnp_Params);
 
     // =========================
     // SUCCESS
     // =========================
     if (responseCode === "00") {
       try {
-        // ✅ Đổi "confirmed" → "paid" cho luồng VNPAY
+        // Đổi "confirmed" → "paid" cho luồng VNPAY
         await orderService.updateStatus(orderId, "paid");
 
         return res.redirect(
