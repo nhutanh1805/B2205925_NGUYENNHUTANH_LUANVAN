@@ -10,6 +10,7 @@ const orderRouter = require("./app/routes/order.route");
 const chatbotRoute = require("./app/routes/chatbot.route");
 const reviewRoute = require("./app/routes/review.route");
 const statisticRouter = require("./app/routes/statistic.route");
+const recommendationRouter = require("./app/routes/recommendation.router");
 
 const app = express();
 
@@ -29,6 +30,7 @@ app.use("/api/orders", orderRouter);
 app.use("/api/chatbot", chatbotRoute);
 app.use("/api/products/:productId/reviews", reviewRoute);
 app.use("/api/statistics", statisticRouter);
+app.use("/api/recommendations", recommendationRouter);
 
 app.use((req, res, next) => {
     return next(new ApiError(404, "Resource not found"));

@@ -189,31 +189,13 @@
       </div>
     </div>
 
-    <!-- ═══════════ RELATED ═══════════ -->
+    <!-- ═══════════ GỢI Ý SẢN PHẨM (thay thế related cũ) ═══════════ -->
     <div class="related-section">
-      <div class="section-header">
-        <h2 class="section-title">Có thể bạn cũng thích</h2>
-        <div class="section-line"></div>
-      </div>
-
-      <div class="related-grid">
-        <div
-          v-for="(item, idx) in related"
-          :key="item._id"
-          class="rcard"
-          :style="`--delay:${idx * 0.06}s`"
-          @click="goProduct(item._id)"
-        >
-          <div class="rcard-img-wrap">
-            <img :src="item.images[0]" class="rcard-img" />
-            <div class="rcard-overlay"></div>
-          </div>
-          <div class="rcard-body">
-            <p class="rcard-name">{{ item.name }}</p>
-            <b class="rcard-price">{{ formatPrice(item.salePrice || item.price) }}₫</b>
-          </div>
-        </div>
-      </div>
+      <ProductRecommendation
+        :product-id="product._id"
+        :limit="4"
+        @add-to-cart="onRecommendationAddToCart"
+      />
     </div>
 
     <!-- TOAST -->
@@ -222,7 +204,7 @@
         <div class="toast-icon">✓</div>
         <div class="toast-text">
           <span class="toast-title">Đã thêm vào giỏ</span>
-          <span class="toast-name">{{ product.name }}</span>
+          <span class="toast-name">{{ toastProductName }}</span>
         </div>
       </div>
     </transition>
@@ -236,19 +218,20 @@ import { useRoute, useRouter } from "vue-router";
 import ProductService from "@/services/product.service";
 import CartService from "@/services/cart.service";
 import ProductReview from "@/components/ProductReview.vue";
+import ProductRecommendation from "@/components/ProductRecommendation.vue"; // 👈 thêm
 
 const route = useRoute();
 const router = useRouter();
 
-const product = ref(null);
-const related = ref([]);
-const currentImage = ref("");
-const quantity = ref(1);
-const showToast = ref(false);
-const isFavorited = ref(false);
+const product         = ref(null);
+const currentImage    = ref("");
+const quantity        = ref(1);
+const showToast       = ref(false);
+const toastProductName = ref(""); // 👈 tách riêng để toast hiện đúng tên
+const isFavorited     = ref(false);
 
 const tabs = ["Mô tả", "Thông số", "Đánh giá"];
-const tab = ref("Mô tả");
+const tab  = ref("Mô tả");
 
 const currentUserId = computed(() => {
   try {
@@ -268,20 +251,30 @@ const specEntries = computed(() => {
 });
 
 const formatPrice = (v) => new Intl.NumberFormat("vi-VN").format(v);
-const formatKey = (k) => k.replace(/([A-Z])/g, " $1").replace(/^./, (s) => s.toUpperCase());
+const formatKey   = (k) => k.replace(/([A-Z])/g, " $1").replace(/^./, (s) => s.toUpperCase());
 
 function increase() { if (quantity.value < product.value.stock) quantity.value++; }
 function decrease() { if (quantity.value > 1) quantity.value--; }
 
-async function addToCart() {
-  await CartService.addToCart(product.value._id, quantity.value);
+function showToastMsg(name) {
+  toastProductName.value = name;
   showToast.value = true;
   setTimeout(() => (showToast.value = false), 2800);
+}
+
+async function addToCart() {
+  await CartService.addToCart(product.value._id, quantity.value);
+  showToastMsg(product.value.name);
 }
 
 async function buyNow() {
   await addToCart();
   router.push("/checkout");
+}
+
+// 👈 Khi ProductRecommendation emit add-to-cart
+function onRecommendationAddToCart(recommendedProduct) {
+  showToastMsg(recommendedProduct.name);
 }
 
 function toggleFavorite() {
@@ -296,13 +289,10 @@ function toggleFavorite() {
   localStorage.setItem("favorite", JSON.stringify(fav));
 }
 
-function goProduct(id) { router.push(`/product/${id}`); }
-
 onMounted(async () => {
   const res = await ProductService.get(route.params.id);
-  product.value = res;
+  product.value   = res;
   currentImage.value = res.images?.[0] || "https://via.placeholder.com/600";
-  related.value = await ProductService.getRelated(res.category);
   const fav = JSON.parse(localStorage.getItem("favorite") || "[]");
   isFavorited.value = fav.includes(res._id);
 });
@@ -564,20 +554,13 @@ onMounted(async () => {
 
 /* ═══ SHOP CARD ═══ */
 .shop-card {
-  max-width: 1200px; margin: 24px auto;
-  padding: 0 24px;
+  max-width: 1200px;
+  margin: 24px auto;
+  padding: 20px 28px;
   display: flex; align-items: center; gap: 18px;
   background: white; border-radius: 20px;
-  padding: 20px 28px;
   border: 1.5px solid #e8edf8;
   box-shadow: 0 8px 30px rgba(10,15,30,.08);
-  margin: 24px auto;
-  max-width: 1200px;
-}
-/* override margin/padding conflict */
-.shop-card {
-  margin-left: auto; margin-right: auto;
-  padding: 20px 28px;
 }
 .shop-avatar {
   width: 52px; height: 52px; border-radius: 14px;
@@ -608,16 +591,13 @@ onMounted(async () => {
 /* ═══ TABS ═══ */
 .tabs-block {
   max-width: 1200px; margin: 0 auto 24px;
-  padding: 0 24px;
   background: white; border-radius: 20px;
   border: 1.5px solid #e8edf8;
   box-shadow: 0 8px 30px rgba(10,15,30,.07);
   overflow: hidden;
 }
-/* fix padding */
-.tabs-block { padding: 0; }
 .tab-header {
-  display: flex; gap: 0;
+  display: flex;
   border-bottom: 1.5px solid #f1f5f9;
   padding: 0 20px;
 }
@@ -636,11 +616,8 @@ onMounted(async () => {
 .tab-btn:hover { color: #4f46e5; }
 .tab-btn.active { color: #2563eb; }
 .tab-btn.active::after { transform: scaleX(1); }
-
 .tab-body { padding: 24px 28px; }
-
 .tab-desc p { font-size: .92rem; color: #374151; line-height: 1.8; }
-
 .tab-specs { display: flex; flex-direction: column; }
 .spec-row {
   display: flex; justify-content: space-between; align-items: center;
@@ -651,50 +628,11 @@ onMounted(async () => {
 .spec-key { color: #94a3b8; font-weight: 500; }
 .spec-val { color: #0f172a; font-weight: 700; text-align: right; }
 
-/* ═══ RELATED ═══ */
+/* ═══ RELATED SECTION (bọc ProductRecommendation) ═══ */
 .related-section {
   max-width: 1200px; margin: 0 auto 48px;
   padding: 0 24px;
 }
-.section-header { display: flex; align-items: center; gap: 16px; margin-bottom: 20px; }
-.section-title { font-size: 1.2rem; font-weight: 800; color: #0f172a; white-space: nowrap; }
-.section-line { flex: 1; height: 2px; background: linear-gradient(90deg, #e0e7ff, transparent); }
-
-.related-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 16px;
-}
-.rcard {
-  background: white; border-radius: 20px; overflow: hidden;
-  border: 1.5px solid #e8edf8; cursor: pointer;
-  transition: transform .3s cubic-bezier(.175,.885,.32,1.275), box-shadow .3s, border-color .3s;
-  animation: cardIn .4s ease both;
-  animation-delay: var(--delay, 0s);
-}
-@keyframes cardIn {
-  from { opacity: 0; transform: translateY(18px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-.rcard:hover {
-  transform: translateY(-6px) scale(1.02);
-  box-shadow: 0 20px 44px rgba(37,99,235,.14);
-  border-color: #a5b4fc;
-}
-.rcard-img-wrap { position: relative; height: 160px; overflow: hidden; background: #f8faff; }
-.rcard-img { width: 100%; height: 100%; object-fit: cover; transition: transform .4s ease; }
-.rcard:hover .rcard-img { transform: scale(1.08); }
-.rcard-overlay {
-  position: absolute; inset: 0;
-  background: linear-gradient(to bottom, transparent 50%, rgba(10,15,30,.06));
-}
-.rcard-body { padding: 12px 14px 16px; }
-.rcard-name {
-  font-size: .82rem; font-weight: 600; color: #0f172a;
-  line-height: 1.35; height: 2.7em; overflow: hidden;
-  margin-bottom: 6px;
-}
-.rcard-price { font-size: .9rem; font-weight: 800; color: #e11d48; }
 
 /* ═══ TOAST ═══ */
 .toast {
@@ -732,7 +670,6 @@ onMounted(async () => {
   .product-shell { margin: -20px auto 0; padding: 0 14px; }
   .shop-card { flex-direction: column; align-items: flex-start; margin: 14px; padding: 18px; }
   .tabs-block, .related-section { margin: 0 0 16px; }
-  .related-grid { grid-template-columns: repeat(2, 1fr); }
   .actions { flex-direction: column; }
   .btn-cart, .btn-buy { width: 100%; }
 }
