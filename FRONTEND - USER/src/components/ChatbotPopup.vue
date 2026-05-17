@@ -26,6 +26,9 @@
         <div class="message bot">
           Xin chào! Tôi có thể tư vấn sản phẩm phụ kiện điện thoại cho bạn. Bạn cần hỗ trợ gì? 😊
         </div>
+        <div v-if="historyLoading" class="message bot" style="opacity:0.5">
+          Đang tải lịch sử...
+        </div>
         <div
           v-for="(msg, i) in messages"
           :key="i"
@@ -40,7 +43,7 @@
       </div>
 
       <!-- Gợi ý nhanh -->
-      <div v-if="messages.length === 0" class="suggestions">
+      <div v-if="messages.length === 0 && !historyLoading" class="suggestions">
         <button
           v-for="s in suggestions"
           :key="s"
@@ -68,13 +71,14 @@
 import { ref, nextTick } from "vue";
 import chatbotService from "@/services/chatbot.service";
 
-const isOpen = ref(false);
-const input = ref("");
-const messages = ref([]);
-const loading = ref(false);
-const unread = ref(0);
-const messagesEl = ref(null);
-const inputEl = ref(null);
+const isOpen        = ref(false);
+const input         = ref("");
+const messages      = ref([]);
+const loading       = ref(false);
+const historyLoading = ref(false);
+const unread        = ref(0);
+const messagesEl    = ref(null);
+const inputEl       = ref(null);
 
 const suggestions = [
   "Tai nghe nào tốt nhất?",
@@ -83,15 +87,44 @@ const suggestions = [
   "Có khuyến mãi không?",
 ];
 
+// Load lịch sử từ server khi mở chat lần đầu
+const loadHistory = async () => {
+  historyLoading.value = true;
+  try {
+    const data = await chatbotService.getHistory();
+    if (data?.data?.length) {
+      messages.value = data.data.map((m) => ({
+        role: m.role,       // "user" | "bot"
+        content: m.content,
+      }));
+      await scrollBottom();
+    }
+  } catch {
+    // Không có lịch sử hoặc lỗi → bỏ qua
+  } finally {
+    historyLoading.value = false;
+  }
+};
+
 const toggleChat = () => {
   isOpen.value = !isOpen.value;
   if (isOpen.value) {
     unread.value = 0;
+    // Chỉ load lịch sử lần đầu mở
+    if (messages.value.length === 0) loadHistory();
     nextTick(() => inputEl.value?.focus());
   }
 };
 
-const clearChat = () => { messages.value = []; };
+// Xoá lịch sử cả local lẫn server
+const clearChat = async () => {
+  messages.value = [];
+  try {
+    await chatbotService.clearHistory();
+  } catch {
+    // Bỏ qua lỗi xoá
+  }
+};
 
 const scrollBottom = async () => {
   await nextTick();
