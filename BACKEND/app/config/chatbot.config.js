@@ -6,6 +6,8 @@ const chatbotConfig = {
         "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
         "tencent/hy3-preview:free",
         "inclusionai/ling-2.6-1t:free",
+        "arcee-ai/trinity-large-thinking:free",
+        
     ],
     systemPrompt: `Bạn là nhân viên tư vấn bán hàng chuyên nghiệp của shop điện thoại/điện tử.
 Hãy trả lời ngắn gọn, thân thiện bằng tiếng Việt.
