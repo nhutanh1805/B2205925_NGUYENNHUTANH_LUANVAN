@@ -13,7 +13,6 @@ exports.ask = async (req, res, next) => {
       return next(new ApiError(400, "Nội dung tin nhắn không được để trống"));
     }
 
-    // Lấy userId từ middleware auth nếu có (không bắt buộc đăng nhập)
     const userId = req.user?.id || req.user?._id?.toString() || null;
 
     if (!userId && !sessionId) {
@@ -25,10 +24,19 @@ exports.ask = async (req, res, next) => {
     const chatHistoryService = new ChatHistoryService(client);
 
     // 1. Lấy danh sách sản phẩm
-    const result      = await productService.findAll({ limit: 50 });
-    const products    = result.products || [];
+    const result   = await productService.findAll({ limit: 50 });
+    const products = result.products || [];
+
     const productInfo = products
-      .map((p) => `- ${p.name}: ${p.price.toLocaleString()} VNĐ (Loại: ${p.category})`)
+      .map((p) => {
+        const originalPrice = p.price.toLocaleString();
+        const hasSale = p.salePrice && p.salePrice < p.price;
+        const priceText = hasSale
+          ? `${originalPrice} VNĐ → KM còn ${p.salePrice.toLocaleString()} VNĐ`
+          : `${originalPrice} VNĐ`;
+
+        return `- ${p.name}: ${priceText} (Loại: ${p.category})`;
+      })
       .join("\n");
 
     // 2. Lấy lịch sử hội thoại gần nhất (20 messages = 10 lượt)
@@ -50,7 +58,7 @@ exports.ask = async (req, res, next) => {
 // GET /api/chatbot/history?sessionId=xxx
 exports.getHistory = async (req, res, next) => {
   try {
-    const userId    = req.user?.id || req.user?._id?.toString() || null;
+    const userId        = req.user?.id || req.user?._id?.toString() || null;
     const { sessionId } = req.query;
 
     if (!userId && !sessionId) {
@@ -69,7 +77,7 @@ exports.getHistory = async (req, res, next) => {
 // DELETE /api/chatbot/history?sessionId=xxx
 exports.clearHistory = async (req, res, next) => {
   try {
-    const userId    = req.user?.id || req.user?._id?.toString() || null;
+    const userId        = req.user?.id || req.user?._id?.toString() || null;
     const { sessionId } = req.query;
 
     if (!userId && !sessionId) {

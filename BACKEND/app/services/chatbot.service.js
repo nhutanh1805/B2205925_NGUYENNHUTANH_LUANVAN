@@ -1,42 +1,142 @@
 const chatbotConfig = require("../config/chatbot.config");
 
+// Cache model tốt nhất, reset sau 10 phút
+let cachedModel = null;
+let cacheTime = null;
+const CACHE_TTL = 10 * 60 * 1000;
+
+async function pingModel(model) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 5000);
+    const start = Date.now();
+
+    try {
+        const res = await fetch(chatbotConfig.url, {
+            method: "POST",
+            headers: {
+                Authorization: `Bearer ${chatbotConfig.apiKey}`,
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                model,
+                max_tokens: 1,
+                messages: [{ role: "user", content: "hi" }],
+            }),
+            signal: controller.signal,
+        });
+
+        clearTimeout(timer);
+        if (!res.ok) return null;
+
+        return { model, latency: Date.now() - start };
+    } catch {
+        clearTimeout(timer);
+        return null;
+    }
+}
+
+async function findBestModel() {
+    if (cachedModel && cacheTime && Date.now() - cacheTime < CACHE_TTL) {
+        return cachedModel;
+    }
+
+    const results = await Promise.allSettled(
+        chatbotConfig.models.map((m) => pingModel(m))
+    );
+
+    const alive = results
+        .map((r) => r.value)
+        .filter(Boolean)
+        .sort((a, b) => a.latency - b.latency);
+
+    if (!alive.length) throw new Error("Tất cả model đều không khả dụng");
+
+    cachedModel = alive[0].model;
+    cacheTime = Date.now();
+
+    console.log("[Chatbot] Model tốt nhất:", cachedModel);
+    return cachedModel;
+}
+
+// Trích content từ response — xử lý cả model reasoning
+function extractContent(data) {
+    const choice = data.choices?.[0];
+    if (!choice) return null;
+
+    const content = choice.message?.content;
+
+    // Một số model reasoning trả content ở đây
+    if (content && content.trim()) return content.trim();
+
+    // Một số model trả ở reasoning field
+    const reasoning = choice.message?.reasoning;
+    if (reasoning && reasoning.trim()) return reasoning.trim();
+
+    return null;
+}
+
 class ChatbotService {
-  async chatWithAI(userMessage, productContext = "", conversationHistory = []) {
-    const { apiKey, url, model, systemPrompt } = chatbotConfig;
+    async chatWithAI(userMessage, productContext = "", conversationHistory = []) {
+        const { apiKey, url, models, systemPrompt } = chatbotConfig;
 
-    // Ghép lịch sử hội thoại + tin nhắn hiện tại
-    const messages = [
-      {
-        role: "system",
-        content: `${systemPrompt}\n\nDanh sách sản phẩm hiện có:\n${productContext}`,
-      },
-      ...conversationHistory.map((msg) => ({
-        role: msg.role === "bot" ? "assistant" : msg.role, // "bot" → "assistant" cho đúng chuẩn API
-        content: msg.content,
-      })),
-      {
-        role: "user",
-        content: userMessage,
-      },
-    ];
+        const messages = [
+            {
+                role: "system",
+                content: `${systemPrompt}\n\nDanh sách sản phẩm hiện có:\n${productContext}`,
+            },
+            ...conversationHistory.map((msg) => ({
+                role: msg.role === "bot" ? "assistant" : msg.role,
+                content: msg.content,
+            })),
+            {
+                role: "user",
+                content: userMessage,
+            },
+        ];
 
-    const payload = { model, messages };
+        const bestModel = await findBestModel();
+        const modelsToTry = [bestModel, ...models.filter((m) => m !== bestModel)];
 
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload),
-    });
+        for (const model of modelsToTry) {
+            try {
+                const response = await fetch(url, {
+                    method: "POST",
+                    headers: {
+                        Authorization: `Bearer ${apiKey}`,
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({ model, messages }),
+                });
 
-    const data = await response.json();
+                const data = await response.json();
 
-    if (data.error) throw new Error(data.error.message);
+                console.log(`[Chatbot] Model: ${model} | Raw:`, JSON.stringify(data, null, 2));
 
-    return data.choices[0].message.content;
-  }
+                if (data.error) {
+                    console.warn(`[Chatbot] Model ${model} lỗi:`, data.error.message);
+                    if (model === cachedModel) cachedModel = null;
+                    continue;
+                }
+
+                const content = extractContent(data);
+
+                // Content rỗng → thử model tiếp theo
+                if (!content) {
+                    console.warn(`[Chatbot] Model ${model} trả content rỗng, thử model tiếp...`);
+                    if (model === cachedModel) cachedModel = null;
+                    continue;
+                }
+
+                return content;
+
+            } catch (err) {
+                console.warn(`[Chatbot] Model ${model} exception:`, err.message);
+                if (model === cachedModel) cachedModel = null;
+            }
+        }
+
+        throw new Error("Không có model nào phản hồi được");
+    }
 }
 
 module.exports = new ChatbotService();
