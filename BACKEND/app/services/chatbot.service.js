@@ -1,9 +1,8 @@
 const chatbotConfig = require("../config/chatbot.config");
 
-// Cache model tốt nhất, reset sau 10 phút
 let cachedModel = null;
 let cacheTime = null;
-const CACHE_TTL = 10 * 60 * 1000;
+const CACHE_TTL = 60 * 60 * 1000; // 1 tiếng
 
 async function pingModel(model) {
     const controller = new AbortController();
@@ -35,11 +34,8 @@ async function pingModel(model) {
     }
 }
 
-async function findBestModel() {
-    if (cachedModel && cacheTime && Date.now() - cacheTime < CACHE_TTL) {
-        return cachedModel;
-    }
-
+// Tách riêng hàm refresh — dùng cho cả lần đầu lẫn background
+async function refreshBestModel() {
     const results = await Promise.allSettled(
         chatbotConfig.models.map((m) => pingModel(m))
     );
@@ -49,13 +45,28 @@ async function findBestModel() {
         .filter(Boolean)
         .sort((a, b) => a.latency - b.latency);
 
-    if (!alive.length) throw new Error("Tất cả model đều không khả dụng");
+    if (!alive.length) return; // giữ cache cũ nếu ping thất bại
 
     cachedModel = alive[0].model;
     cacheTime = Date.now();
 
     console.log("[Chatbot] Model tốt nhất:", cachedModel);
-    return cachedModel;
+}
+
+async function findBestModel() {
+    // Chưa có cache → chờ ping lần đầu
+    if (!cachedModel) {
+        await refreshBestModel();
+        if (!cachedModel) throw new Error("Tất cả model đều không khả dụng");
+        return cachedModel;
+    }
+
+    // Cache hết hạn → ping ngầm, không chặn request
+    if (Date.now() - cacheTime > CACHE_TTL) {
+        refreshBestModel(); // không await — chạy background
+    }
+
+    return cachedModel; // trả luôn cache hiện tại
 }
 
 // Trích content từ response — xử lý cả model reasoning
@@ -64,11 +75,8 @@ function extractContent(data) {
     if (!choice) return null;
 
     const content = choice.message?.content;
-
-    // Một số model reasoning trả content ở đây
     if (content && content.trim()) return content.trim();
 
-    // Một số model trả ở reasoning field
     const reasoning = choice.message?.reasoning;
     if (reasoning && reasoning.trim()) return reasoning.trim();
 
@@ -110,8 +118,6 @@ class ChatbotService {
 
                 const data = await response.json();
 
-                console.log(`[Chatbot] Model: ${model} | Raw:`, JSON.stringify(data, null, 2));
-
                 if (data.error) {
                     console.warn(`[Chatbot] Model ${model} lỗi:`, data.error.message);
                     if (model === cachedModel) cachedModel = null;
@@ -120,7 +126,6 @@ class ChatbotService {
 
                 const content = extractContent(data);
 
-                // Content rỗng → thử model tiếp theo
                 if (!content) {
                     console.warn(`[Chatbot] Model ${model} trả content rỗng, thử model tiếp...`);
                     if (model === cachedModel) cachedModel = null;
