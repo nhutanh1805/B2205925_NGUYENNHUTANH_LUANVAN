@@ -4,7 +4,7 @@ const querystring = require("qs");
 
 const MongoDB = require("../utils/mongodb.util");
 const OrderService = require("../services/order.service");
-const PaymentService = require("../services/payment.service"); // ✅ THÊM
+const PaymentService = require("../services/payment.service");
 const vnpayConfig = require("../config/vnpay.config");
 
 // =========================
@@ -29,7 +29,6 @@ exports.createVNPayPayment = async (req, res) => {
       return res.status(400).json({ message: "Thiếu orderId hoặc amount" });
     }
 
-    // THÊM: Lưu payment "pending" vào DB
     const client = await MongoDB.connect();
     const paymentService = new PaymentService(client);
     await paymentService.createPayment({ orderId, amount, ipAddr: "127.0.0.1" });
@@ -59,14 +58,8 @@ exports.createVNPayPayment = async (req, res) => {
       .map((key) => `${key}=${encodeURIComponent(vnp_Params[key])}`)
       .join("&");
 
-    const hmac = crypto.createHmac(
-      "sha512",
-      vnpayConfig.vnp_HashSecret.trim()
-    );
-
-    const secureHash = hmac
-      .update(Buffer.from(signData, "utf-8"))
-      .digest("hex");
+    const hmac = crypto.createHmac("sha512", vnpayConfig.vnp_HashSecret.trim());
+    const secureHash = hmac.update(Buffer.from(signData, "utf-8")).digest("hex");
 
     vnp_Params["vnp_SecureHash"] = secureHash;
 
@@ -86,7 +79,7 @@ exports.createVNPayPayment = async (req, res) => {
 // =========================
 exports.vnpayReturn = async (req, res) => {
   try {
-    let vnp_Params = { ...req.query }; // THÊM: spread tránh mutate req.query
+    let vnp_Params = { ...req.query };
 
     const secureHash = vnp_Params["vnp_SecureHash"];
 
@@ -100,14 +93,8 @@ exports.vnpayReturn = async (req, res) => {
       .map((key) => `${key}=${encodeURIComponent(vnp_Params[key])}`)
       .join("&");
 
-    const hmac = crypto.createHmac(
-      "sha512",
-      vnpayConfig.vnp_HashSecret.trim()
-    );
-
-    const checkHash = hmac
-      .update(Buffer.from(signData, "utf-8"))
-      .digest("hex");
+    const hmac = crypto.createHmac("sha512", vnpayConfig.vnp_HashSecret.trim());
+    const checkHash = hmac.update(Buffer.from(signData, "utf-8")).digest("hex");
 
     if (secureHash !== checkHash) {
       return res.status(400).json({ message: "Sai chữ ký VNPay" });
@@ -118,9 +105,9 @@ exports.vnpayReturn = async (req, res) => {
 
     const client = await MongoDB.connect();
     const orderService = new OrderService(client);
-    const paymentService = new PaymentService(client); // ✅ THÊM
+    const paymentService = new PaymentService(client);
 
-    // THÊM: Cập nhật payment record dù success hay failed
+    // Cập nhật payment record dù success hay failed
     await paymentService.updatePaymentByTxnRef(orderId, vnp_Params);
 
     // =========================
@@ -128,25 +115,22 @@ exports.vnpayReturn = async (req, res) => {
     // =========================
     if (responseCode === "00") {
       try {
-        // Đổi "confirmed" → "paid" cho luồng VNPAY
         await orderService.updateStatus(orderId, "paid");
 
+        const amount = parseInt(vnp_Params["vnp_Amount"] || "0") / 100;
+        const points = Math.floor(amount / 1000);
+
         return res.redirect(
-          "http://localhost:3002/payment-success"
+          `http://localhost:3002/payment-success?points=${points}`
         );
       } catch (err) {
         console.log("UPDATE ERROR:", err);
-
-        return res.redirect(
-          "http://localhost:3002/payment-failed"
-        );
+        return res.redirect("http://localhost:3002/payment-failed");
       }
     }
 
     // FAIL
-    return res.redirect(
-      "http://localhost:3002/payment-failed"
-    );
+    return res.redirect("http://localhost:3002/payment-failed");
   } catch (err) {
     return res.status(500).json({ message: err.message });
   }

@@ -44,7 +44,7 @@ class OrderService {
       shippingAddress: orderData.shippingAddress,
       phone: orderData.phone,
       note: orderData.note,
-      paymentMethod: orderData.paymentMethod || "COD", 
+      paymentMethod: orderData.paymentMethod || "COD",
       status: "pending",
       createdAt: new Date(),
       updatedAt: new Date()
@@ -71,6 +71,7 @@ class OrderService {
       {
         $project: {
           _id: 1,
+          userId: 1,
           items: 1,
           totalQuantity: 1,
           totalPrice: 1,
@@ -78,7 +79,7 @@ class OrderService {
           phone: 1,
           note: 1,
           status: 1,
-          paymentMethod: 1, 
+          paymentMethod: 1,
           createdAt: 1,
           updatedAt: 1,
           userName: { $ifNull: ["$userInfo.name", "$userName"] }
@@ -115,6 +116,7 @@ class OrderService {
       {
         $project: {
           _id: 1,
+          userId: 1,
           items: 1,
           totalQuantity: 1,
           totalPrice: 1,
@@ -122,7 +124,7 @@ class OrderService {
           phone: 1,
           note: 1,
           status: 1,
-          paymentMethod: 1, 
+          paymentMethod: 1,
           createdAt: 1,
           updatedAt: 1,
           userName: { $ifNull: ["$userInfo.name", "$userName"] }
@@ -158,6 +160,7 @@ class OrderService {
       {
         $project: {
           _id: 1,
+          userId: 1,
           items: 1,
           totalQuantity: 1,
           totalPrice: 1,
@@ -165,7 +168,7 @@ class OrderService {
           phone: 1,
           note: 1,
           status: 1,
-          paymentMethod: 1, 
+          paymentMethod: 1,
           createdAt: 1,
           updatedAt: 1,
           userName: { $ifNull: ["$userInfo.name", "$userName"] }

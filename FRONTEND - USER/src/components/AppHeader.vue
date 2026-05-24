@@ -33,6 +33,15 @@
           Đơn hàng
         </router-link>
 
+        <router-link
+          v-if="user"
+          to="/points"
+          class="nav-link"
+          active-class="nav-active"
+        >
+          Điểm thưởng
+        </router-link>
+
         <UserMenu v-if="user" :user="user" @logout="handleLogout" />
 
         <button v-else class="login-btn" @click="router.push('/user/login')">
@@ -179,17 +188,15 @@ watch(localUI, (val) => emit("update-ui", { ...val }), { deep: true });
   top: 0;
   z-index: 9999;
   backdrop-filter: blur(18px);
-  background: linear-gradient(
-      135deg,
-      rgba(59, 130, 246, 0.85),
-      rgba(99, 102, 241, 0.85)
-    ),
+  background:
+    linear-gradient(135deg, rgba(59, 130, 246, 0.85), rgba(99, 102, 241, 0.85)),
     radial-gradient(
       circle at top left,
       rgba(255, 255, 255, 0.25),
       transparent 60%
     );
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.35),
+  box-shadow:
+    0 20px 40px rgba(0, 0, 0, 0.35),
     inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 

@@ -1,10 +1,11 @@
 const OrderService = require("../services/order.service");
 const CartService = require("../services/cart.service");
+const PointService = require("../services/point.service");
 const MongoDB = require("../utils/mongodb.util");
 const ApiError = require("../api-error");
 
 exports.createOrder = async (req, res, next) => {
-  const { userId, shippingAddress, phone, note, paymentMethod } = req.body; 
+  const { userId, shippingAddress, phone, note, paymentMethod } = req.body;
 
   if (!userId || !shippingAddress || !phone) {
     return next(new ApiError(400, "Thiếu thông tin bắt buộc"));
@@ -28,10 +29,14 @@ exports.createOrder = async (req, res, next) => {
       shippingAddress,
       phone,
       note: note || "",
-      paymentMethod: paymentMethod || "COD", 
+      paymentMethod: paymentMethod || "COD",
     });
 
     await cartService.clearCart(userId);
+
+    // Tích điểm sau khi đặt hàng thành công
+    const pointService = new PointService(MongoDB.client);
+    await pointService.earnFromOrder(userId, order._id, order.totalPrice);
 
     return res.status(201).json({
       message: "Đặt hàng thành công",
@@ -89,6 +94,12 @@ exports.updateOrderStatus = async (req, res, next) => {
 
     if (!order) return next(new ApiError(404, "Đơn hàng không tồn tại"));
 
+    // Hoàn điểm khi đơn bị huỷ
+    if (status === "cancelled") {
+      const pointService = new PointService(MongoDB.client);
+      await pointService.refundFromOrder(order.userId, orderId, order.totalPrice);
+    }
+
     return res.json({ message: "Cập nhật trạng thái thành công", data: order });
   } catch (error) {
     return next(new ApiError(500, "Lỗi cập nhật trạng thái"));
@@ -104,7 +115,7 @@ exports.getAllOrders = async (req, res, next) => {
       limit = 10,
       status,
       sortBy = "createdAt",
-      sortOrder = "desc"
+      sortOrder = "desc",
     } = req.query;
 
     const result = await orderService.getAllOrders({
@@ -112,12 +123,12 @@ exports.getAllOrders = async (req, res, next) => {
       limit,
       status,
       sortBy,
-      sortOrder
+      sortOrder,
     });
 
     return res.json({
       message: "Lấy danh sách tất cả đơn hàng thành công",
-      ...result
+      ...result,
     });
   } catch (error) {
     console.error("Lỗi getAllOrders controller:", error);
