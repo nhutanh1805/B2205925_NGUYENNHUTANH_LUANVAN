@@ -25,7 +25,7 @@
     <CommunitySidebar v-if="ui.sidebar" />
 
     <ModelViewer v-if="ui.model" />
-
+<ChatbotTuvan />
   </div>
 </template>
 
@@ -38,6 +38,7 @@ import { initIdleDetector } from "@/components/idle/IdleDetector";
 import ModelViewer from "@/components/ModelViewer/ModelViewer.vue";
 import CommunitySidebar from "@/components/sidebar/CommunitySidebar.vue";
 import ChatbotPopup from "@/components/ChatbotPopup.vue";
+import ChatbotTuvan from "@/components/ChatbotTuvan.vue";  
 export default {
   name: "App",
 
@@ -49,6 +50,7 @@ export default {
     ModelViewer,
     CommunitySidebar,
     ChatbotPopup,
+    ChatbotTuvan,
   },
 
   data() {
