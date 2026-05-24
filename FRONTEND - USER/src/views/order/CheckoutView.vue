@@ -1,19 +1,18 @@
 <template>
   <div class="checkout-page">
 
-    <!-- POINT ANIMATION OVERLAY -->
+    <!-- ORDER SUCCESS ANIMATION OVERLAY -->
     <transition name="point-fade">
-      <div v-if="showPointAnim" class="point-overlay">
+      <div v-if="showSuccessAnim" class="point-overlay">
         <div class="point-card">
-          <div class="point-star">⭐</div>
-          <div class="point-title">Tích điểm thành công!</div>
-          <div class="point-earned">
-            <span class="point-plus">+</span>
-            <span class="point-num">{{ earnedPoints }}</span>
-            <span class="point-lbl">điểm</span>
+          <div class="point-star"></div>
+          <div class="point-title">Đặt hàng thành công!</div>
+          <div class="point-msg">
+            Điểm thưởng sẽ được cộng sau khi đơn hàng giao thành công
           </div>
           <div class="point-detail">
-            {{ formatPrice(cart.totalPrice) }}₫ × 1đ/1.000₫
+            Ước tính <b>{{ Math.floor(cart.totalPrice / 1000).toLocaleString("vi-VN") }} điểm</b>
+            cho đơn {{ formatPrice(cart.totalPrice) }}₫
           </div>
           <div class="point-bar-wrap">
             <div class="point-bar" :style="{ width: barWidth + '%' }"></div>
@@ -67,10 +66,13 @@
             <div class="price">{{ formatPrice(cart.totalPrice) }}₫</div>
           </div>
 
-          <!-- Điểm sẽ nhận được -->
+          <!-- Điểm ước tính — chỉ nhận sau khi giao thành công -->
           <div class="point-preview" v-if="cart.totalPrice > 0">
-            <span class="preview-ico">⭐</span>
-            <span>Đơn này nhận được <b>{{ Math.floor(cart.totalPrice / 1000).toLocaleString("vi-VN") }} điểm</b></span>
+            <span class="preview-ico"></span>
+            <span>
+              Nhận <b>{{ Math.floor(cart.totalPrice / 1000).toLocaleString("vi-VN") }} điểm</b>
+              sau khi đơn giao thành công
+            </span>
           </div>
 
         </div>
@@ -78,7 +80,6 @@
       </div>
 
     </div>
-
   </div>
 </template>
 
@@ -92,8 +93,7 @@ const router = useRouter();
 
 const cart = ref({ items: [], totalQuantity: 0, totalPrice: 0 });
 const loading = ref(false);
-const showPointAnim = ref(false);
-const earnedPoints = ref(0);
+const showSuccessAnim = ref(false);
 const barWidth = ref(0);
 
 const form = ref({
@@ -131,18 +131,13 @@ const validate = () => {
 
 const normalize = (r) => r?.data ?? r;
 
-// Hiện animation rồi chuyển trang sau 2.5s
-const showPointSuccess = (totalPrice) => {
-  earnedPoints.value = Math.floor(totalPrice / 1000);
-  showPointAnim.value = true;
+// Hiện animation đặt hàng thành công rồi chuyển trang sau 2.5s
+const showOrderSuccess = () => {
+  showSuccessAnim.value = true;
   barWidth.value = 0;
-
-  // Animate progress bar
   setTimeout(() => { barWidth.value = 100; }, 50);
-
-  // Chuyển trang sau 2.5s
   setTimeout(() => {
-    showPointAnim.value = false;
+    showSuccessAnim.value = false;
     router.push("/orders");
   }, 2500);
 };
@@ -162,7 +157,7 @@ const placeOrder = async () => {
     const order = normalize(res);
     if (!order?._id) throw new Error("Lỗi tạo đơn");
 
-    showPointSuccess(cart.value.totalPrice);
+    showOrderSuccess();
 
   } catch (err) {
     alert(err.message);
@@ -208,7 +203,7 @@ const payVNPay = async () => {
 
 <style scoped>
 
-/* ===== POINT OVERLAY ===== */
+/* ===== ORDER SUCCESS OVERLAY ===== */
 .point-overlay {
   position: fixed; inset: 0; z-index: 9999;
   background: rgba(0,0,0,0.55);
@@ -243,35 +238,15 @@ const payVNPay = async () => {
 }
 
 .point-title {
-  font-size: 1.2rem; font-weight: 900; color: #0f172a; margin-bottom: 20px;
+  font-size: 1.3rem; font-weight: 900; color: #0f172a; margin-bottom: 12px;
 }
 
-.point-earned {
-  display: flex; align-items: baseline; justify-content: center;
-  gap: 4px; margin-bottom: 8px;
-}
-
-.point-plus {
-  font-size: 2rem; font-weight: 900; color: #eab308;
-}
-
-.point-num {
-  font-size: 3.5rem; font-weight: 900;
-  color: #eab308;
-  animation: countUp .6s ease-out;
-}
-
-@keyframes countUp {
-  from { transform: translateY(20px); opacity: 0; }
-  to   { transform: translateY(0);    opacity: 1; }
-}
-
-.point-lbl {
-  font-size: 1.2rem; font-weight: 700; color: #92400e;
+.point-msg {
+  font-size: .9rem; color: #475569; margin-bottom: 8px;
 }
 
 .point-detail {
-  font-size: .8rem; color: #94a3b8; margin-bottom: 24px;
+  font-size: .85rem; color: #94a3b8; margin-bottom: 24px;
 }
 
 .point-bar-wrap {
@@ -281,7 +256,7 @@ const payVNPay = async () => {
 
 .point-bar {
   height: 100%;
-  background: linear-gradient(90deg, #eab308, #f97316);
+  background: linear-gradient(90deg, #6366f1, #a855f7);
   border-radius: 999px;
   transition: width 2.4s ease;
 }
@@ -367,7 +342,6 @@ const payVNPay = async () => {
 .total { margin-top: 10px; font-weight: bold; }
 .price { color: #ef4444; font-size: 20px; }
 
-/* Điểm preview */
 .point-preview {
   margin-top: 14px; padding: 10px 14px;
   background: #fefce8; border: 1.5px solid #fde68a;

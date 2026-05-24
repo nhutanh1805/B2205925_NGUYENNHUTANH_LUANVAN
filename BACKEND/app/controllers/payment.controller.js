@@ -110,19 +110,10 @@ exports.vnpayReturn = async (req, res) => {
     // Cập nhật payment record dù success hay failed
     await paymentService.updatePaymentByTxnRef(orderId, vnp_Params);
 
-    // =========================
-    // SUCCESS
-    // =========================
     if (responseCode === "00") {
       try {
         await orderService.updateStatus(orderId, "paid");
-
-        const amount = parseInt(vnp_Params["vnp_Amount"] || "0") / 100;
-        const points = Math.floor(amount / 1000);
-
-        return res.redirect(
-          `http://localhost:3002/payment-success?points=${points}`
-        );
+        return res.redirect("http://localhost:3002/payment-success");
       } catch (err) {
         console.log("UPDATE ERROR:", err);
         return res.redirect("http://localhost:3002/payment-failed");

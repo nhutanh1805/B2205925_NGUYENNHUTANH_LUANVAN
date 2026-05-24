@@ -34,9 +34,7 @@ exports.createOrder = async (req, res, next) => {
 
     await cartService.clearCart(userId);
 
-    // Tích điểm sau khi đặt hàng thành công
-    const pointService = new PointService(MongoDB.client);
-    await pointService.earnFromOrder(userId, order._id, order.totalPrice);
+    // KHÔNG tích điểm ở đây — chỉ tích khi đơn được giao (delivered)
 
     return res.status(201).json({
       message: "Đặt hàng thành công",
@@ -94,10 +92,13 @@ exports.updateOrderStatus = async (req, res, next) => {
 
     if (!order) return next(new ApiError(404, "Đơn hàng không tồn tại"));
 
-    // Hoàn điểm khi đơn bị huỷ
-    if (status === "cancelled") {
-      const pointService = new PointService(MongoDB.client);
-      await pointService.refundFromOrder(order.userId, orderId, order.totalPrice);
+    const pointService = new PointService(MongoDB.client);
+
+    // Tích điểm khi đơn hàng đã giao thành công
+    // Không hoàn điểm khi huỷ vì điểm chỉ được tích sau khi delivered —
+    // cancelled chỉ xảy ra trước đó nên chưa có điểm nào được cộng
+    if (status === "delivered") {
+      await pointService.earnFromOrder(order.userId, orderId, order.totalPrice);
     }
 
     return res.json({ message: "Cập nhật trạng thái thành công", data: order });

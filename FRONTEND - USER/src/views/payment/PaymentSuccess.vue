@@ -18,8 +18,9 @@
       <h1 class="title">Thanh toán thành công</h1>
       <p class="muted">Đơn hàng của bạn đã được xác nhận</p>
 
-      <div class="point-badge" v-if="earnedPoints > 0">
-        Bạn nhận được <strong>+{{ earnedPoints.toLocaleString("vi-VN") }} điểm</strong>
+      <!-- Thông báo điểm sẽ cộng sau khi giao — không hiện số điểm ngay -->
+      <div class="point-badge">
+        Điểm thưởng sẽ được cộng sau khi đơn hàng giao thành công
       </div>
 
       <div class="actions">
@@ -33,14 +34,11 @@
 
 <script setup>
 import { ref, onMounted } from "vue";
-import { useRoute } from "vue-router";
 
-const route = useRoute();
 const loading = ref(true);
-const earnedPoints = ref(0);
 
 onMounted(() => {
-  earnedPoints.value = parseInt(route.query.points || "0");
+  // Không cần đọc points từ query nữa vì điểm chưa được tích tại thời điểm này
   loading.value = false;
 });
 </script>
@@ -101,6 +99,7 @@ onMounted(() => {
   font-size: .9rem;
   color: #92400e;
   margin-bottom: 24px;
+  line-height: 1.5;
 }
 
 /* ACTIONS */
