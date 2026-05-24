@@ -91,36 +91,41 @@ class ChatbotTuvanService {
             { role: "user", content: userMessage },
         ];
 
-        // 5. Gọi AI — xoay vòng apiKeys × models
-        for (const apiKey of config.apiKeys) {
-            for (const model of config.models) {
-                try {
-                    const response = await fetch(config.url, {
-                        method: "POST",
-                        headers: {
-                            Authorization: `Bearer ${apiKey}`,
-                            "Content-Type": "application/json",
-                        },
-                        body: JSON.stringify({ model, messages }),
-                    });
+        // 5. Gọi AI — xoay vòng providers → models → apiKeys
+        for (const provider of config.providers) {
+            for (const model of provider.models) {
+                for (const apiKey of provider.apiKeys) {
+                    try {
+                        const response = await fetch(provider.url, {
+                            method: "POST",
+                            headers: {
+                                Authorization: `Bearer ${apiKey}`,
+                                "Content-Type": "application/json",
+                            },
+                            body: JSON.stringify({ model, messages }),
+                        });
 
-                    const data = await response.json();
+                        const data = await response.json();
 
-                    if (data.error) {
-                        console.warn(`[ChatbotTuvan] ${model} / ...${apiKey.slice(-6)} lỗi:`, data.error.message);
-                        continue;
+                        // ── Debug: xem raw response ──
+                        console.log(`[Debug] ${model} raw:`, JSON.stringify(data).slice(0, 300));
+
+                        if (data.error) {
+                            console.warn(`[ChatbotTuvan] ${model} / ...${apiKey.slice(-6)} lỗi:`, data.error.message);
+                            continue;
+                        }
+
+                        const content = extractContent(data);
+                        if (!content) {
+                            console.warn(`[ChatbotTuvan] ${model} trả content rỗng, thử tiếp...`);
+                            continue;
+                        }
+
+                        console.log(`[ChatbotTuvan] Dùng model: ${model}`);
+                        return content;
+                    } catch (err) {
+                        console.warn(`[ChatbotTuvan] ${model} exception:`, err.message);
                     }
-
-                    const content = extractContent(data);
-                    if (!content) {
-                        console.warn(`[ChatbotTuvan] ${model} trả content rỗng, thử tiếp...`);
-                        continue;
-                    }
-
-                    console.log(`[ChatbotTuvan] Dùng model: ${model}`);
-                    return content;
-                } catch (err) {
-                    console.warn(`[ChatbotTuvan] ${model} exception:`, err.message);
                 }
             }
         }

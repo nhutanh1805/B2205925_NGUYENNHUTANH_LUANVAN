@@ -1,28 +1,18 @@
 const chatbotTuvanConfig = {
-     apiKeys: [
-        process.env.OPENROUTER_API_KEY   || "",
-        process.env.OPENROUTER_API_KEY_2 || "",
-        process.env.OPENROUTER_API_KEY_3 || "",
-    ].filter(Boolean),
-    url: "https://openrouter.ai/api/v1/chat/completions",
-    models: [
-        "meta-llama/llama-3.3-70b-instruct:free",
-        "meta-llama/llama-3.1-8b-instruct:free",
-        "nvidia/nemotron-3-super-120b-a12b:free",
-        "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
-        "tencent/hy3-preview:free",
-        "inclusionai/ling-2.6-1t:free",
-        "arcee-ai/trinity-large-thinking:free",
-        "poolside/laguna-m.1:free",
-        "deepseek/deepseek-v4-flash:free",
-        "meta-llama/llama-3.3-70b-instruct:free",
-    "google/gemma-3-27b-it:free",
-    "google/gemma-3-12b-it:free",
-    "qwen/qwen3-14b:free",
-    "qwen/qwen3-8b:free",
-    "deepseek/deepseek-v4-flash:free",
-    "nvidia/nemotron-3-super-120b-a12b:free",
-    "arcee-ai/trinity-large-thinking:free",
+    providers: [
+        {
+            url: "https://api.groq.com/openai/v1/chat/completions",
+            apiKeys: [
+                process.env.GROQ_API_KEY   || "",
+                process.env.GROQ_API_KEY_2 || "",
+            ].filter(Boolean),
+            models: [
+                "llama-3.3-70b-versatile",
+                "llama-3.1-8b-instant",
+                "mixtral-8x7b-32768",
+                "gemma2-9b-it",
+            ],
+        },
     ],
     systemPrompt: `Bạn là nhân viên tư vấn bán hàng chuyên nghiệp của shop điện thoại/điện tử.
 QUAN TRỌNG: Chỉ trả lời bằng tiếng Việt, tuyệt đối không dùng ngôn ngữ khác.
