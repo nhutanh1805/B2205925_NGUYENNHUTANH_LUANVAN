@@ -10,34 +10,42 @@ class OrderService {
   }
 
   async createOrder(orderData) {
+    const isCOD = (orderData.paymentMethod || "COD") === "COD";
+
     let userName = "";
     const user = await this.User.findOne({ _id: new ObjectId(orderData.userId) });
     if (user) userName = user.name;
 
-    for (const item of orderData.items) {
-      const result = await this.productService.Product.updateOne(
-        {
-          _id: new ObjectId(item.productId),
-          stock: { $gte: item.quantity },
-          isActive: true
-        },
-        { $inc: { stock: -item.quantity, sold: item.quantity }, $set: { updatedAt: new Date() } }
-      );
+    // Chỉ trừ kho ngay nếu COD
+    if (isCOD) {
+      for (const item of orderData.items) {
+        const result = await this.productService.Product.updateOne(
+          {
+            _id: new ObjectId(item.productId),
+            stock: { $gte: item.quantity },
+            isActive: true,
+          },
+          {
+            $inc: { stock: -item.quantity, sold: item.quantity },
+            $set: { updatedAt: new Date() },
+          }
+        );
 
-      if (result.modifiedCount === 0) {
-        throw new Error(`Sản phẩm ${item.name} không đủ số lượng`);
+        if (result.modifiedCount === 0) {
+          throw new Error(`Sản phẩm ${item.name} không đủ số lượng`);
+        }
       }
     }
 
     const order = {
       userId: orderData.userId,
       userName,
-      items: orderData.items.map(item => ({
+      items: orderData.items.map((item) => ({
         productId: item.productId,
         name: item.name,
         price: item.price,
         quantity: item.quantity,
-        images: item.images
+        images: item.images,
       })),
       totalQuantity: orderData.totalQuantity,
       totalPrice: orderData.totalPrice,
@@ -45,15 +53,45 @@ class OrderService {
       phone: orderData.phone,
       note: orderData.note,
       paymentMethod: orderData.paymentMethod || "COD",
+      paymentStatus: isCOD ? "paid" : "unpaid",
       status: "pending",
+      stockDeducted: isCOD,
+      // VNPay: hết hạn sau 1 phút
+      paymentExpiredAt: isCOD ? null : new Date(Date.now() + 1 * 60 * 1000),
       createdAt: new Date(),
-      updatedAt: new Date()
+      updatedAt: new Date(),
     };
 
     const result = await this.Order.insertOne(order);
     order._id = result.insertedId;
 
     return order;
+  }
+
+  // Trừ kho khi VNPay thanh toán thành công
+  async deductStock(order) {
+    for (const item of order.items) {
+      const result = await this.productService.Product.updateOne(
+        {
+          _id: new ObjectId(item.productId),
+          stock: { $gte: item.quantity },
+          isActive: true,
+        },
+        {
+          $inc: { stock: -item.quantity, sold: item.quantity },
+          $set: { updatedAt: new Date() },
+        }
+      );
+
+      if (result.modifiedCount === 0) {
+        throw new Error(`Sản phẩm ${item.name} không đủ số lượng`);
+      }
+    }
+
+    await this.Order.updateOne(
+      { _id: new ObjectId(order._id) },
+      { $set: { stockDeducted: true, updatedAt: new Date() } }
+    );
   }
 
   async getOrdersByUser(userId) {
@@ -64,8 +102,8 @@ class OrderService {
           from: "users",
           localField: "userId",
           foreignField: "_id",
-          as: "userInfo"
-        }
+          as: "userInfo",
+        },
       },
       { $unwind: { path: "$userInfo", preserveNullAndEmptyArrays: true } },
       {
@@ -80,18 +118,26 @@ class OrderService {
           note: 1,
           status: 1,
           paymentMethod: 1,
+          paymentStatus: 1,
+          paymentExpiredAt: 1,
           createdAt: 1,
           updatedAt: 1,
-          userName: { $ifNull: ["$userInfo.name", "$userName"] }
-        }
+          userName: { $ifNull: ["$userInfo.name", "$userName"] },
+        },
       },
-      { $sort: { createdAt: -1 } }
+      { $sort: { createdAt: -1 } },
     ]).toArray();
 
     return orders;
   }
 
-  async getAllOrders({ page = 1, limit = 10, status, sortBy = "createdAt", sortOrder = "desc" } = {}) {
+  async getAllOrders({
+    page = 1,
+    limit = 10,
+    status,
+    sortBy = "createdAt",
+    sortOrder = "desc",
+  } = {}) {
     const pageNum = parseInt(page) || 1;
     const limitNum = Math.min(parseInt(limit) || 10, 100);
     const skip = (pageNum - 1) * limitNum;
@@ -109,8 +155,8 @@ class OrderService {
           from: "users",
           localField: "userId",
           foreignField: "_id",
-          as: "userInfo"
-        }
+          as: "userInfo",
+        },
       },
       { $unwind: { path: "$userInfo", preserveNullAndEmptyArrays: true } },
       {
@@ -125,26 +171,38 @@ class OrderService {
           note: 1,
           status: 1,
           paymentMethod: 1,
+          paymentStatus: 1,
+          paymentExpiredAt: 1,
           createdAt: 1,
           updatedAt: 1,
-          userName: { $ifNull: ["$userInfo.name", "$userName"] }
-        }
+          userName: { $ifNull: ["$userInfo.name", "$userName"] },
+        },
       },
       { $sort: sort },
       { $skip: skip },
-      { $limit: limitNum }
+      { $limit: limitNum },
     ]).toArray();
 
     const total = await this.Order.countDocuments(matchQuery);
 
     return {
       data: orders,
-      pagination: { page: pageNum, limit: limitNum, total, totalPages: Math.ceil(total / limitNum) }
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
+        total,
+        totalPages: Math.ceil(total / limitNum),
+      },
     };
   }
 
   async findById(orderId) {
-    if (!orderId || orderId.length !== 24 || !/^[0-9a-fA-F]{24}$/.test(orderId)) return null;
+    if (
+      !orderId ||
+      orderId.length !== 24 ||
+      !/^[0-9a-fA-F]{24}$/.test(orderId)
+    )
+      return null;
 
     const orders = await this.Order.aggregate([
       { $match: { _id: new ObjectId(orderId) } },
@@ -153,8 +211,8 @@ class OrderService {
           from: "users",
           localField: "userId",
           foreignField: "_id",
-          as: "userInfo"
-        }
+          as: "userInfo",
+        },
       },
       { $unwind: { path: "$userInfo", preserveNullAndEmptyArrays: true } },
       {
@@ -169,18 +227,26 @@ class OrderService {
           note: 1,
           status: 1,
           paymentMethod: 1,
+          paymentStatus: 1,
+          paymentExpiredAt: 1,
+          stockDeducted: 1,
           createdAt: 1,
           updatedAt: 1,
-          userName: { $ifNull: ["$userInfo.name", "$userName"] }
-        }
-      }
+          userName: { $ifNull: ["$userInfo.name", "$userName"] },
+        },
+      },
     ]).toArray();
 
     return orders[0] || null;
   }
 
   async updateStatus(orderId, newStatus) {
-    if (!orderId || orderId.length !== 24 || !/^[0-9a-fA-F]{24}$/.test(orderId)) return null;
+    if (
+      !orderId ||
+      orderId.length !== 24 ||
+      !/^[0-9a-fA-F]{24}$/.test(orderId)
+    )
+      return null;
 
     const order = await this.findById(orderId);
     if (!order) return null;
@@ -199,21 +265,32 @@ class OrderService {
     };
 
     if (!allowedTransitions[currentStatus]?.includes(newStatus)) {
-      throw new Error(`Không thể chuyển từ "${currentStatus}" sang "${newStatus}"`);
+      throw new Error(
+        `Không thể chuyển từ "${currentStatus}" sang "${newStatus}"`
+      );
     }
 
-    if (newStatus === "cancelled") {
+    // Hoàn kho khi hủy — chỉ hoàn nếu kho đã bị trừ (COD)
+    if (newStatus === "cancelled" && order.stockDeducted) {
       for (const item of order.items) {
         await this.productService.Product.updateOne(
           { _id: new ObjectId(item.productId) },
-          { $inc: { stock: item.quantity, sold: -item.quantity }, $set: { updatedAt: new Date() } }
+          {
+            $inc: { stock: item.quantity, sold: -item.quantity },
+            $set: { updatedAt: new Date() },
+          }
         );
       }
     }
 
+    const extraFields =
+      newStatus === "paid"
+        ? { paymentStatus: "paid" }
+        : {};
+
     await this.Order.updateOne(
       { _id: new ObjectId(orderId) },
-      { $set: { status: newStatus, updatedAt: new Date() } }
+      { $set: { status: newStatus, updatedAt: new Date(), ...extraFields } }
     );
 
     return await this.findById(orderId);

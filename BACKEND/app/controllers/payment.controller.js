@@ -12,9 +12,11 @@ const vnpayConfig = require("../config/vnpay.config");
 // =========================
 function sortObject(obj) {
   const sorted = {};
-  Object.keys(obj).sort().forEach((key) => {
-    sorted[key] = obj[key];
-  });
+  Object.keys(obj)
+    .sort()
+    .forEach((key) => {
+      sorted[key] = obj[key];
+    });
   return sorted;
 }
 
@@ -30,6 +32,20 @@ exports.createVNPayPayment = async (req, res) => {
     }
 
     const client = await MongoDB.connect();
+    const orderService = new OrderService(client);
+
+    // Kiểm tra đơn hàng tồn tại và chưa hết hạn
+    const order = await orderService.findById(orderId);
+    if (!order) {
+      return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
+    }
+    if (order.paymentStatus === "paid") {
+      return res.status(400).json({ message: "Đơn hàng đã được thanh toán" });
+    }
+    if (order.paymentExpiredAt && new Date() > new Date(order.paymentExpiredAt)) {
+      return res.status(400).json({ message: "Đơn hàng đã hết hạn thanh toán" });
+    }
+
     const paymentService = new PaymentService(client);
     await paymentService.createPayment({ orderId, amount, ipAddr: "127.0.0.1" });
 
@@ -40,14 +56,11 @@ exports.createVNPayPayment = async (req, res) => {
     vnp_Params["vnp_TmnCode"] = vnpayConfig.vnp_TmnCode;
     vnp_Params["vnp_Locale"] = "vn";
     vnp_Params["vnp_CurrCode"] = "VND";
-
     vnp_Params["vnp_TxnRef"] = orderId;
     vnp_Params["vnp_OrderInfo"] = `Thanh_toan_don_hang_${orderId}`;
     vnp_Params["vnp_OrderType"] = "billpayment";
-
     vnp_Params["vnp_Amount"] = amount * 100;
     vnp_Params["vnp_ReturnUrl"] = vnpayConfig.vnp_ReturnUrl;
-
     vnp_Params["vnp_IpAddr"] = "127.0.0.1";
     vnp_Params["vnp_CreateDate"] = moment().format("YYYYMMDDHHmmss");
 
@@ -82,7 +95,6 @@ exports.vnpayReturn = async (req, res) => {
     let vnp_Params = { ...req.query };
 
     const secureHash = vnp_Params["vnp_SecureHash"];
-
     delete vnp_Params["vnp_SecureHash"];
     delete vnp_Params["vnp_SecureHashType"];
 
@@ -97,7 +109,7 @@ exports.vnpayReturn = async (req, res) => {
     const checkHash = hmac.update(Buffer.from(signData, "utf-8")).digest("hex");
 
     if (secureHash !== checkHash) {
-      return res.status(400).json({ message: "Sai chữ ký VNPay" });
+      return res.redirect("http://localhost:3002/payment-failed?reason=invalid_signature");
     }
 
     const orderId = vnp_Params["vnp_TxnRef"];
@@ -107,22 +119,46 @@ exports.vnpayReturn = async (req, res) => {
     const orderService = new OrderService(client);
     const paymentService = new PaymentService(client);
 
-    // Cập nhật payment record dù success hay failed
+    // Cập nhật payment record
     await paymentService.updatePaymentByTxnRef(orderId, vnp_Params);
 
     if (responseCode === "00") {
       try {
+        const order = await orderService.findById(orderId);
+
+        if (!order) {
+          return res.redirect("http://localhost:3002/payment-failed?reason=order_not_found");
+        }
+
+        // Kiểm tra đơn chưa hết hạn
+        if (order.paymentExpiredAt && new Date() > new Date(order.paymentExpiredAt)) {
+          return res.redirect("http://localhost:3002/payment-failed?reason=expired");
+        }
+
+        // Kiểm tra chưa thanh toán (tránh xử lý trùng)
+        if (order.paymentStatus === "paid") {
+          return res.redirect(`http://localhost:3002/payment-success?orderId=${orderId}`);
+        }
+
+        // Trừ kho nếu chưa trừ (VNPay)
+        if (!order.stockDeducted) {
+          await orderService.deductStock(order);
+        }
+
+        // Cập nhật trạng thái đơn
         await orderService.updateStatus(orderId, "paid");
-        return res.redirect("http://localhost:3002/payment-success");
+
+        return res.redirect(`http://localhost:3002/payment-success?orderId=${orderId}`);
       } catch (err) {
-        console.log("UPDATE ERROR:", err);
-        return res.redirect("http://localhost:3002/payment-failed");
+        console.error("[VNPay Return] Lỗi xử lý sau thanh toán:", err.message);
+        return res.redirect("http://localhost:3002/payment-failed?reason=server_error");
       }
     }
 
-    // FAIL
-    return res.redirect("http://localhost:3002/payment-failed");
+    // Thanh toán thất bại
+    return res.redirect(`http://localhost:3002/payment-failed?orderId=${orderId}`);
   } catch (err) {
+    console.error("[VNPay Return] Lỗi:", err.message);
     return res.status(500).json({ message: err.message });
   }
 };
