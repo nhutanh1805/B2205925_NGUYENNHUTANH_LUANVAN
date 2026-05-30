@@ -5,36 +5,39 @@ const MongoDB = require("../utils/mongodb.util");
 const ApiError = require("../api-error");
 
 exports.createOrder = async (req, res, next) => {
-  const { userId, shippingAddress, phone, note, paymentMethod } = req.body;
+  const { userId, shippingAddress, phone, note, paymentMethod, items } = req.body;
 
   if (!userId || !shippingAddress || !phone) {
     return next(new ApiError(400, "Thiếu thông tin bắt buộc"));
+  }
+
+  if (!items || items.length === 0) {
+    return next(new ApiError(400, "Chưa chọn sản phẩm nào"));
   }
 
   try {
     const cartService = new CartService(MongoDB.client);
     const orderService = new OrderService(MongoDB.client);
 
-    const cart = await cartService.getCartByUser(userId);
-
-    if (!cart || cart.items.length === 0) {
-      return next(new ApiError(400, "Giỏ hàng trống"));
-    }
+    // Tính tổng từ items được chọn
+    const totalQuantity = items.reduce((s, i) => s + i.quantity, 0);
+    const totalPrice    = items.reduce((s, i) => s + i.price * i.quantity, 0);
 
     const order = await orderService.createOrder({
       userId,
-      items: cart.items,
-      totalQuantity: cart.totalQuantity,
-      totalPrice: cart.totalPrice,
+      items,
+      totalQuantity,
+      totalPrice,
       shippingAddress,
       phone,
       note: note || "",
       paymentMethod: paymentMethod || "COD",
     });
 
-    await cartService.clearCart(userId);
-
-    // KHÔNG tích điểm ở đây — chỉ tích khi đơn được giao (delivered)
+    // Chỉ xóa các sản phẩm đã đặt khỏi giỏ, không clear toàn bộ
+    for (const item of items) {
+      await cartService.removeItem(userId, item.productId);
+    }
 
     return res.status(201).json({
       message: "Đặt hàng thành công",
@@ -95,8 +98,6 @@ exports.updateOrderStatus = async (req, res, next) => {
     const pointService = new PointService(MongoDB.client);
 
     // Tích điểm khi đơn hàng đã giao thành công
-    // Không hoàn điểm khi huỷ vì điểm chỉ được tích sau khi delivered —
-    // cancelled chỉ xảy ra trước đó nên chưa có điểm nào được cộng
     if (status === "delivered") {
       await pointService.earnFromOrder(order.userId, orderId, order.totalPrice);
     }

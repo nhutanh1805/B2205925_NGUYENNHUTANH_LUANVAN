@@ -11,8 +11,8 @@
             Điểm thưởng sẽ được cộng sau khi đơn hàng giao thành công
           </div>
           <div class="point-detail">
-            Ước tính <b>{{ Math.floor(cart.totalPrice / 1000).toLocaleString("vi-VN") }} điểm</b>
-            cho đơn {{ formatPrice(cart.totalPrice) }}₫
+            Ước tính <b>{{ Math.floor(checkoutTotal / 1000).toLocaleString("vi-VN") }} điểm</b>
+            cho đơn {{ formatPrice(checkoutTotal) }}₫
           </div>
           <div class="point-bar-wrap">
             <div class="point-bar" :style="{ width: barWidth + '%' }"></div>
@@ -54,23 +54,23 @@
         <!-- RIGHT -->
         <div class="right">
 
-          <h2>Đơn hàng</h2>
+          <h2>Sản phẩm đã chọn ({{ checkoutItems.length }})</h2>
 
-          <div v-for="(item, index) in cart.items" :key="index" class="item">
+          <div v-for="(item, index) in checkoutItems" :key="index" class="item">
             <span>{{ item.name }} × {{ item.quantity }}</span>
             <b>{{ formatPrice(item.price * item.quantity) }}₫</b>
           </div>
 
           <div class="total">
-            <div>Số lượng: {{ cart.totalQuantity }}</div>
-            <div class="price">{{ formatPrice(cart.totalPrice) }}₫</div>
+            <div>Số lượng: {{ checkoutQuantity }}</div>
+            <div class="price">{{ formatPrice(checkoutTotal) }}₫</div>
           </div>
 
-          <!-- Điểm ước tính — chỉ nhận sau khi giao thành công -->
-          <div class="point-preview" v-if="cart.totalPrice > 0">
+          <!-- Điểm ước tính -->
+          <div class="point-preview" v-if="checkoutTotal > 0">
             <span class="preview-ico"></span>
             <span>
-              Nhận <b>{{ Math.floor(cart.totalPrice / 1000).toLocaleString("vi-VN") }} điểm</b>
+              Nhận <b>{{ Math.floor(checkoutTotal / 1000).toLocaleString("vi-VN") }} điểm</b>
               sau khi đơn giao thành công
             </span>
           </div>
@@ -84,17 +84,26 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
-import CartService from "@/services/cart.service";
 import OrderService from "@/services/order.service";
 
 const router = useRouter();
 
-const cart = ref({ items: [], totalQuantity: 0, totalPrice: 0 });
 const loading = ref(false);
 const showSuccessAnim = ref(false);
 const barWidth = ref(0);
+
+// ── Đọc sản phẩm đã chọn từ sessionStorage ──
+const checkoutItems = ref([]);
+
+const checkoutTotal = computed(() =>
+  checkoutItems.value.reduce((s, i) => s + i.price * i.quantity, 0)
+);
+
+const checkoutQuantity = computed(() =>
+  checkoutItems.value.reduce((s, i) => s + i.quantity, 0)
+);
 
 const form = ref({
   shippingAddress: "",
@@ -104,24 +113,25 @@ const form = ref({
 
 const formatPrice = (v) => new Intl.NumberFormat("vi-VN").format(v || 0);
 
-const loadCart = async () => {
+onMounted(() => {
+  const raw = sessionStorage.getItem("checkoutItems");
+  if (!raw) {
+    alert("Không có sản phẩm nào được chọn");
+    router.push("/cart");
+    return;
+  }
   try {
-    const res = await CartService.getCart();
-    cart.value = {
-      items: res.items || [],
-      totalQuantity: res.totalQuantity || 0,
-      totalPrice: res.totalPrice || 0,
-    };
-    if (!cart.value.items.length) {
-      alert("Giỏ hàng trống");
+    const parsed = JSON.parse(raw);
+    if (!parsed || parsed.length === 0) {
+      alert("Không có sản phẩm nào được chọn");
       router.push("/cart");
+      return;
     }
+    checkoutItems.value = parsed;
   } catch {
     router.push("/cart");
   }
-};
-
-onMounted(loadCart);
+});
 
 const validate = () => {
   if (!form.value.shippingAddress) { alert("Nhập địa chỉ"); return false; }
@@ -131,12 +141,13 @@ const validate = () => {
 
 const normalize = (r) => r?.data ?? r;
 
-// Hiện animation đặt hàng thành công rồi chuyển trang sau 2.5s
 const showOrderSuccess = () => {
   showSuccessAnim.value = true;
   barWidth.value = 0;
   setTimeout(() => { barWidth.value = 100; }, 50);
   setTimeout(() => {
+    // Xóa checkoutItems khỏi sessionStorage sau khi đặt hàng xong
+    sessionStorage.removeItem("checkoutItems");
     showSuccessAnim.value = false;
     router.push("/orders");
   }, 2500);
@@ -149,16 +160,13 @@ const placeOrder = async () => {
     const res = await OrderService.createOrder({
       ...form.value,
       paymentMethod: "COD",
-      items: cart.value.items,
-      totalPrice: cart.value.totalPrice,
-      totalQuantity: cart.value.totalQuantity,
+      items: checkoutItems.value,
     });
 
     const order = normalize(res);
     if (!order?._id) throw new Error("Lỗi tạo đơn");
 
     showOrderSuccess();
-
   } catch (err) {
     alert(err.message);
   } finally {
@@ -173,26 +181,26 @@ const payVNPay = async () => {
     const res = await OrderService.createOrder({
       ...form.value,
       paymentMethod: "VNPAY",
-      items: cart.value.items,
-      totalPrice: cart.value.totalPrice,
-      totalQuantity: cart.value.totalQuantity,
+      items: checkoutItems.value,
     });
 
     const order = normalize(res);
     const orderId = order?._id;
     if (!orderId) throw new Error("Không tạo đơn");
 
+    // Xóa checkoutItems sau khi tạo đơn thành công
+    sessionStorage.removeItem("checkoutItems");
+
     const paymentRes = await fetch("http://localhost:3000/api/payment/create-vnpay", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ orderId, amount: cart.value.totalPrice }),
+      body: JSON.stringify({ orderId, amount: checkoutTotal.value }),
     });
 
     const data = await paymentRes.json();
     if (!data?.payment_url) throw new Error("VNPay lỗi");
 
     window.location.href = data.payment_url;
-
   } catch (err) {
     alert(err.message);
   } finally {
@@ -275,6 +283,7 @@ const payVNPay = async () => {
   display: flex; justify-content: center; align-items: center;
   background: linear-gradient(135deg, #c7d2fe, #fbcfe8, #ddd6fe);
   position: relative; overflow: hidden;
+  padding: 40px 16px;
 }
 
 .checkout-page::before {
@@ -319,6 +328,7 @@ const payVNPay = async () => {
 .btn-cod {
   background: #000; color: white;
   padding: 10px; border-radius: 12px; transition: 0.2s;
+  cursor: pointer; border: none;
 }
 .btn-cod:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
 .btn-cod:disabled { opacity: .6; cursor: not-allowed; }
@@ -326,16 +336,19 @@ const payVNPay = async () => {
 .btn-vnpay {
   background: linear-gradient(90deg, #22c55e, #10b981);
   color: white; padding: 10px; border-radius: 12px; transition: 0.2s;
+  cursor: pointer; border: none;
 }
 .btn-vnpay:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 10px 25px rgba(16,185,129,0.3); }
 .btn-vnpay:disabled { opacity: .6; cursor: not-allowed; }
 
 .right { padding: 20px; background: #f8fafc; }
 
+.right h2 { font-size: 1rem; font-weight: 800; color: #0f172a; margin-bottom: 14px; }
+
 .item {
   display: flex; justify-content: space-between;
   padding: 10px; background: white; border-radius: 12px;
-  margin-bottom: 8px; transition: 0.2s;
+  margin-bottom: 8px; transition: 0.2s; font-size: .9rem;
 }
 .item:hover { transform: translateX(4px); }
 

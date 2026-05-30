@@ -16,7 +16,7 @@
 
         <h1 class="hero-title">Giỏ<br/><em>hàng</em></h1>
 
-        <p class="hero-sub">Kiểm tra sản phẩm trước khi thanh toán</p>
+        <p class="hero-sub">Chọn sản phẩm muốn thanh toán</p>
 
         <div class="hero-stats" v-if="!loading">
           <div class="hero-stat">
@@ -25,13 +25,13 @@
           </div>
           <div class="stat-divider"></div>
           <div class="hero-stat">
-            <span class="stat-num">{{ cart.totalQuantity }}</span>
-            <span class="stat-lbl">Số lượng</span>
+            <span class="stat-num">{{ selectedItems.length }}</span>
+            <span class="stat-lbl">Đã chọn</span>
           </div>
           <div class="stat-divider"></div>
           <div class="hero-stat">
-            <span class="stat-num price-stat">{{ formatPrice(cart.totalPrice) }}₫</span>
-            <span class="stat-lbl">Tổng tiền</span>
+            <span class="stat-num price-stat">{{ formatPrice(selectedTotal) }}₫</span>
+            <span class="stat-lbl">Tổng chọn</span>
           </div>
         </div>
       </div>
@@ -73,7 +73,19 @@
         <!-- LEFT: Items -->
         <div class="items-col">
           <div class="col-header">
-            <span class="col-label">Sản phẩm ({{ cart.items.length }})</span>
+            <label class="select-all-label">
+              <div
+                class="custom-checkbox"
+                :class="{ checked: allSelected, indeterminate: !allSelected && selectedItems.length > 0 }"
+                @click="toggleAll"
+              >
+                <svg v-if="allSelected" viewBox="0 0 12 12" fill="none" width="12" height="12">
+                  <path d="M2 6l3 3 5-5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span v-else-if="selectedItems.length > 0" class="indeterminate-bar"></span>
+              </div>
+              <span class="col-label">Sản phẩm ({{ cart.items.length }})</span>
+            </label>
             <button class="clear-all-btn" @click="clearCart">
               🗑 Xóa tất cả
             </button>
@@ -84,7 +96,19 @@
               v-for="item in cart.items"
               :key="item.productId"
               class="item-card"
+              :class="{ selected: selectedIds.has(item.productId.toString()) }"
             >
+              <!-- Checkbox -->
+              <div
+                class="custom-checkbox item-cb"
+                :class="{ checked: selectedIds.has(item.productId.toString()) }"
+                @click="toggleItem(item.productId)"
+              >
+                <svg v-if="selectedIds.has(item.productId.toString())" viewBox="0 0 12 12" fill="none" width="12" height="12">
+                  <path d="M2 6l3 3 5-5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+
               <!-- Badge -->
               <span v-if="item.salePrice" class="item-badge">SALE</span>
 
@@ -134,33 +158,42 @@
         <aside class="checkout-col">
           <div class="checkout-card">
             <div class="checkout-header">
-              <span class="checkout-icon">🚀</span>
+              <span class="checkout-icon"></span>
               <h2 class="checkout-title">Thanh toán</h2>
             </div>
 
             <div class="checkout-lines">
               <div class="checkout-row">
-                <span>Số loại sản phẩm</span>
-                <b>{{ cart.items.length }}</b>
+                <span>Đã chọn</span>
+                <b>{{ selectedItems.length }} / {{ cart.items.length }} loại</b>
               </div>
               <div class="checkout-row">
                 <span>Tổng số lượng</span>
-                <b>{{ cart.totalQuantity }}</b>
+                <b>{{ selectedQuantity }}</b>
               </div>
               <div class="checkout-divider"></div>
               <div class="checkout-row total-row">
                 <span>Tổng tiền</span>
-                <span class="total-price">{{ formatPrice(cart.totalPrice) }}₫</span>
+                <span class="total-price">{{ formatPrice(selectedTotal) }}₫</span>
               </div>
             </div>
 
-            <router-link to="/checkout" class="checkout-btn">
-              <span>Thanh toán ngay</span>
+            <!-- Thông báo nếu chưa chọn -->
+            <div v-if="selectedItems.length === 0" class="no-select-hint">
+              Vui lòng chọn ít nhất một sản phẩm
+            </div>
+
+            <button
+              class="checkout-btn"
+              :disabled="selectedItems.length === 0"
+              @click="goCheckout"
+            >
+              <span>Thanh toán ({{ selectedItems.length }})</span>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="16" height="16">
                 <path d="M5 12h14M12 5l7 7-7 7"/>
               </svg>
               <span class="btn-shine"></span>
-            </router-link>
+            </button>
 
             <router-link to="/products" class="continue-btn">
               ← Tiếp tục mua sắm
@@ -190,7 +223,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue"
+import { ref, computed, onMounted } from "vue"
 import { useRouter } from "vue-router"
 import CartService from "@/services/cart.service"
 
@@ -200,11 +233,49 @@ const cart = ref({ items: [], totalQuantity: 0, totalPrice: 0 })
 const loading = ref(true)
 const placeholder = "https://via.placeholder.com/120x160?text=No+Image"
 
+// ── Danh sách productId đã chọn ──
+const selectedIds = ref(new Set())
+
+const allSelected = computed(() =>
+  cart.value.items.length > 0 &&
+  cart.value.items.every(i => selectedIds.value.has(i.productId.toString()))
+)
+
+const selectedItems = computed(() =>
+  cart.value.items.filter(i => selectedIds.value.has(i.productId.toString()))
+)
+
+const selectedTotal = computed(() =>
+  selectedItems.value.reduce((s, i) => s + i.price * i.quantity, 0)
+)
+
+const selectedQuantity = computed(() =>
+  selectedItems.value.reduce((s, i) => s + i.quantity, 0)
+)
+
+const toggleItem = (productId) => {
+  const id = productId.toString()
+  const next = new Set(selectedIds.value)
+  if (next.has(id)) next.delete(id)
+  else next.add(id)
+  selectedIds.value = next
+}
+
+const toggleAll = () => {
+  if (allSelected.value) {
+    selectedIds.value = new Set()
+  } else {
+    selectedIds.value = new Set(cart.value.items.map(i => i.productId.toString()))
+  }
+}
+
 const loadCart = async () => {
   loading.value = true
   try {
     const res = await CartService.getCart()
     cart.value = res || cart.value
+    // Mặc định chọn tất cả khi load lần đầu
+    selectedIds.value = new Set(cart.value.items.map(i => i.productId.toString()))
   } catch (err) {
     if (err.message === "Chưa đăng nhập") {
       alert("Bạn cần đăng nhập")
@@ -215,6 +286,17 @@ const loadCart = async () => {
   }
 }
 
+// ── Chuyển sang checkout với sản phẩm đã chọn ──
+const goCheckout = () => {
+  if (selectedItems.value.length === 0) {
+    alert("Vui lòng chọn ít nhất một sản phẩm")
+    return
+  }
+  // Lưu các sản phẩm đã chọn vào sessionStorage để trang checkout đọc
+  sessionStorage.setItem("checkoutItems", JSON.stringify(selectedItems.value))
+  router.push("/checkout")
+}
+
 const updateQuantity = async (productId, quantity) => {
   if (quantity < 1) return
   await CartService.updateQuantity({ productId, quantity })
@@ -223,6 +305,9 @@ const updateQuantity = async (productId, quantity) => {
 
 const removeItem = async (productId) => {
   if (!confirm("Xóa sản phẩm này?")) return
+  const next = new Set(selectedIds.value)
+  next.delete(productId.toString())
+  selectedIds.value = next
   await CartService.removeItem(productId)
   await loadCart()
 }
@@ -230,6 +315,7 @@ const removeItem = async (productId) => {
 const clearCart = async () => {
   if (!confirm("Xóa toàn bộ giỏ hàng?")) return
   await CartService.clearCart()
+  selectedIds.value = new Set()
   await loadCart()
 }
 
@@ -366,6 +452,9 @@ onMounted(loadCart)
   padding: 18px 22px; border-bottom: 1.5px solid #f0f4ff;
   box-shadow: 0 -2px 20px rgba(37,99,235,.05);
 }
+.select-all-label {
+  display: flex; align-items: center; gap: 12px; cursor: pointer;
+}
 .col-label { font-weight: 800; font-size: 1rem; color: #0f172a; }
 .clear-all-btn {
   font-size: .8rem; font-weight: 700; color: #ef4444;
@@ -375,11 +464,33 @@ onMounted(loadCart)
 }
 .clear-all-btn:hover { background: #ef4444; color: white; border-color: #ef4444; }
 
+/* ══ CUSTOM CHECKBOX ══ */
+.custom-checkbox {
+  width: 20px; height: 20px; border-radius: 6px; flex-shrink: 0;
+  border: 2px solid #cbd5e1;
+  background: white;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: all .2s;
+  user-select: none;
+}
+.custom-checkbox:hover { border-color: #2563eb; background: #eff6ff; }
+.custom-checkbox.checked {
+  background: linear-gradient(135deg, #2563eb, #4f46e5);
+  border-color: transparent;
+  box-shadow: 0 2px 8px rgba(37,99,235,.4);
+}
+.custom-checkbox.indeterminate {
+  background: #eff6ff; border-color: #2563eb;
+}
+.indeterminate-bar {
+  width: 10px; height: 2.5px; background: #2563eb; border-radius: 999px;
+}
+
 .items-list { display: flex; flex-direction: column; }
 
 /* ══ ITEM CARD ══ */
 .item-card {
-  display: flex; align-items: center; gap: 18px;
+  display: flex; align-items: center; gap: 14px;
   background: white; padding: 18px 22px;
   border-bottom: 1.5px solid #f0f4ff;
   position: relative;
@@ -391,9 +502,13 @@ onMounted(loadCart)
   box-shadow: 0 12px 40px rgba(37,99,235,.08);
 }
 .item-card:hover { background: #f8faff; }
+.item-card.selected { background: #f0f5ff; }
+.item-card.selected:hover { background: #e8efff; }
+
+.item-cb { flex-shrink: 0; }
 
 .item-badge {
-  position: absolute; top: 12px; left: 12px;
+  position: absolute; top: 12px; left: 52px;
   background: linear-gradient(135deg, #e11d48, #f97316);
   color: white; font-size: .6rem; font-weight: 800;
   padding: 3px 8px; border-radius: 999px;
@@ -460,22 +575,31 @@ onMounted(loadCart)
 .total-row { font-size: 1rem; font-weight: 800; color: #0f172a; }
 .total-price { color: #f97316; font-size: 1.3rem; font-weight: 900; }
 
+/* Hint chưa chọn */
+.no-select-hint {
+  text-align: center; font-size: .82rem; color: #94a3b8;
+  background: #f8fafc; border-radius: 10px; padding: 10px;
+  margin-bottom: 12px; border: 1.5px dashed #e2e8f0;
+}
+
 .checkout-btn {
   display: flex; align-items: center; justify-content: center; gap: 8px;
   width: 100%; padding: 16px;
   border-radius: 14px; font-weight: 800; font-size: 1rem; color: white;
   background: linear-gradient(135deg, #f97316, #ec4899);
   box-shadow: 0 8px 24px rgba(249,115,22,.4);
-  transition: transform .25s, box-shadow .25s;
+  transition: transform .25s, box-shadow .25s, opacity .2s;
   position: relative; overflow: hidden; margin-bottom: 10px;
+  cursor: pointer; border: none;
 }
-.checkout-btn:hover { transform: translateY(-3px) scale(1.02); box-shadow: 0 14px 32px rgba(249,115,22,.5); }
+.checkout-btn:hover:not(:disabled) { transform: translateY(-3px) scale(1.02); box-shadow: 0 14px 32px rgba(249,115,22,.5); }
+.checkout-btn:disabled { opacity: .45; cursor: not-allowed; transform: none; box-shadow: none; }
 .btn-shine {
   position: absolute; top: 0; left: -80%; width: 60%; height: 100%;
   background: linear-gradient(90deg, transparent, rgba(255,255,255,.25), transparent);
   transform: skewX(-20deg); transition: left .6s;
 }
-.checkout-btn:hover .btn-shine { left: 130%; }
+.checkout-btn:hover:not(:disabled) .btn-shine { left: 130%; }
 
 .continue-btn {
   display: block; text-align: center; width: 100%; padding: 12px;

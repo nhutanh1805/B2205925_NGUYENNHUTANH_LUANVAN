@@ -11,18 +11,18 @@ class OrderService {
     return JSON.parse(user)._id;
   }
 
-  // GET ORDERS
+  // Lấy danh sách đơn hàng của user
   async getOrders() {
     const userId = this.getUserId();
     return (await this.api.post("/", { userId })).data;
   }
 
-  // GET DETAIL
+  // Lấy chi tiết đơn hàng
   async getOrder(orderId) {
     return (await this.api.get(`/${orderId}`)).data;
   }
 
-  // CREATE ORDER
+  // Tạo đơn hàng — truyền items đã chọn từ giỏ hàng
   async createOrder(data) {
     const userId = this.getUserId();
 
@@ -30,20 +30,19 @@ class OrderService {
       userId,
       shippingAddress: data.shippingAddress,
       phone: data.phone,
-      note: data.note,
-      paymentMethod: data.paymentMethod || "COD", 
+      note: data.note || "",
+      paymentMethod: data.paymentMethod || "COD",
+      items: data.items, // ← Danh sách sản phẩm đã chọn từ Cart.vue
     };
 
     const res = await this.api.post("/create", payload);
     return res.data;
   }
 
-  // HỦY / UPDATE STATUS
+  // Hủy / cập nhật trạng thái đơn hàng
   async updateOrderStatus(orderId, status) {
     return (
-      await this.api.patch(`/${orderId}/status`, {
-        status,
-      })
+      await this.api.patch(`/${orderId}/status`, { status })
     ).data;
   }
 }
