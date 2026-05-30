@@ -6,8 +6,6 @@ class ReviewService {
     this.Order = client.db().collection("orders");
   }
 
-  /* ================= EXTRACT DATA ================= */
-
   extractReviewData(payload) {
     const review = {
       rating: Number(payload.rating),
@@ -23,38 +21,36 @@ class ReviewService {
     return review;
   }
 
-  /* ================= CRUD ================= */
-
   async create(userId, productId, payload) {
-  const existed = await this.Review.findOne({
-    userId: new ObjectId(userId),
-    productId: new ObjectId(productId),
-  });
-  if (existed) throw new Error("Bạn đã đánh giá sản phẩm này rồi");
+    const existed = await this.Review.findOne({
+      userId: new ObjectId(userId),
+      productId: new ObjectId(productId),
+    });
+    if (existed) throw new Error("Bạn đã đánh giá sản phẩm này rồi");
 
-  // ⭐ productId trong items là ObjectId nên query bằng ObjectId
-  const hasPurchased = await this.Order.findOne({
-    userId: userId.toString(),
-    status: "delivered",
-    "items.productId": new ObjectId(productId),
-  });
-  if (!hasPurchased) {
-    throw new Error("Bạn cần mua và nhận sản phẩm này trước khi đánh giá");
+    const hasPurchased = await this.Order.findOne({
+      userId: userId.toString(),
+      status: "delivered",
+      "items.productId": { $in: [new ObjectId(productId), productId.toString()] },
+    });
+
+    if (!hasPurchased) {
+      throw new Error("Bạn cần mua và nhận sản phẩm này trước khi đánh giá");
+    }
+
+    const review = {
+      ...this.extractReviewData(payload),
+      userId: new ObjectId(userId),
+      productId: new ObjectId(productId),
+      helpfulVotes: [],
+      status: "approved",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    const result = await this.Review.insertOne(review);
+    return { _id: result.insertedId, ...review };
   }
-
-  const review = {
-    ...this.extractReviewData(payload),
-    userId: new ObjectId(userId),
-    productId: new ObjectId(productId),
-    helpfulVotes: [],
-    status: "approved",
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  };
-
-  const result = await this.Review.insertOne(review);
-  return { _id: result.insertedId, ...review };
-}
 
   async findByProduct(productId, query = {}) {
     const { page = 1, limit = 10, sort = "createdAt", rating } = query;
