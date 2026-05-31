@@ -56,6 +56,10 @@ class StatisticService {
   async getOrderAverages({ from, to } = {}) {
     return (await this.api.get("/order-averages", { params: { from, to } })).data;
   }
+
+  async getProfit({ from, to, period = "day" } = {}) {
+    return (await this.api.get("/profit", { params: { from, to, period } })).data;
+  }
 }
 
 export default new StatisticService();

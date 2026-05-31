@@ -41,30 +41,26 @@ class StatisticService {
     const matchAll       = { ...dateFilter };
 
     const [revenueData, orderData, customerData, cancelData] = await Promise.all([
-      // Doanh thu từ đơn delivered
       this.Order.aggregate([
         { $match: matchDelivered },
         { $group: { _id: null, total: { $sum: "$totalPrice" }, count: { $sum: 1 } } },
       ]).toArray(),
 
-      // Tất cả đơn
       this.Order.aggregate([
         { $match: matchAll },
         { $group: { _id: "$status", count: { $sum: 1 } } },
       ]).toArray(),
 
-      // Khách hàng đặt trong khoảng
       this.Order.distinct("userId", matchAll),
 
-      // Đơn huỷ
       this.Order.countDocuments({ ...dateFilter, status: "cancelled" }),
     ]);
 
-    const totalRevenue  = revenueData[0]?.total  || 0;
-    const totalDelivered= revenueData[0]?.count  || 0;
-    const totalOrders   = orderData.reduce((s, o) => s + o.count, 0);
-    const aov           = totalDelivered > 0 ? Math.round(totalRevenue / totalDelivered) : 0;
-    const cancelRate    = totalOrders > 0 ? Math.round((cancelData / totalOrders) * 100) : 0;
+    const totalRevenue   = revenueData[0]?.total || 0;
+    const totalDelivered = revenueData[0]?.count || 0;
+    const totalOrders    = orderData.reduce((s, o) => s + o.count, 0);
+    const aov            = totalDelivered > 0 ? Math.round(totalRevenue / totalDelivered) : 0;
+    const cancelRate     = totalOrders > 0 ? Math.round((cancelData / totalOrders) * 100) : 0;
 
     const byStatus = {};
     orderData.forEach(o => { byStatus[o._id] = o.count; });
@@ -88,11 +84,11 @@ class StatisticService {
       { $match: { ...dateFilter, status: "delivered" } },
       {
         $group: {
-          _id: this._buildGroupByDate(period),
-          revenue:  { $sum: "$totalPrice" },
-          orders:   { $sum: 1 },
-          cod:      { $sum: { $cond: [{ $eq: ["$paymentMethod", "COD"] },   "$totalPrice", 0] } },
-          vnpay:    { $sum: { $cond: [{ $eq: ["$paymentMethod", "VNPAY"] }, "$totalPrice", 0] } },
+          _id:    this._buildGroupByDate(period),
+          revenue: { $sum: "$totalPrice" },
+          orders:  { $sum: 1 },
+          cod:     { $sum: { $cond: [{ $eq: ["$paymentMethod", "COD"] },   "$totalPrice", 0] } },
+          vnpay:   { $sum: { $cond: [{ $eq: ["$paymentMethod", "VNPAY"] }, "$totalPrice", 0] } },
         },
       },
       { $sort: { "_id.year": 1, "_id.month": 1, "_id.day": 1, "_id.week": 1 } },
@@ -135,11 +131,11 @@ class StatisticService {
       { $match: { ...dateFilter, status: { $ne: "cancelled" } } },
       {
         $group: {
-          _id:        "$userId",
-          totalSpent: { $sum: "$totalPrice" },
-          totalOrders:{ $sum: 1 },
-          userName:   { $first: "$userName" },
-          lastOrder:  { $max: "$createdAt" },
+          _id:         "$userId",
+          totalSpent:  { $sum: "$totalPrice" },
+          totalOrders: { $sum: 1 },
+          userName:    { $first: "$userName" },
+          lastOrder:   { $max: "$createdAt" },
         },
       },
       { $sort: { totalSpent: -1 } },
@@ -158,9 +154,9 @@ class StatisticService {
       { $match: { ...dateFilter, status: "cancelled" } },
       {
         $group: {
-          _id:          "$userId",
-          cancelCount:  { $sum: 1 },
-          userName:     { $first: "$userName" },
+          _id:         "$userId",
+          cancelCount: { $sum: 1 },
+          userName:    { $first: "$userName" },
         },
       },
       { $sort: { cancelCount: -1 } },
@@ -169,7 +165,6 @@ class StatisticService {
 
     return data;
   }
-
 
   // 6. SẢN PHẨM BÁN CHẠY
 
@@ -181,11 +176,11 @@ class StatisticService {
       { $unwind: "$items" },
       {
         $group: {
-          _id:       "$items.productId",
-          name:      { $first: "$items.name" },
-          quantity:  { $sum: "$items.quantity" },
-          revenue:   { $sum: { $multiply: ["$items.price", "$items.quantity"] } },
-          orders:    { $sum: 1 },
+          _id:      "$items.productId",
+          name:     { $first: "$items.name" },
+          quantity: { $sum: "$items.quantity" },
+          revenue:  { $sum: { $multiply: ["$items.price", "$items.quantity"] } },
+          orders:   { $sum: 1 },
         },
       },
       { $sort: { quantity: -1 } },
@@ -217,7 +212,7 @@ class StatisticService {
     return data;
   }
 
-  // 8. KHUNG GIỜ ĐẶT HÀNG NHIỀU NHẤT bỎ KO XÀI NỮA
+  // 8. KHUNG GIỜ ĐẶT HÀNG NHIỀU NHẤT
 
   async getOrdersByHour({ from, to } = {}) {
     const dateFilter = this._buildDateFilter(from, to);
@@ -233,7 +228,6 @@ class StatisticService {
       { $sort: { _id: 1 } },
     ]).toArray();
 
-    // Fill đủ 24h
     const result = Array.from({ length: 24 }, (_, h) => ({
       hour:  h,
       count: data.find(d => d._id === h)?.count || 0,
@@ -252,8 +246,8 @@ class StatisticService {
       { $match: dateFilter },
       {
         $group: {
-          _id:   { $dayOfWeek: "$createdAt" }, // 1=CN, 2=T2,...
-          count: { $sum: 1 },
+          _id:     { $dayOfWeek: "$createdAt" },
+          count:   { $sum: 1 },
           revenue: { $sum: { $cond: [{ $eq: ["$status", "delivered"] }, "$totalPrice", 0] } },
         },
       },
@@ -295,7 +289,6 @@ class StatisticService {
 
     const current = { from, to };
 
-    // Tính khoảng thời gian để so sánh kỳ trước tương đương
     const diff     = new Date(to) - new Date(from);
     const prevTo   = new Date(new Date(from) - 1);
     const prevFrom = new Date(prevTo - diff);
@@ -314,11 +307,11 @@ class StatisticService {
       prev > 0 ? Math.round(((curr - prev) / prev) * 100) : null;
 
     return {
-      current: currData,
+      current:  currData,
       previous: prevData,
       growth: {
-        revenue: calcGrowth(currData.totalRevenue,   prevData.totalRevenue),
-        orders:  calcGrowth(currData.totalOrders,    prevData.totalOrders),
+        revenue:   calcGrowth(currData.totalRevenue,   prevData.totalRevenue),
+        orders:    calcGrowth(currData.totalOrders,    prevData.totalOrders),
         customers: calcGrowth(currData.totalCustomers, prevData.totalCustomers),
       },
     };
@@ -331,7 +324,7 @@ class StatisticService {
     threshold.setDate(threshold.getDate() - Number(days));
 
     const data = await this.Order.find({
-      status: { $in: ["pending", "confirmed"] },
+      status:    { $in: ["pending", "confirmed"] },
       createdAt: { $lte: threshold },
     })
       .sort({ createdAt: 1 })
@@ -360,6 +353,72 @@ class StatisticService {
     ]).toArray();
 
     return data[0] || { avgOrderValue: 0, avgItems: 0, maxOrder: 0, minOrder: 0 };
+  }
+
+  // 14. DOANH THU & LỢI NHUẬN THEO THỜI GIAN
+
+  async getProfit({ from, to, period = "day" } = {}) {
+    const dateFilter = this._buildDateFilter(from, to);
+
+    const data = await this.Order.aggregate([
+      { $match: { ...dateFilter, status: "delivered" } },
+      // Tính cost từng item trước khi group
+      {
+        $addFields: {
+          totalCost: {
+            $sum: {
+              $map: {
+                input: "$items",
+                as:    "item",
+                in:    { $multiply: ["$$item.costPrice", "$$item.quantity"] },
+              },
+            },
+          },
+        },
+      },
+      {
+        $group: {
+          _id:     this._buildGroupByDate(period),
+          revenue: { $sum: "$totalPrice" },  // giá thực khách trả
+          cost:    { $sum: "$totalCost" },   // tổng giá vốn
+          orders:  { $sum: 1 },
+        },
+      },
+      {
+        $addFields: {
+          profit: { $subtract: ["$revenue", "$cost"] },
+          margin: {
+            $cond: [
+              { $gt: ["$revenue", 0] },
+              {
+                $round: [
+                  { $multiply: [{ $divide: [{ $subtract: ["$revenue", "$cost"] }, "$revenue"] }, 100] },
+                  1,
+                ],
+              },
+              0,
+            ],
+          },
+        },
+      },
+      { $sort: { "_id.year": 1, "_id.month": 1, "_id.day": 1, "_id.week": 1 } },
+    ]).toArray();
+
+    // Tổng toàn kỳ
+    const summary = data.reduce(
+      (acc, d) => {
+        acc.revenue += d.revenue;
+        acc.cost    += d.cost;
+        acc.profit  += d.profit;
+        return acc;
+      },
+      { revenue: 0, cost: 0, profit: 0 }
+    );
+    summary.margin = summary.revenue > 0
+      ? Math.round((summary.profit / summary.revenue) * 1000) / 10
+      : 0;
+
+    return { summary, data };
   }
 }
 

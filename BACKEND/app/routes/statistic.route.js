@@ -32,4 +32,7 @@ router.get("/growth",                 stats.getGrowthComparison);
 router.get("/stale-orders",           stats.getStaleOrders);
 router.get("/order-averages",         stats.getOrderAverages);
 
+// Doanh thu & lợi nhuận (doanh thu - giá vốn)
+router.get("/profit",                 stats.getProfit);
+
 module.exports = router;

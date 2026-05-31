@@ -122,6 +122,62 @@
           </div>
         </div>
 
+        <!-- ══ LỢI NHUẬN ══ -->
+        <div class="card profit-card" v-if="profit">
+          <h2>Doanh thu &amp; Lợi nhuận</h2>
+
+          <!-- Summary KPIs -->
+          <div class="profit-summary">
+            <div class="profit-kpi">
+              <span class="profit-kpi-label">Doanh thu</span>
+              <span class="profit-kpi-value revenue">{{ formatCurrency(profit.data.summary.revenue) }}</span>
+            </div>
+            <div class="profit-arrow">→</div>
+            <div class="profit-kpi">
+              <span class="profit-kpi-label">Giá vốn</span>
+              <span class="profit-kpi-value cost">{{ formatCurrency(profit.data.summary.cost) }}</span>
+            </div>
+            <div class="profit-arrow">=</div>
+            <div class="profit-kpi highlight">
+              <span class="profit-kpi-label">Lợi nhuận</span>
+              <span class="profit-kpi-value profit-color">{{ formatCurrency(profit.data.summary.profit) }}</span>
+            </div>
+            <div class="profit-kpi">
+              <span class="profit-kpi-label">Biên lợi nhuận</span>
+              <span class="profit-kpi-value margin-color">{{ profit.data.summary.margin }}%</span>
+            </div>
+          </div>
+
+          <!-- Detail table -->
+          <table v-if="profit.data.data?.length">
+            <thead>
+              <tr>
+                <th>Kỳ</th>
+                <th>Doanh thu</th>
+                <th>Giá vốn</th>
+                <th>Lợi nhuận</th>
+                <th>Biên LN</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="(row, i) in profit.data.data" :key="i">
+                <td>{{ formatPeriodLabel(row._id) }}</td>
+                <td class="price">{{ formatCurrency(row.revenue) }}</td>
+                <td class="cost">{{ formatCurrency(row.cost) }}</td>
+                <td :class="row.profit >= 0 ? 'profit-pos' : 'profit-neg'">
+                  {{ formatCurrency(row.profit) }}
+                </td>
+                <td>
+                  <span class="margin-badge" :class="row.margin >= 30 ? 'margin-good' : row.margin >= 10 ? 'margin-ok' : 'margin-low'">
+                    {{ row.margin }}%
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <p v-else class="empty">Không có dữ liệu</p>
+        </div>
+
         <!-- Doanh thu & Đơn hàng theo thời gian -->
         <div class="section-row">
           <div class="card">
@@ -228,19 +284,19 @@
           </div>
         </div>
 
-       <!-- Ngày trong tuần -->
-<div class="card">
-  <h2>Đơn theo ngày trong tuần</h2>
-  <div class="bar-chart" v-if="ordersByDay?.data?.length">
-    <div class="bar-item" v-for="item in ordersByDay.data" :key="item.day">
-      <div class="bar-track">
-        <div class="bar-fill bar-fill-purple" :style="{ height: barHeight(item.count, ordersByDay.data) + '%' }" :title="`${item.day}: ${item.count} đơn`"></div>
-      </div>
-      <span class="bar-label">{{ item.day }}</span>
-    </div>
-  </div>
-  <p v-else class="empty">Không có dữ liệu</p>
-</div>
+        <!-- Ngày trong tuần -->
+        <div class="card">
+          <h2>Đơn theo ngày trong tuần</h2>
+          <div class="bar-chart" v-if="ordersByDay?.data?.length">
+            <div class="bar-item" v-for="item in ordersByDay.data" :key="item.day">
+              <div class="bar-track">
+                <div class="bar-fill bar-fill-purple" :style="{ height: barHeight(item.count, ordersByDay.data) + '%' }" :title="`${item.day}: ${item.count} đơn`"></div>
+              </div>
+              <span class="bar-label">{{ item.day }}</span>
+            </div>
+          </div>
+          <p v-else class="empty">Không có dữ liệu</p>
+        </div>
 
         <!-- Thanh toán & Trung bình đơn -->
         <div class="section-row">
@@ -334,6 +390,7 @@ export default {
       topProducts: null, cancelledProducts: null,
       ordersByHour: null, ordersByDay: null,
       paymentStats: null, staleOrders: null, orderAverages: null,
+      profit: null,
     };
   },
   mounted() { this.loadAll(); },
@@ -354,6 +411,7 @@ export default {
           topProducts, cancelledProducts,
           ordersByHour, ordersByDay,
           paymentStats, staleOrders, orderAverages,
+          profit,
         ] = await Promise.all([
           statisticService.getOverview({ from, to }),
           statisticService.getGrowthComparison({ from, to }),
@@ -368,6 +426,7 @@ export default {
           statisticService.getPaymentMethodStats({ from, to }),
           statisticService.getStaleOrders(),
           statisticService.getOrderAverages({ from, to }),
+          statisticService.getProfit({ from, to, period }),
         ]);
         Object.assign(this, {
           overview, growth, revenue, ordersByPeriod,
@@ -375,6 +434,7 @@ export default {
           topProducts, cancelledProducts,
           ordersByHour, ordersByDay,
           paymentStats, staleOrders, orderAverages,
+          profit,
         });
       } catch (err) {
         console.error("Lỗi tải thống kê:", err);
@@ -562,6 +622,50 @@ export default {
 .kpi-growth.up   { color:#16a34a; }
 .kpi-growth.down { color:#ef4444; }
 
+/* ══ PROFIT CARD ══ */
+.profit-card { margin-bottom: 20px; }
+
+.profit-summary {
+  display: flex; align-items: center; gap: 12px;
+  flex-wrap: wrap; margin-bottom: 20px;
+  padding: 16px; background: #f8faff; border-radius: 12px;
+  border: 1px solid #e0e7ff;
+}
+.profit-kpi {
+  display: flex; flex-direction: column; gap: 4px;
+  padding: 12px 18px; background: white; border-radius: 10px;
+  border: 1px solid #e8edf8; min-width: 140px;
+}
+.profit-kpi.highlight {
+  border-color: #bbf7d0; background: #f0fdf4;
+}
+.profit-kpi-label {
+  font-size: .68rem; color: #94a3b8;
+  text-transform: uppercase; letter-spacing: .07em; font-weight: 600;
+}
+.profit-kpi-value {
+  font-family: 'Times New Roman', Times, serif;
+  font-size: 1.15rem; font-weight: 900;
+}
+.profit-kpi-value.revenue  { color: #2563eb; }
+.profit-kpi-value.cost     { color: #dc2626; }
+.profit-kpi-value.profit-color  { color: #16a34a; }
+.profit-kpi-value.margin-color  { color: #7c3aed; }
+
+.profit-arrow { font-size: 1.2rem; color: #94a3b8; font-weight: 700; }
+
+td.cost      { color: #dc2626; font-weight: 600; }
+td.profit-pos { color: #16a34a; font-weight: 700; font-family: 'Times New Roman', Times, serif; }
+td.profit-neg { color: #dc2626; font-weight: 700; font-family: 'Times New Roman', Times, serif; }
+
+.margin-badge {
+  display: inline-block; padding: 2px 10px; border-radius: 999px;
+  font-size: .72rem; font-weight: 700;
+}
+.margin-good { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+.margin-ok   { background: #fef9c3; color: #a16207; border: 1px solid #fef08a; }
+.margin-low  { background: #fee2e2; color: #dc2626; border: 1px solid #fecaca; }
+
 /* SECTIONS */
 .section-row {
   display:grid; grid-template-columns:1fr 1fr;
@@ -655,5 +759,7 @@ td.mono   { font-family:monospace; font-size:.78rem; color:#64748b; font-weight:
   .hero { padding:50px 20px 60px; }
   .main-panel { padding:0 14px 40px; }
   .hero-stats { gap:14px; padding:14px 18px; }
+  .profit-summary { flex-direction: column; }
+  .profit-kpi { min-width: unset; width: 100%; }
 }
 </style>

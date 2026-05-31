@@ -178,3 +178,16 @@ exports.getOrderAverages = async (req, res, next) => {
     return next(new ApiError(500, err.message || "Lỗi khi lấy trung bình đơn hàng"));
   }
 };
+
+// DOANH THU & LỢI NHUẬN
+
+exports.getProfit = async (req, res, next) => {
+  try {
+    const service = new StatisticService(MongoDB.client);
+    const { from, to, period } = getFilter(req.query);
+    const data = await service.getProfit({ from, to, period });
+    return res.json({ message: "Lấy lợi nhuận thành công", data });
+  } catch (err) {
+    return next(new ApiError(500, err.message || "Lỗi khi lấy lợi nhuận"));
+  }
+};
