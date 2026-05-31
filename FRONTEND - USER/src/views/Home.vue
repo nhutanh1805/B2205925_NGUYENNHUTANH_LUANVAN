@@ -87,7 +87,7 @@
     <section class="ts-video-main">
       <div class="ts-container">
         <div class="ts-section-header">
-          <h2 class="ts-section-title">Bộ sưu tập <em>2025</em></h2>
+          <h2 class="ts-section-title">Bộ sưu tập <em>2026</em></h2>
           <p class="ts-section-sub">Khám phá xu hướng phụ kiện smartphone mới nhất</p>
         </div>
         <div class="ts-video-frame">

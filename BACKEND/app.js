@@ -13,6 +13,7 @@ const statisticRouter = require("./app/routes/statistic.route");
 const recommendationRouter = require("./app/routes/recommendation.router");
 const chatbotTuvanRoute = require("./app/routes/chatbottuvan.route");
 const pointRouter = require("./app/routes/point.router");
+const stockReceiptRouter = require("./app/routes/stockReceipt.route");
 
 const app = express();
 
@@ -35,6 +36,7 @@ app.use("/api/statistics", statisticRouter);
 app.use("/api/recommendations", recommendationRouter);
 app.use("/api/chatbottuvan", chatbotTuvanRoute);
 app.use("/api/points", pointRouter);
+app.use("/api/stock-receipts", stockReceiptRouter);
 
 app.use((req, res, next) => {
     return next(new ApiError(404, "Resource not found"));

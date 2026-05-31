@@ -50,6 +50,19 @@
               Làm mới
             </button>
 
+            <router-link to="/admin/stock-receipts" class="btn-stock">
+              <span class="add-icon-wrap">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="add-icon">
+                  <path d="M20 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2z"/>
+                  <path d="M16 3H8a2 2 0 00-2 2v2h12V5a2 2 0 00-2-2z"/>
+                  <line x1="12" y1="12" x2="12" y2="17"/>
+                  <line x1="9.5" y1="14.5" x2="14.5" y2="14.5"/>
+                </svg>
+              </span>
+              Nhập kho
+              <span class="btn-shine"></span>
+            </router-link>
+
             <router-link to="/products/add" class="btn-add">
               <span class="add-icon-wrap">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" class="add-icon">
@@ -249,9 +262,7 @@ function initDragScroll() {
 .breadcrumb .current { color: rgba(255,255,255,.8); font-weight: 600; }
 
 /* STATS */
-.hero-stats {
-  display: flex; gap: 14px; flex-wrap: wrap;
-}
+.hero-stats { display: flex; gap: 14px; flex-wrap: wrap; }
 .hero-stat {
   backdrop-filter: blur(12px);
   background: rgba(255,255,255,.07);
@@ -275,15 +286,12 @@ function initDragScroll() {
   padding: 18px 22px;
   backdrop-filter: blur(12px);
 }
-
 .toolbar-left { display: flex; flex-direction: column; gap: 8px; }
-
 .hero-title {
   font-size: 1.6rem; font-weight: 800; color: white;
   letter-spacing: -.02em; margin: 0;
   text-shadow: 0 2px 20px rgba(0,0,0,.3);
 }
-
 .hero-badge {
   display: inline-flex; align-items: center; gap: 6px;
   background: rgba(255,255,255,.1);
@@ -291,8 +299,7 @@ function initDragScroll() {
   border-radius: 999px;
   padding: 3px 12px;
   font-size: .72rem; font-weight: 600; color: rgba(255,255,255,.75);
-  letter-spacing: .05em;
-  width: fit-content;
+  letter-spacing: .05em; width: fit-content;
 }
 .badge-dot {
   width: 7px; height: 7px; border-radius: 50%;
@@ -303,7 +310,6 @@ function initDragScroll() {
   0%,100% { opacity:1; transform:scale(1); }
   50%      { opacity:.5; transform:scale(1.5); }
 }
-
 .toolbar-actions { display: flex; gap: 10px; flex-wrap: wrap; }
 
 /* BTN REFRESH */
@@ -320,6 +326,30 @@ function initDragScroll() {
 .refresh-icon { width: 15px; height: 15px; transition: transform .5s; }
 .btn-refresh.spinning .refresh-icon { animation: spin .6s linear; }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* BTN STOCK */
+.btn-stock {
+  position: relative;
+  display: inline-flex; align-items: center; gap: 10px;
+  padding: 11px 22px; border-radius: 13px;
+  font-size: .9rem; font-weight: 700; color: white;
+  background: linear-gradient(135deg, #0891b2, #0e7490);
+  border: none; text-decoration: none; cursor: pointer;
+  overflow: hidden;
+  box-shadow: 0 6px 20px rgba(8,145,178,.45);
+  transition: transform .2s, box-shadow .2s;
+}
+.btn-stock:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 28px rgba(8,145,178,.55);
+}
+.btn-stock .btn-shine {
+  position: absolute; top: 0; left: -75%;
+  width: 50%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.22), transparent);
+  transform: skewX(-20deg); transition: left .5s;
+}
+.btn-stock:hover .btn-shine { left: 130%; }
 
 /* BTN ADD */
 .btn-add {
@@ -413,7 +443,6 @@ function initDragScroll() {
   box-shadow: 0 20px 44px rgba(37,99,235,.16);
   border-color: #a5b4fc;
 }
-
 .img-wrap {
   overflow: hidden; border-radius: 14px;
   background: #f8faff;
@@ -424,9 +453,7 @@ function initDragScroll() {
   transition: transform .35s;
 }
 .mini-card:hover .mini-img { transform: scale(1.06); }
-
 .mini-body { display: flex; flex-direction: column; gap: 3px; }
-
 .mini-brand {
   font-size: .65rem; font-weight: 800; color: #4f46e5;
   text-transform: uppercase; letter-spacing: .07em; margin: 0;
@@ -452,7 +479,6 @@ function initDragScroll() {
   width: fit-content; margin-top: 2px;
 }
 .mini-stock.out-stock { color: #94a3b8; background: #f1f5f9; border-color: #e2e8f0; }
-
 .stock-dot {
   width: 6px; height: 6px; border-radius: 50%;
   background: #10b981; box-shadow: 0 0 5px #10b981;
@@ -489,7 +515,7 @@ function initDragScroll() {
   .hero-content  { padding: 20px 14px 0; }
   .content-shell { padding: 0 14px; margin-top: -24px; }
   .toolbar-actions { width: 100%; }
-  .btn-add, .btn-refresh { flex: 1; justify-content: center; }
+  .btn-add, .btn-stock, .btn-refresh { flex: 1; justify-content: center; }
   .hero-title { font-size: 1.3rem; }
 }
 </style>

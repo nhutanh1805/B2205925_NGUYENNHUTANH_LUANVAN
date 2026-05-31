@@ -3,6 +3,7 @@ import adminRoutes from "./admin.router";
 import orderRoutes from "./order.router";
 import userRoutes from "./userAuth.router";
 import statisticRoutes from "./statistic.router";
+import stockReceiptRoutes from "./stockReceipt.router";
 
 const routes = [
   {
@@ -44,7 +45,8 @@ const routes = [
  
  // ===== STATISTIC =====
   ...statisticRoutes, 
-
+// ===== STOCK RECEIPT =====
+  ...stockReceiptRoutes,
   ...userRoutes,
   // ===== NOT FOUND =====
   {
