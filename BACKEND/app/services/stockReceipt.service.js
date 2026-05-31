@@ -1,9 +1,11 @@
 const { ObjectId } = require("mongodb");
+const StockBatchService = require("./stockBatch.service");
 
 class StockReceiptService {
   constructor(client) {
-    this.Receipt = client.db().collection("stock_receipts");
-    this.Product = client.db().collection("products");
+    this.Receipt      = client.db().collection("stock_receipts");
+    this.Product      = client.db().collection("products");
+    this.batchService = new StockBatchService(client);
   }
 
   async create(payload) {
@@ -24,12 +26,12 @@ class StockReceiptService {
       if (!product) throw new Error(`Không tìm thấy sản phẩm id=${item.productId}`);
 
       builtItems.push({
-        productId: item.productId,
-        name: product.name,
-        sku: product.sku || "",
-        quantity: Number(item.quantity),
+        productId:   item.productId,
+        name:        product.name,
+        sku:         product.sku || "",
+        quantity:    Number(item.quantity),
         importPrice: Number(item.importPrice),
-        subtotal: Number(item.quantity) * Number(item.importPrice),
+        subtotal:    Number(item.quantity) * Number(item.importPrice),
       });
     }
 
@@ -38,11 +40,11 @@ class StockReceiptService {
 
     const receipt = {
       supplierName,
-      items: builtItems,
+      items:     builtItems,
       totalItems,
       totalCost,
-      note: note || "",
-      status: "pending",
+      note:      note || "",
+      status:    "pending",
       createdBy: createdBy || "admin",
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -59,7 +61,10 @@ class StockReceiptService {
     if (receipt.status === "completed") throw new Error("Phiếu nhập đã được duyệt trước đó");
     if (receipt.status === "cancelled") throw new Error("Phiếu nhập đã bị hủy, không thể duyệt");
 
+    const importedAt = new Date();
+
     for (const item of receipt.items) {
+      // 1. Cộng stock vào product
       await this.Product.updateOne(
         { _id: ObjectId.isValid(item.productId) ? new ObjectId(item.productId) : null },
         {
@@ -67,6 +72,15 @@ class StockReceiptService {
           $set: { updatedAt: new Date() },
         }
       );
+
+      // 2. Tạo batch mới
+      await this.batchService.createBatch({
+        productId:   item.productId,
+        receiptId:   receiptId,
+        quantity:    item.quantity,
+        importPrice: item.importPrice,
+        importedAt,
+      });
     }
 
     return await this.Receipt.findOneAndUpdate(
@@ -111,8 +125,8 @@ class StockReceiptService {
     return {
       data: receipts,
       pagination: {
-        page: Number(page),
-        limit: Number(limit),
+        page:       Number(page),
+        limit:      Number(limit),
         total,
         totalPages: Math.ceil(total / Number(limit)),
       },
