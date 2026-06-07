@@ -43,7 +43,7 @@
           </div>
           <div class="stat-divider"></div>
           <div class="hero-stat">
-            <span class="stat-num">{{ deliveredCount }}</span>
+           <span class="stat-num">{{ completedCount }}</span>
             <span class="stat-lbl">Hoàn thành</span>
           </div>
         </div>
@@ -150,14 +150,16 @@
               <option value="pending">Chờ</option>
               <option value="confirmed">Đã xác nhận</option>
               <option value="paid">Đã thanh toán</option>
+              <option value="preparing">Chuẩn bị hàng</option>
               <option value="shipping">Đang giao</option>
-              <option value="delivered">Hoàn thành</option>
+              <option value="delivered">Đã giao</option>
+              <option value="completed">Hoàn thành</option>
               <option value="cancelled">Đã hủy</option>
             </select>
 
             <!-- Nút gán shipper — chỉ hiện khi confirmed và paid-->
             <button
-              v-if="order.status === 'confirmed' || order.status === 'paid'"
+              v-if="order.status === 'preparing'"
               @click="openAssignModal(order)"
               class="btn-assign"
             >
@@ -165,7 +167,7 @@
             </button>
 
             <button
-              v-if="order.status === 'pending'"
+              v-if="order.paymentMethod === 'COD' ? ['pending','confirmed','preparing'].includes(order.status) : order.status === 'pending'"
               @click="cancelOrder(order._id)"
               class="btn-cancel"
             >
@@ -293,7 +295,7 @@ const pagination = ref({ page: 1, totalPages: 1 })
 const pendingCount   = computed(() => orders.value.filter(o => o.status === 'pending').length)
 const paidCount      = computed(() => orders.value.filter(o => o.status === 'paid').length)
 const shippingCount  = computed(() => orders.value.filter(o => o.status === 'shipping').length)
-const deliveredCount = computed(() => orders.value.filter(o => o.status === 'delivered').length)
+const completedCount = computed(() => orders.value.filter(o => o.status === 'completed').length)
 
 // ── Assign shipper modal ──────────────────────────────
 const showAssignModal   = ref(false)
@@ -341,8 +343,10 @@ const statusText = (s) => ({
   pending:   "Chờ",
   confirmed: "Đã xác nhận",
   paid:      "Đã thanh toán",
+  preparing: "Chuẩn bị hàng",
   shipping:  "Đang giao",
-  delivered: "Hoàn thành",
+  delivered: "Đã giao",
+  completed: "Hoàn thành",
   cancelled: "Đã hủy",
 }[s] || s)
 
@@ -353,7 +357,7 @@ const formatDate  = (d) =>
     hour: "2-digit", minute: "2-digit",
   })
 
-const isStatusLocked = (s) => s === "cancelled" || s === "delivered"
+const isStatusLocked = (s) => s === "cancelled" || s === "completed"
 
 // ── Data ──────────────────────────────────────────────
 const loadOrders = async (page = 1) => {
@@ -532,6 +536,8 @@ onMounted(() => loadOrders(1))
 .accent-shipping  { background: linear-gradient(180deg, #c084fc, #7c3aed); }
 .accent-delivered { background: linear-gradient(180deg, #34d399, #10b981); }
 .accent-cancelled { background: linear-gradient(180deg, #fca5a5, #ef4444); }
+.accent-preparing { background: linear-gradient(180deg, #fb923c, #ea580c); }
+.accent-completed { background: linear-gradient(180deg, #4ade80, #16a34a); }
 
 .ocard-body { flex: 1; padding: 18px 22px; min-width: 0; }
 .ocard-top { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
@@ -557,6 +563,9 @@ onMounted(() => loadOrders(1))
 .badge-shipping  { background: #f3e8ff; color: #7c3aed; border: 1px solid #ddd6fe; }
 .badge-delivered { background: #d1fae5; color: #059669; border: 1px solid #a7f3d0; }
 .badge-cancelled { background: #fee2e2; color: #dc2626; border: 1px solid #fecaca; }
+.badge-preparing { background: #fff7ed; color: #ea580c; border: 1px solid #fed7aa; }
+.badge-completed { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+
 .payment-badge {
   display: inline-flex; align-items: center; gap: 4px;
   padding: 4px 11px; border-radius: 999px;
@@ -598,6 +607,8 @@ onMounted(() => loadOrders(1))
 .select-shipping  { color: #7c3aed; border-color: #ddd6fe; background: #f5f3ff; }
 .select-delivered { color: #059669; border-color: #a7f3d0; background: #f0fdf4; }
 .select-cancelled { color: #dc2626; border-color: #fecaca; background: #fff1f2; }
+.select-preparing { color: #ea580c; border-color: #fed7aa; background: #fff7ed; }
+.select-completed { color: #16a34a; border-color: #bbf7d0; background: #f0fdf4; }
 
 .btn-assign {
   padding: 7px 14px; border-radius: 10px;

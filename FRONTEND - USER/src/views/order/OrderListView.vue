@@ -156,15 +156,17 @@ const pendingCount = computed(() =>
   orders.value.filter(o => ['pending', 'confirmed', 'paid', 'shipping'].includes(o.status)).length
 )
 const deliveredCount = computed(() =>
-  orders.value.filter(o => o.status === 'delivered').length
+  orders.value.filter(o => o.status === 'completed').length
 )
 
 const statusText = (s) => ({
-  pending:   "Chờ",
+  pending:   "Chờ xác nhận",
   confirmed: "Đã xác nhận",
   paid:      "Đã thanh toán",
+  preparing: "Chuẩn bị hàng",
   shipping:  "Đang giao",
-  delivered: "Hoàn thành",
+  delivered: "Đã giao",
+  completed: "Hoàn thành",
   cancelled: "Đã hủy",
 }[s] || s)
 
@@ -467,6 +469,8 @@ onMounted(loadOrders)
 .accent-shipping  { background: linear-gradient(180deg, #c084fc, #7c3aed); }
 .accent-delivered { background: linear-gradient(180deg, #34d399, #10b981); }
 .accent-cancelled { background: linear-gradient(180deg, #fca5a5, #ef4444); }
+.accent-preparing { background: linear-gradient(180deg, #fb923c, #ea580c); }
+.accent-completed { background: linear-gradient(180deg, #4ade80, #16a34a); }
 
 .ocard-body { flex: 1; padding: 20px 22px; min-width: 0; }
 
@@ -503,6 +507,8 @@ onMounted(loadOrders)
 .badge-shipping  { background: #f3e8ff; color: #7c3aed; border: 1px solid #ddd6fe; }
 .badge-delivered { background: #d1fae5; color: #059669; border: 1px solid #a7f3d0; }
 .badge-cancelled { background: #fee2e2; color: #dc2626; border: 1px solid #fecaca; }
+.badge-preparing { background: #fff7ed; color: #ea580c; border: 1px solid #fed7aa; }
+.badge-completed { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
 
 .payment-badge {
   display: inline-flex;

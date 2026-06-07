@@ -111,7 +111,7 @@ exports.updateOrderStatus = async (req, res, next) => {
   const { orderId } = req.params;
   const { status }  = req.body;
 
-  const validStatuses = ["pending", "confirmed", "paid", "shipping", "delivered", "cancelled"];
+  const validStatuses = ["pending", "confirmed", "paid", "preparing", "shipping", "delivered", "completed", "cancelled"];
   if (!validStatuses.includes(status)) {
     return next(new ApiError(400, "Trạng thái không hợp lệ"));
   }
@@ -124,7 +124,7 @@ exports.updateOrderStatus = async (req, res, next) => {
     const pointService = new PointService(MongoDB.client);
 
     // Tích điểm khi giao hàng thành công (tính theo giá gốc, không phải giá sau giảm)
-    if (status === "delivered") {
+    if (status === "completed") {
       await pointService.earnFromOrder(
         order.userId,
         orderId,

@@ -126,16 +126,26 @@ class OrderService {
 
     const currentStatus = order.status;
 
-    if (currentStatus === "cancelled" || currentStatus === "delivered") {
+    if (currentStatus === "cancelled" || currentStatus === "completed") {
       throw new Error(`Không thể thay đổi trạng thái từ "${currentStatus}"`);
     }
 
-    const allowedTransitions = {
-      pending:   ["confirmed", "paid", "cancelled"],
-      confirmed: ["shipping"],
-      paid:      ["shipping"],
-      shipping:  ["delivered"],
-    };
+    const isCOD = order.paymentMethod === "COD";
+    const allowedTransitions = isCOD
+      ? {
+          pending:   ["confirmed", "preparing", "cancelled"],
+          confirmed: ["preparing", "cancelled"],
+          preparing: ["shipping",  "cancelled"],
+          shipping:  ["delivered"],
+          delivered: ["completed"],
+        }
+      : {
+          pending:   ["paid", "cancelled"],
+          paid:      ["preparing"],
+          preparing: ["shipping"],
+          shipping:  ["delivered"],
+          delivered: ["completed"],
+        };
 
     if (!allowedTransitions[currentStatus]?.includes(newStatus)) {
       throw new Error(`Không thể chuyển từ "${currentStatus}" sang "${newStatus}"`);

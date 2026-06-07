@@ -88,7 +88,7 @@
 
         <div class="stats-row">
           <div class="stat-pill stat-confirm">
-            <span class="sp-num">{{ stats.confirmed }}</span>
+            <span class="sp-num">{{ stats.preparing }}</span>
             <span class="sp-lbl">Chờ lấy</span>
           </div>
           <div class="stat-pill stat-ship">
@@ -172,7 +172,7 @@
             </div>
 
             <div class="card-action">
-             <template v-if="order.status === 'confirmed' || order.status === 'paid'">
+             <template v-if="order.status === 'preparing'">
                 <button class="action-btn btn-pickup" :disabled="updating === order._id" @click="changeStatus(order._id, 'shipping')">
                   <span v-if="updating === order._id" class="spinner"></span>
                   <span v-else>Bắt đầu giao</span>
@@ -185,7 +185,10 @@
                 </button>
               </template>
               <template v-else-if="order.status === 'delivered'">
-                <div class="done-label">Đã hoàn thành</div>
+                <div class="done-label">📬 Đã giao — chờ admin xác nhận</div>
+              </template>
+              <template v-else-if="order.status === 'completed'">
+                <div class="done-label">✅ Đã hoàn thành</div>
               </template>
             </div>
           </div>
@@ -281,7 +284,7 @@ const logout = () => {
   currentShipper.value = null
   localStorage.removeItem("shipper")
   allOrders.value = []
-  stats.value = { confirmed: 0, shipping: 0, delivered: 0 }
+  stats.value = { preparing: 0, shipping: 0, delivered: 0 }
   loginForm.value = { email: "", password: "" }
   registerForm.value = { name: "", phone: "", email: "", password: "", vehicle: "" }
   authError.value = ""
@@ -293,20 +296,23 @@ const allOrders = ref([])
 const loading   = ref(false)
 const updating  = ref(null)
 const activeTab = ref("all")
-const stats     = ref({ confirmed: 0, shipping: 0, delivered: 0 })
+const stats     = ref({ preparing: 0, shipping: 0, delivered: 0 })
 
 const tabs = [
   { label: "Tất cả",     value: "all"       },
-  { label: "Chờ lấy",    value: "confirmed" },
+  { label: "Chờ lấy",    value: "preparing" },
   { label: "Đang giao",  value: "shipping"  },
-  { label: "Hoàn thành", value: "delivered" },
+  { label: "Đã giao",    value: "delivered" },
+  { label: "Hoàn thành", value: "completed" },
 ]
 
 const statusLabel = (s) => ({
   confirmed: "Chờ lấy",
   paid:      "Chờ lấy",
+  preparing: "Chờ lấy",
   shipping:  "Đang giao",
-  delivered: "Hoàn thành",
+  delivered: "Đã giao",
+  completed: "Hoàn thành",
 }[s] || s)
 
 const formatPrice = (v) => new Intl.NumberFormat("vi-VN").format(v)
@@ -315,14 +321,17 @@ const todayStr = computed(() =>
   new Date().toLocaleDateString("vi-VN", { weekday: "long", day: "2-digit", month: "2-digit" })
 )
 
-const filteredOrders = computed(() =>
-  activeTab.value === "all"
-    ? allOrders.value
-    : allOrders.value.filter(o => o.status === activeTab.value)
-)
+const filteredOrders = computed(() => {
+  if (activeTab.value === "all") return allOrders.value
+  if (activeTab.value === "preparing")
+    return allOrders.value.filter(o => ["confirmed", "paid", "preparing"].includes(o.status))
+  return allOrders.value.filter(o => o.status === activeTab.value)
+})
 
 const tabCount = (val) => {
   if (val === "all") return 0
+  if (val === "preparing")
+    return allOrders.value.filter(o => ["confirmed", "paid", "preparing"].includes(o.status)).length
   return allOrders.value.filter(o => o.status === val).length
 }
 
@@ -541,8 +550,10 @@ onMounted(async () => {
 @keyframes cardIn { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
 .card-confirmed { border-left-color: #f59e0b; }
 .card-paid      { border-left-color: #f59e0b; }
+.card-preparing { border-left-color: #f59e0b; }
 .card-shipping  { border-left-color: #8b5cf6; }
 .card-delivered { border-left-color: #10b981; }
+.card-completed { border-left-color: #16a34a; }
 
 .card-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
 .card-id { font-size: .78rem; font-weight: 900; color: #1e293b; letter-spacing: .04em; }
@@ -551,6 +562,8 @@ onMounted(async () => {
 .chip-paid      { background: #fef3c7; color: #d97706; border: 1px solid #fde68a; }
 .chip-shipping  { background: #f3e8ff; color: #7c3aed; border: 1px solid #ddd6fe; }
 .chip-delivered { background: #d1fae5; color: #059669; border: 1px solid #6ee7b7; }
+.chip-preparing { background: #fef3c7; color: #d97706; border: 1px solid #fde68a; }
+.chip-completed { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
 
 .card-info { display: flex; flex-direction: column; gap: 5px; margin-bottom: 10px; }
 .info-row { display: flex; align-items: flex-start; gap: 6px; }

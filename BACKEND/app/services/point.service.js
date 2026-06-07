@@ -28,9 +28,19 @@ class PointService {
 
   // Tích điểm khi đặt hàng thành công
   // Tỉ lệ: 1.000đ = 1 điểm (tính theo giá gốc, không phải giá sau giảm)
-  async earnFromOrder(userId, orderId, orderTotal) {
-    const points = Math.floor(orderTotal / 1000);
-    if (points <= 0) return null;
+ async earnFromOrder(userId, orderId, orderTotal) {
+  const points = Math.floor(orderTotal / 1000);
+  if (points <= 0) return null;
+
+  // Chống tích điểm 2 lần cho cùng 1 đơn
+  if (orderId) {
+    const existed = await this.Points.findOne({
+      userId,
+      orderId: new ObjectId(orderId),
+      type: "earn",
+    });
+    if (existed) return null;
+  }
 
     const transaction = {
       userId,

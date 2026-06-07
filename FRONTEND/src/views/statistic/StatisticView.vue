@@ -202,15 +202,16 @@
             <h2>Đơn hàng theo thời gian</h2>
             <table v-if="ordersByPeriod?.data?.length">
               <thead>
-                <tr><th>Kỳ</th><th>Tổng</th><th>Chờ</th><th>Giao</th><th>Huỷ</th></tr>
+                <tr><th>Kỳ</th><th>Tổng</th><th>Chờ</th><th>Đang giao</th><th>Hoàn thành</th><th>Huỷ</th></tr>
               </thead>
               <tbody>
                 <tr v-for="(row, i) in ordersByPeriod.data" :key="i">
                   <td>{{ formatPeriodLabel(row._id) }}</td>
                   <td><strong>{{ row.total }}</strong></td>
                   <td>{{ row.pending }}</td>
-                  <td>{{ row.delivered }}</td>
-                  <td class="cancel">{{ row.cancelled }}</td>
+<td>{{ row.shipping }}</td>
+<td>{{ row.completed }}</td>
+<td class="cancel">{{ row.cancelled }}</td>
                 </tr>
               </tbody>
             </table>

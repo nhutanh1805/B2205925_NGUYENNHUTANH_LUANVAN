@@ -121,6 +121,13 @@
                 <span class="info-lbl">Ghi chú</span>
                 <span class="info-val note">{{ order.note }}</span>
               </div>
+              <div v-if="order.shipperName" class="info-item full">
+  <span class="info-lbl">Shipper giao hàng</span>
+  <span class="info-val shipper-val">
+    🛵 {{ order.shipperName }}
+    <span class="shipper-phone">{{ order.shipperPhone }}</span>
+  </span>
+</div>
             </div>
           </div>
 
@@ -145,7 +152,7 @@
                 <div class="step-dot">
                   <span class="step-ico">{{ step.icon }}</span>
                 </div>
-                <div class="step-line" v-if="step.key !== 'delivered'"></div>
+                <div class="step-line" v-if="step.key !== 'completed'"></div>
                 <div class="step-info">
                   <span class="step-name">{{ step.label }}</span>
                 </div>
@@ -196,16 +203,26 @@
 
             <!-- Summary -->
             <div class="order-summary">
-              <div class="summary-row">
-                <span>Tổng số lượng</span>
-                <b>{{ order.totalQuantity }} sản phẩm</b>
-              </div>
-              <div class="summary-divider"></div>
-              <div class="summary-row total">
-                <span>Tổng tiền</span>
-                <span class="summary-price">{{ formatPrice(order.totalPrice) }}₫</span>
-              </div>
-            </div>
+  <div class="summary-row">
+    <span>Tổng số lượng</span>
+    <b>{{ order.totalQuantity }} sản phẩm</b>
+  </div>
+  <div class="summary-row">
+    <span>Tạm tính</span>
+    <span>{{ formatPrice(order.originalPrice) }}₫</span>
+  </div>
+  <template v-if="order.discount > 0">
+    <div class="summary-row discount-row">
+      <span>Giảm giá ({{ order.pointsUsed }} điểm)</span>
+      <span class="discount-val">-{{ formatPrice(order.discount) }}₫</span>
+    </div>
+  </template>
+  <div class="summary-divider"></div>
+  <div class="summary-row total">
+    <span>Khách trả</span>
+    <span class="summary-price">{{ formatPrice(order.totalPrice) }}₫</span>
+  </div>
+</div>
           </div>
         </div>
 
@@ -227,17 +244,21 @@ const loading = ref(true)
 const placeholder = "https://via.placeholder.com/120x160?text=No+Image"
 
 const codSteps = [
-  { key: "pending",   label: "Chờ xác nhận", icon: "🕐" },
-  { key: "confirmed", label: "Đã xác nhận",  icon: "✅" },
-  { key: "shipping",  label: "Đang giao",    icon: "🚚" },
-  { key: "delivered", label: "Hoàn thành",   icon: "🎉" },
+  { key: "pending",   label: "Chờ xác nhận",  icon: "🕐" },
+  { key: "confirmed", label: "Đã xác nhận",   icon: "✅" },
+  { key: "preparing", label: "Chuẩn bị hàng", icon: "📦" },
+  { key: "shipping",  label: "Đang giao",     icon: "🚚" },
+  { key: "delivered", label: "Đã giao",       icon: "📬" },
+  { key: "completed", label: "Hoàn thành",    icon: "🎉" },
 ]
 
 const vnpaySteps = [
   { key: "pending",   label: "Chờ thanh toán", icon: "🕐" },
   { key: "paid",      label: "Đã thanh toán",  icon: "💳" },
+  { key: "preparing", label: "Chuẩn bị hàng",  icon: "📦" },
   { key: "shipping",  label: "Đang giao",      icon: "🚚" },
-  { key: "delivered", label: "Hoàn thành",     icon: "🎉" },
+  { key: "delivered", label: "Đã giao",        icon: "📬" },
+  { key: "completed", label: "Hoàn thành",     icon: "🎉" },
 ]
 
 // Dùng paymentMethod để chọn đúng bộ steps
@@ -245,8 +266,8 @@ const currentStatusSteps = computed(() =>
   order.value?.paymentMethod === "VNPAY" ? vnpaySteps : codSteps
 )
 
-const codOrder   = ["pending", "confirmed", "shipping", "delivered"]
-const vnpayOrder = ["pending", "paid",      "shipping", "delivered"]
+const codOrder   = ["pending", "confirmed", "preparing", "shipping", "delivered", "completed"]
+const vnpayOrder = ["pending", "paid",      "preparing", "shipping", "delivered", "completed"]
 
 // Dùng paymentMethod để chọn đúng orderArr
 const isStepActive = (key) => {
@@ -268,8 +289,10 @@ const getStatusLabel = (s) => ({
   pending:   "Chờ xác nhận",
   confirmed: "Đã xác nhận",
   paid:      "Đã thanh toán",
+  preparing: "Chuẩn bị hàng",
   shipping:  "Đang giao",
-  delivered: "Hoàn thành",
+  delivered: "Đã giao",
+  completed: "Hoàn thành",
   cancelled: "Đã hủy",
 }[s] || s)
 
@@ -366,6 +389,8 @@ onMounted(loadOrder)
 .pill-shipping  { background: #f3e8ff; color: #7c3aed; }
 .pill-delivered { background: #d1fae5; color: #059669; }
 .pill-cancelled { background: #fee2e2; color: #dc2626; }
+.pill-preparing { background: #fff7ed; color: #ea580c; }
+.pill-completed { background: #f0fdf4; color: #16a34a; }
 
 /* ══ MAIN ══ */
 .main-panel {
@@ -578,6 +603,10 @@ onMounted(loadOrder)
 .summary-divider { height: 1.5px; background: linear-gradient(90deg, #e0e7ff, #ddd6fe); border-radius: 999px; }
 .summary-row.total { font-size: 1rem; font-weight: 800; color: #0f172a; }
 .summary-price { color: #f97316; font-size: 1.3rem; font-weight: 900; }
+.discount-row { color: #059669; }
+.discount-val { font-weight: 700; color: #059669; }
+.shipper-val { display: flex; align-items: center; gap: 8px; color: #7c3aed; }
+.shipper-phone { font-size: .8rem; color: #94a3b8; font-weight: 500; }
 
 /* ══ MOBILE ══ */
 @media (max-width: 900px) {

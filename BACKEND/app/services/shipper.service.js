@@ -70,8 +70,8 @@ class ShipperService {
     if (!order) throw new Error("Đơn hàng không tồn tại");
 
     // Chỉ gán được khi đơn ở trạng thái "confirmed" và "paid" 
-    if (!["confirmed", "paid"].includes(order.status))
-  throw new Error(`Chỉ có thể gán đơn ở trạng thái "confirmed" hoặc "paid", hiện tại: "${order.status}"`);
+    if (order.status !== "preparing")
+  throw new Error(`Chỉ có thể gán đơn khi đang ở trạng thái "Chuẩn bị hàng", hiện tại: "${order.status}"`);
 
     await this.Order.updateOne(
       { _id: new ObjectId(orderId) },
@@ -108,6 +108,7 @@ class ShipperService {
    const allowed = {
   confirmed: ["shipping"],
   paid:      ["shipping"],
+  preparing: ["shipping"],
   shipping:  ["delivered"],
 };
 
@@ -123,12 +124,12 @@ class ShipperService {
   }
 
   async getStats(shipperId) {
-    const [confirmed, shipping, delivered] = await Promise.all([
-      this.Order.countDocuments({ shipperId, status: "confirmed" }),
+    const [preparing, shipping, delivered] = await Promise.all([
+      this.Order.countDocuments({ shipperId, status: "preparing" }),
       this.Order.countDocuments({ shipperId, status: "shipping"  }),
       this.Order.countDocuments({ shipperId, status: "delivered" }),
     ]);
-    return { confirmed, shipping, delivered };
+    return { preparing, shipping, delivered };
   }
 
   async updateShipperStatus(shipperId, status) {

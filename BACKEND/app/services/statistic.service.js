@@ -37,7 +37,7 @@ class StatisticService {
 
   async getOverview({ from, to } = {}) {
     const dateFilter = this._buildDateFilter(from, to);
-    const matchDelivered = { ...dateFilter, status: "delivered" };
+    const matchDelivered = { ...dateFilter, status: "completed" };
     const matchAll       = { ...dateFilter };
 
     const [revenueData, orderData, customerData, cancelData] = await Promise.all([
@@ -81,7 +81,7 @@ class StatisticService {
     const dateFilter = this._buildDateFilter(from, to);
 
     const data = await this.Order.aggregate([
-      { $match: { ...dateFilter, status: "delivered" } },
+      { $match: { ...dateFilter, status: "completed" } },
       {
         $group: {
           _id:    this._buildGroupByDate(period),
@@ -109,11 +109,13 @@ class StatisticService {
           _id:       this._buildGroupByDate(period),
           total:     { $sum: 1 },
           pending:   { $sum: { $cond: [{ $eq: ["$status", "pending"] },   1, 0] } },
-          confirmed: { $sum: { $cond: [{ $eq: ["$status", "confirmed"] }, 1, 0] } },
-          paid:      { $sum: { $cond: [{ $eq: ["$status", "paid"] },      1, 0] } },
-          shipping:  { $sum: { $cond: [{ $eq: ["$status", "shipping"] },  1, 0] } },
-          delivered: { $sum: { $cond: [{ $eq: ["$status", "delivered"] }, 1, 0] } },
-          cancelled: { $sum: { $cond: [{ $eq: ["$status", "cancelled"] }, 1, 0] } },
+confirmed: { $sum: { $cond: [{ $eq: ["$status", "confirmed"] }, 1, 0] } },
+paid:      { $sum: { $cond: [{ $eq: ["$status", "paid"] },      1, 0] } },
+preparing: { $sum: { $cond: [{ $eq: ["$status", "preparing"] }, 1, 0] } },
+shipping:  { $sum: { $cond: [{ $eq: ["$status", "shipping"] },  1, 0] } },
+delivered: { $sum: { $cond: [{ $eq: ["$status", "delivered"] }, 1, 0] } },
+completed: { $sum: { $cond: [{ $eq: ["$status", "completed"] }, 1, 0] } },
+cancelled: { $sum: { $cond: [{ $eq: ["$status", "cancelled"] }, 1, 0] } },
         },
       },
       { $sort: { "_id.year": 1, "_id.month": 1, "_id.day": 1, "_id.week": 1 } },
@@ -172,7 +174,7 @@ class StatisticService {
     const dateFilter = this._buildDateFilter(from, to);
 
     const data = await this.Order.aggregate([
-      { $match: { ...dateFilter, status: "delivered" } },
+      { $match: { ...dateFilter, status: "completed" } },
       { $unwind: "$items" },
       {
         $group: {
@@ -248,7 +250,7 @@ class StatisticService {
         $group: {
           _id:     { $dayOfWeek: "$createdAt" },
           count:   { $sum: 1 },
-          revenue: { $sum: { $cond: [{ $eq: ["$status", "delivered"] }, "$totalPrice", 0] } },
+          revenue: { $sum: { $cond: [{ $eq: ["$status", "completed"] }, "$totalPrice", 0] } },
         },
       },
       { $sort: { _id: 1 } },
@@ -274,7 +276,7 @@ class StatisticService {
         $group: {
           _id:     "$paymentMethod",
           count:   { $sum: 1 },
-          revenue: { $sum: { $cond: [{ $eq: ["$status", "delivered"] }, "$totalPrice", 0] } },
+          revenue: { $sum: { $cond: [{ $eq: ["$status", "completed"] }, "$totalPrice", 0] } },
         },
       },
     ]).toArray();
@@ -340,7 +342,7 @@ class StatisticService {
     const dateFilter = this._buildDateFilter(from, to);
 
     const data = await this.Order.aggregate([
-      { $match: { ...dateFilter, status: "delivered" } },
+      { $match: { ...dateFilter, status: "completed" } },
       {
         $group: {
           _id:           null,
@@ -361,7 +363,7 @@ class StatisticService {
     const dateFilter = this._buildDateFilter(from, to);
 
     const data = await this.Order.aggregate([
-      { $match: { ...dateFilter, status: "delivered" } },
+      { $match: { ...dateFilter, status: "completed" } },
       // Tính cost từng item trước khi group
       {
         $addFields: {

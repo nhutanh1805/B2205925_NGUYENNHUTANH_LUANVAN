@@ -140,8 +140,10 @@
                   <option value="pending">🕐 Chờ xác nhận</option>
                   <option value="confirmed">✅ Đã xác nhận</option>
                   <option value="paid">💳 Đã thanh toán</option>
+                  <option value="preparing">📦 Chuẩn bị hàng</option>
                   <option value="shipping">🚚 Đang giao</option>
-                  <option value="delivered">🎉 Hoàn thành</option>
+                  <option value="delivered">📬 Đã giao</option>
+                  <option value="completed">🎉 Hoàn thành</option>
                   <option value="cancelled">❌ Đã hủy</option>
                 </select>
                 <p v-if="isStatusLocked(order.status)" class="locked-note">
@@ -150,7 +152,7 @@
               </div>
 
               <!-- Gán shipper — chỉ hiện khi confirmed và paid-->
-              <div v-if="order.status === 'confirmed' || order.status === 'paid'" class="admin-field">
+              <div v-if="order.status === 'preparing'" class="admin-field">
   <label class="admin-lbl">Shipper giao hàng</label>
 
                 <!-- Đã có shipper -->
@@ -183,7 +185,7 @@
               </div>
 
               <button
-                v-if="order.status === 'pending'"
+                v-if="order.paymentMethod === 'COD' ? ['pending','confirmed','preparing'].includes(order.status) : order.status === 'pending'"
                 @click="confirmCancel(order._id)"
                 class="btn-cancel-order"
               >
@@ -217,7 +219,7 @@
                 <div class="step-dot">
                   <span class="step-ico">{{ step.icon }}</span>
                 </div>
-                <div class="step-line" v-if="step.key !== 'delivered'"></div>
+                <div class="step-line" v-if="step.key !== 'completed'"></div>
                 <div class="step-info">
                   <span class="step-name">{{ step.label }}</span>
                 </div>
@@ -363,19 +365,23 @@ const placeholder = "https://via.placeholder.com/120x160?text=No+Image"
 
 // ── Steps timeline ────────────────────────────────────
 const codSteps = [
-  { key: "pending",   label: "Chờ xác nhận", icon: "🕐" },
-  { key: "confirmed", label: "Đã xác nhận",  icon: "✅" },
-  { key: "shipping",  label: "Đang giao",    icon: "🚚" },
-  { key: "delivered", label: "Hoàn thành",   icon: "🎉" },
+  { key: "pending",   label: "Chờ xác nhận",  icon: "🕐" },
+  { key: "confirmed", label: "Đã xác nhận",   icon: "✅" },
+  { key: "preparing", label: "Chuẩn bị hàng", icon: "📦" },
+  { key: "shipping",  label: "Đang giao",     icon: "🚚" },
+  { key: "delivered", label: "Đã giao",       icon: "📬" },
+  { key: "completed", label: "Hoàn thành",    icon: "🎉" },
 ]
 const vnpaySteps = [
   { key: "pending",   label: "Chờ thanh toán", icon: "🕐" },
   { key: "paid",      label: "Đã thanh toán",  icon: "💳" },
+  { key: "preparing", label: "Chuẩn bị hàng",  icon: "📦" },
   { key: "shipping",  label: "Đang giao",      icon: "🚚" },
-  { key: "delivered", label: "Hoàn thành",     icon: "🎉" },
+  { key: "delivered", label: "Đã giao",        icon: "📬" },
+  { key: "completed", label: "Hoàn thành",     icon: "🎉" },
 ]
-const codOrder   = ["pending", "confirmed", "shipping", "delivered"]
-const vnpayOrder = ["pending", "paid",      "shipping", "delivered"]
+const codOrder   = ["pending", "confirmed", "preparing", "shipping", "delivered", "completed"]
+const vnpayOrder = ["pending", "paid",      "preparing", "shipping", "delivered", "completed"]
 
 const currentStatusSteps = computed(() =>
   order.value?.paymentMethod === "VNPAY" ? vnpaySteps : codSteps
@@ -425,7 +431,7 @@ const doAssign = async (shipperId) => {
 }
 
 // ── Helpers ───────────────────────────────────────────
-const isStatusLocked = (s) => s === "cancelled" || s === "delivered"
+const isStatusLocked = (s) => s === "cancelled" || s === "completed"
 const formatPrice = v => new Intl.NumberFormat("vi-VN").format(v)
 const formatDate  = d =>
   new Date(d).toLocaleString("vi-VN", {
@@ -436,8 +442,10 @@ const getStatusLabel = (s) => ({
   pending:   "Chờ xác nhận",
   confirmed: "Đã xác nhận",
   paid:      "Đã thanh toán",
+  preparing: "Chuẩn bị hàng",
   shipping:  "Đang giao",
-  delivered: "Hoàn thành",
+  delivered: "Đã giao",
+  completed: "Hoàn thành",
   cancelled: "Đã hủy",
 }[s] || s)
 
@@ -545,6 +553,8 @@ onMounted(loadOrder)
 .pill-shipping  { background: #f3e8ff; color: #7c3aed; }
 .pill-delivered { background: #d1fae5; color: #059669; }
 .pill-cancelled { background: #fee2e2; color: #dc2626; }
+.pill-preparing { background: #fff7ed; color: #ea580c; }
+.pill-completed { background: #f0fdf4; color: #16a34a; }
 
 /* ══ MAIN ══ */
 .main-panel {
@@ -634,6 +644,8 @@ onMounted(loadOrder)
 .select-shipping  { color: #7c3aed; border-color: #ddd6fe; background: #f5f3ff; }
 .select-delivered { color: #059669; border-color: #a7f3d0; background: #f0fdf4; }
 .select-cancelled { color: #dc2626; border-color: #fecaca; background: #fff1f2; }
+.select-preparing { color: #ea580c; border-color: #fed7aa; background: #fff7ed; }
+.select-completed { color: #16a34a; border-color: #bbf7d0; background: #f0fdf4; }
 
 .locked-note { font-size: .75rem; color: #94a3b8; font-weight: 500; background: #f8faff; border: 1px solid #e0e7ff; padding: 8px 12px; border-radius: 8px; }
 
