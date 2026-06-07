@@ -113,9 +113,12 @@
               <span class="status-badge" :class="`badge-${order.status}`">
                 <i class="dot"></i>{{ statusText(order.status) }}
               </span>
-              <!-- Badge phương thức thanh toán -->
               <span class="payment-badge" :class="order.paymentMethod === 'VNPAY' ? 'pay-vnpay' : 'pay-cod'">
                 {{ order.paymentMethod === 'VNPAY' ? 'THANH TOÁN VNPAY' : 'THANH TOÁN COD' }}
+              </span>
+              <!-- Shipper badge nếu đã gán -->
+              <span v-if="order.shipperId" class="shipper-badge">
+                 {{ order.shipperName }}
               </span>
             </div>
 
@@ -151,6 +154,15 @@
               <option value="delivered">Hoàn thành</option>
               <option value="cancelled">Đã hủy</option>
             </select>
+
+            <!-- Nút gán shipper — chỉ hiện khi confirmed và paid-->
+            <button
+              v-if="order.status === 'confirmed' || order.status === 'paid'"
+              @click="openAssignModal(order)"
+              class="btn-assign"
+            >
+              🛵 {{ order.shipperId ? 'Đổi shipper' : 'Gán shipper' }}
+            </button>
 
             <button
               v-if="order.status === 'pending'"
@@ -197,6 +209,73 @@
       </div>
 
     </div>
+
+    <!-- ══ MODAL GÁN SHIPPER ══ -->
+    <teleport to="body">
+      <div v-if="showAssignModal" class="modal-overlay" @click.self="closeAssignModal">
+        <div class="modal-box">
+          <div class="modal-header">
+            <div>
+              <h3 class="modal-title">Gán shipper giao hàng</h3>
+              <p class="modal-sub">
+                Đơn <b>#{{ assignTargetOrder?._id.slice(-8).toUpperCase() }}</b>
+                · {{ assignTargetOrder?.userName }}
+                · {{ formatPrice(assignTargetOrder?.totalPrice) }}₫
+              </p>
+            </div>
+            <button class="modal-close" @click="closeAssignModal">✕</button>
+          </div>
+
+          <!-- Shipper hiện tại nếu có -->
+          <div v-if="assignTargetOrder?.shipperId" class="current-shipper">
+            <span class="cs-label">Shipper hiện tại:</span>
+            <span class="cs-name"> {{ assignTargetOrder.shipperName }}</span>
+            <span class="cs-phone">{{ assignTargetOrder.shipperPhone }}</span>
+          </div>
+
+          <div v-if="shippersLoading" class="modal-loading">
+            <span class="spin-lg"></span>
+            <span>Đang tải danh sách shipper...</span>
+          </div>
+
+          <div v-else-if="!shippers.length" class="modal-empty">
+            Không có shipper nào đang hoạt động
+          </div>
+
+          <div v-else class="shipper-list">
+            <div
+              v-for="s in shippers"
+              :key="s._id"
+              class="shipper-row"
+              :class="{ 'is-current': s._id === assignTargetOrder?.shipperId }"
+            >
+              <div class="shipper-avatar">🛵</div>
+              <div class="shipper-info">
+                <span class="shipper-name">{{ s.name }}</span>
+                <span class="shipper-phone">{{ s.phone }}</span>
+                <span v-if="s.vehicle" class="shipper-vehicle">{{ s.vehicle }}</span>
+              </div>
+              <div class="shipper-right">
+                <span v-if="s._id === assignTargetOrder?.shipperId" class="current-tag">Hiện tại</span>
+                <button
+                  class="btn-pick"
+                  :disabled="assigningId === s._id"
+                  @click="doAssign(s._id)"
+                >
+                  <span v-if="assigningId === s._id" class="spin"></span>
+                  <span v-else>{{ s._id === assignTargetOrder?.shipperId ? 'Giữ lại' : 'Chọn' }}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button class="btn-modal-cancel" @click="closeAssignModal">Đóng</button>
+          </div>
+        </div>
+      </div>
+    </teleport>
+
   </div>
 </template>
 
@@ -204,17 +283,60 @@
 import { ref, computed, onMounted } from "vue"
 import { useRouter } from "vue-router"
 import OrderService from "@/services/order.service"
+import ShipperService from "@/services/shipper.service"
 
 const router = useRouter()
 const orders = ref([])
 const loading = ref(true)
 const pagination = ref({ page: 1, totalPages: 1 })
 
-const pendingCount  = computed(() => orders.value.filter(o => o.status === 'pending').length)
-const paidCount     = computed(() => orders.value.filter(o => o.status === 'paid').length)
-const shippingCount = computed(() => orders.value.filter(o => o.status === 'shipping').length)
+const pendingCount   = computed(() => orders.value.filter(o => o.status === 'pending').length)
+const paidCount      = computed(() => orders.value.filter(o => o.status === 'paid').length)
+const shippingCount  = computed(() => orders.value.filter(o => o.status === 'shipping').length)
 const deliveredCount = computed(() => orders.value.filter(o => o.status === 'delivered').length)
 
+// ── Assign shipper modal ──────────────────────────────
+const showAssignModal   = ref(false)
+const assignTargetOrder = ref(null)
+const shippers          = ref([])
+const shippersLoading   = ref(false)
+const assigningId       = ref(null)
+
+const openAssignModal = async (order) => {
+  assignTargetOrder.value = order
+  showAssignModal.value   = true
+  shippersLoading.value   = true
+  try {
+    const res = await ShipperService.getAllShippers()
+    const list = res.data ?? res
+    shippers.value = list.filter(s => s.status === "active")
+  } catch {
+    shippers.value = []
+  } finally {
+    shippersLoading.value = false
+  }
+}
+
+const closeAssignModal = () => {
+  showAssignModal.value   = false
+  assignTargetOrder.value = null
+  assigningId.value       = null
+}
+
+const doAssign = async (shipperId) => {
+  assigningId.value = shipperId
+  try {
+    await ShipperService.assignOrder(shipperId, assignTargetOrder.value._id)
+    await loadOrders(pagination.value.page)
+    closeAssignModal()
+  } catch (err) {
+    alert(err.response?.data?.message || err.message || "Gán shipper thất bại")
+  } finally {
+    assigningId.value = null
+  }
+}
+
+// ── Helpers ───────────────────────────────────────────
 const statusText = (s) => ({
   pending:   "Chờ",
   confirmed: "Đã xác nhận",
@@ -233,11 +355,12 @@ const formatDate  = (d) =>
 
 const isStatusLocked = (s) => s === "cancelled" || s === "delivered"
 
+// ── Data ──────────────────────────────────────────────
 const loadOrders = async (page = 1) => {
   loading.value = true
   try {
     const res = await OrderService.getAllOrders({ page, limit: 10 })
-    orders.value = res.data
+    orders.value     = res.data
     pagination.value = res.pagination
   } finally {
     loading.value = false
@@ -290,7 +413,6 @@ onMounted(() => loadOrders(1))
 .hero-orb-3 { width: 180px; height: 180px; background: rgba(16,185,129,.15); top: 40%; left: 55%; }
 
 .hero-content { position: relative; z-index: 2; max-width: 700px; margin: auto; }
-
 .hero-eyebrow {
   display: inline-flex; align-items: center; gap: 8px;
   background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.15);
@@ -308,12 +430,10 @@ onMounted(() => loadOrders(1))
   0%,100% { opacity:1; transform:scale(1); }
   50%      { opacity:.4; transform:scale(1.5); }
 }
-
 .hero-title {
   font-family: 'Times New Roman', Times, serif;
   font-size: clamp(2.4rem, 6vw, 4rem);
-  font-weight: 900; color: white;
-  line-height: 1.1; letter-spacing: -.01em;
+  font-weight: 900; color: white; line-height: 1.1; letter-spacing: -.01em;
   margin-bottom: 14px; text-shadow: 0 2px 30px rgba(0,0,0,.4);
 }
 .hero-title em {
@@ -322,7 +442,6 @@ onMounted(() => loadOrders(1))
   -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
 }
 .hero-sub { font-size: 1rem; color: rgba(255,255,255,.55); letter-spacing: .06em; margin-bottom: 36px; }
-
 .hero-stats {
   display: inline-flex; align-items: center; gap: 24px;
   background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.12);
@@ -330,8 +449,7 @@ onMounted(() => loadOrders(1))
 }
 .hero-stat { text-align: center; }
 .stat-num {
-  display: block;
-  font-family: 'Times New Roman', Times, serif;
+  display: block; font-family: 'Times New Roman', Times, serif;
   font-size: 1.8rem; font-weight: 900; color: white; line-height: 1;
 }
 .stat-lbl { font-size: .7rem; color: rgba(255,255,255,.5); letter-spacing: .07em; text-transform: uppercase; margin-top: 3px; display: block; }
@@ -343,7 +461,6 @@ onMounted(() => loadOrders(1))
   padding: 0 24px 60px; position: relative; z-index: 10;
 }
 
-/* TOP BAR */
 .top-bar {
   display: flex; align-items: center; justify-content: space-between;
   background: white; border-radius: 20px; padding: 16px 24px;
@@ -353,13 +470,11 @@ onMounted(() => loadOrders(1))
 .result-info { font-size: .9rem; color: #64748b; font-weight: 500; }
 .result-num { font-family: 'Times New Roman', Times, serif; font-size: 1.2rem; font-weight: 900; color: #2563eb; }
 .page-info { color: #94a3b8; margin-left: 4px; }
-
 .btn-shop {
   display: inline-flex; align-items: center; gap: 8px;
   padding: 10px 22px; border-radius: 12px;
   background: linear-gradient(135deg, #2563eb, #4f46e5);
-  color: white; font-size: .85rem; font-weight: 700;
-  text-decoration: none;
+  color: white; font-size: .85rem; font-weight: 700; text-decoration: none;
   box-shadow: 0 4px 14px rgba(37,99,235,.3); transition: all .2s;
 }
 .btn-shop:hover { transform: translateY(-2px); box-shadow: 0 8px 22px rgba(37,99,235,.4); }
@@ -370,14 +485,11 @@ onMounted(() => loadOrders(1))
 .skeleton-card {
   background: white; border-radius: 18px; padding: 24px 28px;
   display: flex; align-items: center; gap: 16px;
-  border: 1px solid #e8edf8; animation: pulse 1.6s ease-in-out infinite;
-  overflow: hidden;
+  border: 1px solid #e8edf8; animation: pulse 1.6s ease-in-out infinite; overflow: hidden;
 }
 .sk { background: #e8edf8; border-radius: 8px; height: 14px; }
 .sk-accent { width: 5px; height: 60px; border-radius: 4px; flex-shrink: 0; }
-.sk-id { width: 110px; }
-.sk-mid { flex: 1; }
-.sk-badge { width: 90px; }
+.sk-id { width: 110px; } .sk-mid { flex: 1; } .sk-badge { width: 90px; }
 .sk-btn { width: 80px; height: 32px; border-radius: 10px; }
 @keyframes pulse { 0%,100%{ opacity:.6 } 50%{ opacity:1 } }
 
@@ -403,7 +515,6 @@ onMounted(() => loadOrders(1))
 
 /* ══ ORDER CARDS ══ */
 .orders-list { display: flex; flex-direction: column; gap: 14px; }
-
 .ocard {
   background: white; border-radius: 18px; border: 1.5px solid #e8edf8;
   display: flex; align-items: center; overflow: hidden; cursor: pointer;
@@ -411,15 +522,8 @@ onMounted(() => loadOrders(1))
   animation: cardIn .4s ease both;
   animation-delay: var(--delay, 0s);
 }
-@keyframes cardIn {
-  from { opacity: 0; transform: translateY(16px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-.ocard:hover {
-  transform: translateY(-4px) scale(1.005);
-  box-shadow: 0 16px 40px rgba(37,99,235,.13);
-  border-color: #a5b4fc;
-}
+@keyframes cardIn { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
+.ocard:hover { transform: translateY(-4px) scale(1.005); box-shadow: 0 16px 40px rgba(37,99,235,.13); border-color: #a5b4fc; }
 
 .ocard-accent { width: 5px; align-self: stretch; flex-shrink: 0; }
 .accent-pending   { background: linear-gradient(180deg, #fbbf24, #f59e0b); }
@@ -430,11 +534,7 @@ onMounted(() => loadOrders(1))
 .accent-cancelled { background: linear-gradient(180deg, #fca5a5, #ef4444); }
 
 .ocard-body { flex: 1; padding: 18px 22px; min-width: 0; }
-
-.ocard-top {
-  display: flex; align-items: center; gap: 12px;
-  margin-bottom: 12px; flex-wrap: wrap;
-}
+.ocard-top { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
 .ocard-id {
   font-family: 'Times New Roman', Times, serif;
   font-weight: 700; font-size: 1.05rem; color: #0f172a; letter-spacing: .03em;
@@ -445,7 +545,6 @@ onMounted(() => loadOrders(1))
   background: #f8faff; border: 1.5px solid #e0e7ff;
   padding: 3px 10px; border-radius: 999px;
 }
-
 .status-badge {
   display: inline-flex; align-items: center; gap: 5px;
   padding: 4px 11px; border-radius: 999px;
@@ -458,7 +557,6 @@ onMounted(() => loadOrders(1))
 .badge-shipping  { background: #f3e8ff; color: #7c3aed; border: 1px solid #ddd6fe; }
 .badge-delivered { background: #d1fae5; color: #059669; border: 1px solid #a7f3d0; }
 .badge-cancelled { background: #fee2e2; color: #dc2626; border: 1px solid #fecaca; }
-
 .payment-badge {
   display: inline-flex; align-items: center; gap: 4px;
   padding: 4px 11px; border-radius: 999px;
@@ -466,15 +564,18 @@ onMounted(() => loadOrders(1))
 }
 .pay-cod   { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
 .pay-vnpay { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+.shipper-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 4px 10px; border-radius: 999px;
+  font-size: .7rem; font-weight: 700;
+  background: #f3e8ff; color: #7c3aed; border: 1px solid #ddd6fe;
+}
 
 .ocard-stats { display: flex; gap: 28px; flex-wrap: wrap; }
 .ostat { display: flex; flex-direction: column; gap: 2px; }
 .ostat-lbl { font-size: .68rem; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: #94a3b8; }
 .ostat-val { font-size: .9rem; font-weight: 600; color: #334155; }
-.ostat-val.price {
-  font-family: 'Times New Roman', Times, serif;
-  font-size: 1rem; font-weight: 700; color: #e11d48;
-}
+.ostat-val.price { font-family: 'Times New Roman', Times, serif; font-size: 1rem; font-weight: 700; color: #e11d48; }
 .ostat-val.date { font-size: .8rem; color: #94a3b8; }
 
 /* ACTIONS */
@@ -482,7 +583,6 @@ onMounted(() => loadOrders(1))
   display: flex; flex-direction: column; gap: 8px;
   padding: 18px 18px 18px 0; flex-shrink: 0;
 }
-
 .status-select {
   padding: 7px 10px; border-radius: 10px;
   border: 1.5px solid #e0e7ff; font-size: .78rem; font-weight: 700;
@@ -499,6 +599,16 @@ onMounted(() => loadOrders(1))
 .select-delivered { color: #059669; border-color: #a7f3d0; background: #f0fdf4; }
 .select-cancelled { color: #dc2626; border-color: #fecaca; background: #fff1f2; }
 
+.btn-assign {
+  padding: 7px 14px; border-radius: 10px;
+  background: linear-gradient(135deg, #7c3aed, #4f46e5);
+  border: none; color: white;
+  font-size: .78rem; font-weight: 700; cursor: pointer;
+  transition: all .2s; white-space: nowrap;
+  box-shadow: 0 3px 10px rgba(124,58,237,.3);
+}
+.btn-assign:hover { transform: translateY(-1px); box-shadow: 0 5px 16px rgba(124,58,237,.4); }
+
 .btn-cancel {
   padding: 7px 14px; border-radius: 10px;
   background: #fee2e2; border: 1px solid #fecaca;
@@ -506,7 +616,6 @@ onMounted(() => loadOrders(1))
   cursor: pointer; transition: all .2s; white-space: nowrap;
 }
 .btn-cancel:hover { background: #fecaca; border-color: #fca5a5; }
-
 .btn-detail {
   padding: 7px 14px; border-radius: 10px;
   background: linear-gradient(135deg, #eff6ff, #f5f3ff);
@@ -520,10 +629,7 @@ onMounted(() => loadOrders(1))
 .btn-detail:hover .arrow-icon { transform: translateX(3px); }
 
 /* PAGINATION */
-.pagination {
-  display: flex; align-items: center; justify-content: center; gap: 10px;
-  margin-top: 28px;
-}
+.pagination { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 28px; }
 .page-btn {
   padding: 9px 20px; border-radius: 12px;
   background: white; border: 1.5px solid #e0e7ff;
@@ -533,7 +639,6 @@ onMounted(() => loadOrders(1))
 }
 .page-btn:hover:not(:disabled) { background: #eff6ff; transform: translateY(-1px); }
 .page-btn:disabled { opacity: .4; cursor: not-allowed; }
-
 .page-numbers { display: flex; gap: 6px; }
 .page-num {
   width: 36px; height: 36px; border-radius: 10px;
@@ -543,10 +648,121 @@ onMounted(() => loadOrders(1))
 }
 .page-num:hover { background: #eff6ff; color: #2563eb; border-color: #bfdbfe; }
 .page-num.active {
-  background: linear-gradient(135deg, #2563eb, #4f46e5);
-  color: white; border-color: transparent;
+  background: linear-gradient(135deg, #2563eb, #4f46e5); color: white; border-color: transparent;
   box-shadow: 0 4px 14px rgba(37,99,235,.35);
 }
+
+/* ══ MODAL ══ */
+.modal-overlay {
+  position: fixed; inset: 0; z-index: 1000;
+  background: rgba(10,15,30,.65); backdrop-filter: blur(6px);
+  display: flex; align-items: center; justify-content: center; padding: 24px;
+}
+.modal-box {
+  background: white; border-radius: 24px; width: 100%; max-width: 480px;
+  box-shadow: 0 32px 80px rgba(0,0,0,.35); overflow: hidden;
+  animation: modalIn .25s cubic-bezier(.175,.885,.32,1.275);
+}
+@keyframes modalIn { from { opacity:0; transform:scale(.92) translateY(16px); } to { opacity:1; transform:none; } }
+
+.modal-header {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  padding: 24px 24px 16px;
+  border-bottom: 1.5px solid #f0f4ff;
+  background: linear-gradient(135deg, #f8faff, #f5f3ff);
+}
+.modal-title { font-size: 1.1rem; font-weight: 900; color: #0f172a; margin: 0 0 5px; }
+.modal-sub { font-size: .78rem; color: #64748b; margin: 0; }
+.modal-close {
+  background: #f1f5f9; border: none; color: #64748b;
+  width: 30px; height: 30px; border-radius: 50%; font-size: .85rem;
+  cursor: pointer; transition: all .2s; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+}
+.modal-close:hover { background: #fee2e2; color: #dc2626; }
+
+.current-shipper {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 24px; background: #f5f3ff; border-bottom: 1.5px solid #ede9fe;
+  font-size: .78rem;
+}
+.cs-label { color: #94a3b8; font-weight: 600; }
+.cs-name  { font-weight: 700; color: #7c3aed; }
+.cs-phone { color: #64748b; }
+
+.modal-loading {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  padding: 40px; color: #94a3b8; font-size: .85rem;
+}
+.modal-empty { padding: 40px; text-align: center; color: #94a3b8; font-weight: 600; font-size: .9rem; }
+
+.shipper-list { display: flex; flex-direction: column; max-height: 340px; overflow-y: auto; }
+.shipper-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 24px; border-bottom: 1.5px solid #f8faff;
+  transition: background .15s;
+}
+.shipper-row:last-child { border-bottom: none; }
+.shipper-row:hover { background: #f8faff; }
+.shipper-row.is-current { background: #faf5ff; }
+
+.shipper-avatar {
+  width: 42px; height: 42px; border-radius: 50%;
+  background: linear-gradient(135deg, #ede9fe, #dbeafe);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.15rem; flex-shrink: 0;
+}
+.shipper-info { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.shipper-name { font-weight: 700; font-size: .88rem; color: #0f172a; }
+.shipper-phone { font-size: .73rem; color: #64748b; }
+.shipper-vehicle {
+  display: inline-block; font-size: .65rem; color: #7c3aed;
+  background: #f3e8ff; border: 1px solid #ddd6fe;
+  padding: 1px 7px; border-radius: 999px; width: fit-content; margin-top: 2px;
+}
+.shipper-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; }
+.current-tag {
+  font-size: .62rem; font-weight: 700; color: #7c3aed;
+  background: #ede9fe; border: 1px solid #ddd6fe;
+  padding: 2px 7px; border-radius: 999px;
+}
+.btn-pick {
+  padding: 7px 18px; border-radius: 10px;
+  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  border: none; color: white;
+  font-size: .78rem; font-weight: 700; cursor: pointer;
+  transition: all .2s; min-width: 64px;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 3px 10px rgba(79,70,229,.3);
+}
+.btn-pick:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 5px 16px rgba(79,70,229,.4); }
+.btn-pick:disabled { opacity: .6; cursor: not-allowed; transform: none; }
+
+.modal-footer {
+  padding: 14px 24px;
+  border-top: 1.5px solid #f0f4ff;
+  display: flex; justify-content: flex-end;
+  background: #fafbff;
+}
+.btn-modal-cancel {
+  padding: 9px 24px; border-radius: 10px;
+  background: #f1f5f9; border: 1.5px solid #e0e7ff;
+  color: #64748b; font-size: .85rem; font-weight: 700;
+  cursor: pointer; transition: all .2s;
+}
+.btn-modal-cancel:hover { background: #e0e7ff; color: #4f46e5; }
+
+/* Spinners */
+.spin {
+  width: 13px; height: 13px;
+  border: 2px solid rgba(255,255,255,.4); border-top-color: #fff;
+  border-radius: 50%; animation: spinning .6s linear infinite; display: inline-block;
+}
+.spin-lg {
+  width: 20px; height: 20px;
+  border: 2px solid #e0e7ff; border-top-color: #4f46e5;
+  border-radius: 50%; animation: spinning .6s linear infinite; display: inline-block;
+}
+@keyframes spinning { to { transform: rotate(360deg); } }
 
 /* MOBILE */
 @media (max-width: 768px) {
