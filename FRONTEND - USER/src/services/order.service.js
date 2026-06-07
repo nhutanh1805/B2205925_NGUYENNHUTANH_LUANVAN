@@ -22,7 +22,6 @@ class OrderService {
     return (await this.api.get(`/${orderId}`)).data;
   }
 
-  // Tạo đơn hàng — truyền items đã chọn từ giỏ hàng
   async createOrder(data) {
     const userId = this.getUserId();
 
@@ -32,7 +31,8 @@ class OrderService {
       phone: data.phone,
       note: data.note || "",
       paymentMethod: data.paymentMethod || "COD",
-      items: data.items, // ← Danh sách sản phẩm đã chọn từ Cart.vue
+      items: data.items,       // Danh sách sản phẩm đã chọn từ Cart.vue
+      pointsToUse: data.pointsToUse || 0, 
     };
 
     const res = await this.api.post("/create", payload);

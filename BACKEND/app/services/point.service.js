@@ -1,5 +1,8 @@
 const { ObjectId } = require("mongodb");
 
+const POINT_TO_VND = 100;         // 1 điểm = 100₫
+const MAX_REDEEM_PER_ORDER = 5000; // tối đa 5.000 điểm/đơn = 500.000₫
+
 class PointService {
   constructor(client) {
     this.Points = client.db().collection("point_transactions");
@@ -24,7 +27,7 @@ class PointService {
   }
 
   // Tích điểm khi đặt hàng thành công
-  // Tỉ lệ: 1.000đ = 1 điểm
+  // Tỉ lệ: 1.000đ = 1 điểm (tính theo giá gốc, không phải giá sau giảm)
   async earnFromOrder(userId, orderId, orderTotal) {
     const points = Math.floor(orderTotal / 1000);
     if (points <= 0) return null;
@@ -42,7 +45,7 @@ class PointService {
     return transaction;
   }
 
-  // Hoàn điểm khi đơn hàng bị huỷ
+  // Hoàn điểm khi đơn hàng bị huỷ (hoàn điểm tích)
   async refundFromOrder(userId, orderId, orderTotal) {
     const points = Math.floor(orderTotal / 1000);
     if (points <= 0) return null;
@@ -60,7 +63,7 @@ class PointService {
     return transaction;
   }
 
-  // Dùng điểm để đổi ưu đãi
+  // Dùng điểm để đổi ưu đãi thủ công (không gắn đơn hàng)
   async redeem(userId, points, note = "Đổi điểm") {
     const balance = await this.getBalance(userId);
     if (balance < points) throw new Error("Không đủ điểm");
@@ -71,6 +74,45 @@ class PointService {
       type: "redeem",
       points: -points,
       note,
+      createdAt: new Date(),
+    };
+
+    await this.Points.insertOne(transaction);
+    return transaction;
+  }
+
+  // Dùng điểm khi thanh toán đơn hàng
+  // Tự động giới hạn MAX_REDEEM_PER_ORDER
+  async redeemForOrder(userId, orderId, pointsRequested) {
+    const capped   = Math.min(pointsRequested, MAX_REDEEM_PER_ORDER);
+    const discount = capped * POINT_TO_VND;
+
+    const balance = await this.getBalance(userId);
+    if (balance < capped) throw new Error("Không đủ điểm");
+
+    const transaction = {
+      userId,
+      orderId: orderId ? new ObjectId(orderId) : null,
+      type: "redeem",
+      points: -capped,
+      note: `Dùng điểm giảm giá đơn hàng #${orderId ?? "mới"}`,
+      createdAt: new Date(),
+    };
+
+    await this.Points.insertOne(transaction);
+    return { transaction, pointsUsed: capped, discount };
+  }
+
+  // Hoàn lại điểm đã dùng khi đơn bị huỷ
+  async refundRedeemedPoints(userId, orderId, points) {
+    if (!points || points <= 0) return null;
+
+    const transaction = {
+      userId,
+      orderId: orderId ? new ObjectId(orderId) : null,
+      type: "refund",
+      points: +points,
+      note: `Hoàn điểm đã dùng do huỷ đơn #${orderId}`,
       createdAt: new Date(),
     };
 

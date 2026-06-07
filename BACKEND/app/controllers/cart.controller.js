@@ -50,6 +50,20 @@ exports.updateQuantity = async (req, res, next) => {
   }
 
   try {
+    // Check stock trước khi cho phép cập nhật
+    const productService = new ProductService(MongoDB.client);
+    const product = await productService.findById(productId);
+
+    if (!product || !product.isActive) {
+      return next(new ApiError(404, "Sản phẩm không tồn tại"));
+    }
+
+    if (quantity > product.stock) {
+      return next(
+        new ApiError(400, `Chỉ còn ${product.stock} sản phẩm trong kho`)
+      );
+    }
+
     const cartService = new CartService(MongoDB.client);
     const cart = await cartService.updateQuantity(userId, productId, quantity);
 

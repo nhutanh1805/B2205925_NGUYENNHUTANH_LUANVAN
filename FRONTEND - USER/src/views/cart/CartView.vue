@@ -126,15 +126,21 @@
                   <div class="qty-group">
                     <button
                       class="qty-btn"
-                      :disabled="item.quantity <= 1"
+                      :disabled="item.quantity <= 1 || updatingId === item.productId.toString()"
                       @click="updateQuantity(item.productId, item.quantity - 1)"
                     >−</button>
                     <span class="qty-val">{{ item.quantity }}</span>
                     <button
                       class="qty-btn qty-plus"
+                      :disabled="updatingId === item.productId.toString()"
                       @click="updateQuantity(item.productId, item.quantity + 1)"
                     >+</button>
                   </div>
+
+                  <!-- Lỗi stock -->
+                  <span v-if="stockErrors[item.productId.toString()]" class="stock-error">
+                    {{ stockErrors[item.productId.toString()] }}
+                  </span>
 
                   <button class="remove-btn" @click="removeItem(item.productId)">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
@@ -158,7 +164,7 @@
         <aside class="checkout-col">
           <div class="checkout-card">
             <div class="checkout-header">
-              <span class="checkout-icon"></span>
+              <span class="checkout-icon">🛒</span>
               <h2 class="checkout-title">Thanh toán</h2>
             </div>
 
@@ -229,8 +235,10 @@ import CartService from "@/services/cart.service"
 
 const router = useRouter()
 
-const cart = ref({ items: [], totalQuantity: 0, totalPrice: 0 })
-const loading = ref(true)
+const cart        = ref({ items: [], totalQuantity: 0, totalPrice: 0 })
+const loading     = ref(true)
+const updatingId  = ref(null)   // productId đang được update (để disable nút)
+const stockErrors = ref({})     // { productId: "Chỉ còn X sản phẩm trong kho" }
 const placeholder = "https://via.placeholder.com/120x160?text=No+Image"
 
 // ── Danh sách productId đã chọn ──
@@ -292,15 +300,25 @@ const goCheckout = () => {
     alert("Vui lòng chọn ít nhất một sản phẩm")
     return
   }
-  // Lưu các sản phẩm đã chọn vào sessionStorage để trang checkout đọc
   sessionStorage.setItem("checkoutItems", JSON.stringify(selectedItems.value))
   router.push("/checkout")
 }
 
 const updateQuantity = async (productId, quantity) => {
   if (quantity < 1) return
-  await CartService.updateQuantity({ productId, quantity })
-  await loadCart()
+  const id = productId.toString()
+  updatingId.value = id
+  stockErrors.value = { ...stockErrors.value, [id]: null } 
+
+  try {
+    await CartService.updateQuantity({ productId, quantity })
+    await loadCart()
+  } catch (err) {
+    const msg = err.response?.data?.message || "Không thể cập nhật số lượng"
+    stockErrors.value = { ...stockErrors.value, [id]: msg }
+  } finally {
+    updatingId.value = null
+  }
 }
 
 const removeItem = async (productId) => {
@@ -433,9 +451,7 @@ onMounted(loadCart)
   box-shadow: 0 4px 20px rgba(0,0,0,.06);
   animation: shimmer 1.4s infinite;
 }
-@keyframes shimmer {
-  0%,100% { opacity:1; } 50% { opacity:.5; }
-}
+@keyframes shimmer { 0%,100% { opacity:1; } 50% { opacity:.5; } }
 .sk-img { width: 90px; height: 110px; border-radius: 14px; background: #e8edf8; flex-shrink: 0; }
 .sk-lines { flex: 1; display: flex; flex-direction: column; gap: 10px; }
 .sk-line { height: 14px; border-radius: 8px; background: #e8edf8; }
@@ -452,9 +468,7 @@ onMounted(loadCart)
   padding: 18px 22px; border-bottom: 1.5px solid #f0f4ff;
   box-shadow: 0 -2px 20px rgba(37,99,235,.05);
 }
-.select-all-label {
-  display: flex; align-items: center; gap: 12px; cursor: pointer;
-}
+.select-all-label { display: flex; align-items: center; gap: 12px; cursor: pointer; }
 .col-label { font-weight: 800; font-size: 1rem; color: #0f172a; }
 .clear-all-btn {
   font-size: .8rem; font-weight: 700; color: #ef4444;
@@ -467,11 +481,9 @@ onMounted(loadCart)
 /* ══ CUSTOM CHECKBOX ══ */
 .custom-checkbox {
   width: 20px; height: 20px; border-radius: 6px; flex-shrink: 0;
-  border: 2px solid #cbd5e1;
-  background: white;
+  border: 2px solid #cbd5e1; background: white;
   display: flex; align-items: center; justify-content: center;
-  cursor: pointer; transition: all .2s;
-  user-select: none;
+  cursor: pointer; transition: all .2s; user-select: none;
 }
 .custom-checkbox:hover { border-color: #2563eb; background: #eff6ff; }
 .custom-checkbox.checked {
@@ -479,12 +491,8 @@ onMounted(loadCart)
   border-color: transparent;
   box-shadow: 0 2px 8px rgba(37,99,235,.4);
 }
-.custom-checkbox.indeterminate {
-  background: #eff6ff; border-color: #2563eb;
-}
-.indeterminate-bar {
-  width: 10px; height: 2.5px; background: #2563eb; border-radius: 999px;
-}
+.custom-checkbox.indeterminate { background: #eff6ff; border-color: #2563eb; }
+.indeterminate-bar { width: 10px; height: 2.5px; background: #2563eb; border-radius: 999px; }
 
 .items-list { display: flex; flex-direction: column; }
 
@@ -493,12 +501,10 @@ onMounted(loadCart)
   display: flex; align-items: center; gap: 14px;
   background: white; padding: 18px 22px;
   border-bottom: 1.5px solid #f0f4ff;
-  position: relative;
-  transition: background .2s, transform .25s;
+  position: relative; transition: background .2s, transform .25s;
 }
 .item-card:last-child {
-  border-bottom: none;
-  border-radius: 0 0 20px 20px;
+  border-bottom: none; border-radius: 0 0 20px 20px;
   box-shadow: 0 12px 40px rgba(37,99,235,.08);
 }
 .item-card:hover { background: #f8faff; }
@@ -519,28 +525,39 @@ onMounted(loadCart)
 .item-img {
   width: 86px; height: 108px; object-fit: cover;
   border-radius: 14px; display: block;
-  box-shadow: 0 6px 18px rgba(0,0,0,.1);
-  transition: transform .3s;
+  box-shadow: 0 6px 18px rgba(0,0,0,.1); transition: transform .3s;
 }
 .item-card:hover .item-img { transform: scale(1.04); }
 
 .item-info { flex: 1; }
-.item-name { font-weight: 800; font-size: 1rem; color: #0f172a; margin-bottom: 4px; line-height: 1.3; }
+.item-name  { font-weight: 800; font-size: 1rem; color: #0f172a; margin-bottom: 4px; line-height: 1.3; }
 .item-price { color: #e11d48; font-weight: 700; font-size: .9rem; margin-bottom: 14px; }
 
-.item-controls { display: flex; align-items: center; gap: 14px; }
+.item-controls { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
 
-.qty-group { display: flex; align-items: center; gap: 0; background: #f0f4ff; border-radius: 12px; overflow: hidden; border: 1.5px solid #e0e7ff; }
+.qty-group {
+  display: flex; align-items: center; gap: 0;
+  background: #f0f4ff; border-radius: 12px; overflow: hidden;
+  border: 1.5px solid #e0e7ff;
+}
 .qty-btn {
   width: 34px; height: 34px; display: flex; align-items: center; justify-content: center;
   font-weight: 800; font-size: 1rem; cursor: pointer;
   background: transparent; color: #334155; transition: background .15s;
+  border: none;
 }
 .qty-btn:hover:not(:disabled) { background: #e0e7ff; }
 .qty-btn:disabled { color: #cbd5e1; cursor: not-allowed; }
 .qty-btn.qty-plus { background: linear-gradient(135deg, #2563eb, #4f46e5); color: white; }
-.qty-btn.qty-plus:hover { background: linear-gradient(135deg, #1d4ed8, #4338ca); }
+.qty-btn.qty-plus:hover:not(:disabled) { background: linear-gradient(135deg, #1d4ed8, #4338ca); }
 .qty-val { width: 36px; text-align: center; font-weight: 800; font-size: 1rem; color: #0f172a; }
+
+/* Lỗi stock */
+.stock-error {
+  font-size: .78rem; font-weight: 600; color: #ef4444;
+  background: #fff1f1; border: 1.5px solid #fecaca;
+  padding: 4px 10px; border-radius: 8px;
+}
 
 .remove-btn {
   display: inline-flex; align-items: center; gap: 5px;
@@ -551,9 +568,7 @@ onMounted(loadCart)
 }
 .remove-btn:hover { background: #ef4444; color: white; border-color: #ef4444; }
 
-.item-subtotal {
-  text-align: right; flex-shrink: 0; min-width: 110px;
-}
+.item-subtotal { text-align: right; flex-shrink: 0; min-width: 110px; }
 .subtotal-label { display: block; font-size: .68rem; color: #94a3b8; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 4px; }
 .subtotal-value { font-weight: 900; font-size: 1.05rem; color: #f97316; }
 
@@ -566,16 +581,15 @@ onMounted(loadCart)
   border: 1.5px solid #e0e7ff;
 }
 .checkout-header { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; }
-.checkout-icon { font-size: 1.6rem; }
-.checkout-title { font-size: 1.4rem; font-weight: 900; color: #0f172a; }
+.checkout-icon   { font-size: 1.6rem; }
+.checkout-title  { font-size: 1.4rem; font-weight: 900; color: #0f172a; }
 
-.checkout-lines { display: flex; flex-direction: column; gap: 14px; margin-bottom: 24px; }
-.checkout-row { display: flex; justify-content: space-between; align-items: center; font-size: .9rem; color: #475569; }
+.checkout-lines  { display: flex; flex-direction: column; gap: 14px; margin-bottom: 24px; }
+.checkout-row    { display: flex; justify-content: space-between; align-items: center; font-size: .9rem; color: #475569; }
 .checkout-divider { height: 1.5px; background: linear-gradient(90deg, #e0e7ff, #fce7f3); border-radius: 999px; margin: 4px 0; }
-.total-row { font-size: 1rem; font-weight: 800; color: #0f172a; }
+.total-row   { font-size: 1rem; font-weight: 800; color: #0f172a; }
 .total-price { color: #f97316; font-size: 1.3rem; font-weight: 900; }
 
-/* Hint chưa chọn */
 .no-select-hint {
   text-align: center; font-size: .82rem; color: #94a3b8;
   background: #f8fafc; border-radius: 10px; padding: 10px;
@@ -584,8 +598,8 @@ onMounted(loadCart)
 
 .checkout-btn {
   display: flex; align-items: center; justify-content: center; gap: 8px;
-  width: 100%; padding: 16px;
-  border-radius: 14px; font-weight: 800; font-size: 1rem; color: white;
+  width: 100%; padding: 16px; border-radius: 14px;
+  font-weight: 800; font-size: 1rem; color: white;
   background: linear-gradient(135deg, #f97316, #ec4899);
   box-shadow: 0 8px 24px rgba(249,115,22,.4);
   transition: transform .25s, box-shadow .25s, opacity .2s;
@@ -616,11 +630,8 @@ onMounted(loadCart)
   border: 1.5px solid #e8edf8;
   display: flex; flex-direction: column; gap: 12px;
 }
-.badge-item {
-  display: flex; align-items: center; gap: 10px;
-  font-size: .82rem; font-weight: 600; color: #475569;
-}
-.badge-ico { font-size: 1.1rem; }
+.badge-item { display: flex; align-items: center; gap: 10px; font-size: .82rem; font-weight: 600; color: #475569; }
+.badge-ico  { font-size: 1.1rem; }
 
 /* ══ ANIMATIONS ══ */
 .cart-enter-active, .cart-leave-active { transition: all .4s cubic-bezier(.4,0,.2,1); }

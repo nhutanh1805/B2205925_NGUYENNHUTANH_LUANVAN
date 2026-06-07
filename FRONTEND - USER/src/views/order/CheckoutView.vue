@@ -7,13 +7,22 @@
         <div class="point-card">
           <div class="point-star"></div>
           <div class="point-title">Đặt hàng thành công!</div>
-          <div class="point-msg">
+
+          <template v-if="lastPointsUsed > 0">
+            <div class="point-msg">
+              Bạn đã dùng <b>{{ lastPointsUsed.toLocaleString("vi-VN") }} điểm</b>
+              để giảm <b>{{ formatPrice(lastDiscount) }}₫</b>
+            </div>
+          </template>
+
+          <div class="point-msg" style="margin-top:6px">
             Điểm thưởng sẽ được cộng sau khi đơn hàng giao thành công
           </div>
           <div class="point-detail">
-            Ước tính <b>{{ Math.floor(checkoutTotal / 1000).toLocaleString("vi-VN") }} điểm</b>
-            cho đơn {{ formatPrice(checkoutTotal) }}₫
+            Ước tính <b>+{{ Math.floor((lastOriginalPrice) / 1000).toLocaleString("vi-VN") }} điểm</b>
+            cho đơn {{ formatPrice(lastOriginalPrice) }}₫
           </div>
+
           <div class="point-bar-wrap">
             <div class="point-bar" :style="{ width: barWidth + '%' }"></div>
           </div>
@@ -34,7 +43,6 @@
 
         <!-- LEFT -->
         <div class="left">
-
           <h2>Thông tin giao hàng</h2>
 
           <input v-model="form.shippingAddress" placeholder="Địa chỉ giao hàng" />
@@ -48,12 +56,10 @@
           <button class="btn-vnpay" :disabled="loading" @click="payVNPay">
             VNPay
           </button>
-
         </div>
 
         <!-- RIGHT -->
         <div class="right">
-
           <h2>Sản phẩm đã chọn ({{ checkoutItems.length }})</h2>
 
           <div v-for="(item, index) in checkoutItems" :key="index" class="item">
@@ -61,24 +67,70 @@
             <b>{{ formatPrice(item.price * item.quantity) }}₫</b>
           </div>
 
-          <div class="total">
-            <div>Số lượng: {{ checkoutQuantity }}</div>
-            <div class="price">{{ formatPrice(checkoutTotal) }}₫</div>
+          <!-- DÙNG ĐIỂM -->
+          <div class="point-redeem-box" v-if="userBalance > 0">
+            <div class="redeem-header">
+              <label class="redeem-toggle">
+                <input type="checkbox" v-model="usePoints" @change="onTogglePoints" />
+                <span>Dùng điểm giảm giá</span>
+              </label>
+              <span class="redeem-balance">
+                Bạn có <b>{{ userBalance.toLocaleString("vi-VN") }}</b> điểm
+              </span>
+            </div>
+
+            <div v-if="usePoints" class="redeem-input-row">
+              <input
+                type="number"
+                v-model.number="pointsInput"
+                :max="maxPoints"
+                :min="0"
+                placeholder="Nhập số điểm muốn dùng"
+                class="redeem-input"
+                @input="clampPoints"
+              />
+              <button class="redeem-max" @click="pointsInput = maxPoints">
+                Tối đa
+              </button>
+            </div>
+
+            <div v-if="usePoints && redeemPreview.pointsUsed > 0" class="redeem-result">
+              Dùng <b>{{ redeemPreview.pointsUsed.toLocaleString("vi-VN") }} điểm</b>
+              → giảm <b>{{ formatPrice(redeemPreview.discount) }}₫</b>
+            </div>
+
+            <div v-if="usePoints && pointsInput > 0 && redeemPreview.pointsUsed < pointsInput" class="redeem-warn">
+              Chỉ được dùng tối đa {{ maxPoints.toLocaleString("vi-VN") }} điểm/đơn
+            </div>
           </div>
 
-          <!-- Điểm ước tính -->
+          <!-- TỔNG TIỀN -->
+          <div class="total">
+            <div class="total-row">
+              <span>Tạm tính:</span>
+              <span>{{ formatPrice(checkoutTotal) }}₫</span>
+            </div>
+            <div class="total-row discount" v-if="redeemPreview.discount > 0">
+              <span>Giảm điểm ({{ redeemPreview.pointsUsed }} điểm):</span>
+              <span>-{{ formatPrice(redeemPreview.discount) }}₫</span>
+            </div>
+            <div class="total-row final">
+              <span>Thành tiền:</span>
+              <span class="price">{{ formatPrice(finalTotal) }}₫</span>
+            </div>
+          </div>
+
+          <!-- ĐIỂM ƯỚC TÍNH SAU ĐƠN -->
           <div class="point-preview" v-if="checkoutTotal > 0">
             <span class="preview-ico"></span>
             <span>
-              Nhận <b>{{ Math.floor(checkoutTotal / 1000).toLocaleString("vi-VN") }} điểm</b>
+              Nhận <b>+{{ Math.floor(checkoutTotal / 1000).toLocaleString("vi-VN") }} điểm</b>
               sau khi đơn giao thành công
             </span>
           </div>
 
         </div>
-
       </div>
-
     </div>
   </div>
 </template>
@@ -87,33 +139,65 @@
 import { ref, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import OrderService from "@/services/order.service";
+import PointService from "@/services/point.service";
 
 const router = useRouter();
 
-const loading = ref(false);
+const loading        = ref(false);
 const showSuccessAnim = ref(false);
-const barWidth = ref(0);
+const barWidth       = ref(0);
 
-// ── Đọc sản phẩm đã chọn từ sessionStorage ──
+// Lưu lại để hiển thị trong overlay thành công
+const lastPointsUsed   = ref(0);
+const lastDiscount     = ref(0);
+const lastOriginalPrice = ref(0);
+
+// ── Sản phẩm checkout ──
 const checkoutItems = ref([]);
 
 const checkoutTotal = computed(() =>
   checkoutItems.value.reduce((s, i) => s + i.price * i.quantity, 0)
 );
-
 const checkoutQuantity = computed(() =>
   checkoutItems.value.reduce((s, i) => s + i.quantity, 0)
 );
 
-const form = ref({
-  shippingAddress: "",
-  phone: "",
-  note: "",
+// ── Form ──
+const form = ref({ shippingAddress: "", phone: "", note: "" });
+
+// ── Điểm ──
+const userBalance  = ref(0);
+const usePoints    = ref(false);
+const pointsInput  = ref(0);
+
+const maxPoints = computed(() =>
+  Math.min(userBalance.value, PointService.maxRedeemPerOrder)
+);
+
+const redeemPreview = computed(() => {
+  if (!usePoints.value || pointsInput.value <= 0)
+    return { pointsUsed: 0, discount: 0 };
+  return PointService.calcRedeem(pointsInput.value, userBalance.value);
 });
 
+const finalTotal = computed(() =>
+  Math.max(0, checkoutTotal.value - redeemPreview.value.discount)
+);
+
+// ── Helpers ──
 const formatPrice = (v) => new Intl.NumberFormat("vi-VN").format(v || 0);
 
-onMounted(() => {
+const clampPoints = () => {
+  if (pointsInput.value > maxPoints.value) pointsInput.value = maxPoints.value;
+  if (pointsInput.value < 0) pointsInput.value = 0;
+};
+
+const onTogglePoints = () => {
+  if (!usePoints.value) pointsInput.value = 0;
+};
+
+// ── Mount ──
+onMounted(async () => {
   const raw = sessionStorage.getItem("checkoutItems");
   if (!raw) {
     alert("Không có sản phẩm nào được chọn");
@@ -130,79 +214,102 @@ onMounted(() => {
     checkoutItems.value = parsed;
   } catch {
     router.push("/cart");
+    return;
+  }
+
+  // Load số dư điểm
+  try {
+    const bal = await PointService.getBalance();
+    userBalance.value = bal.balance || 0;
+  } catch {
+    // Không có điểm hoặc chưa đăng nhập → ẩn section điểm
+    userBalance.value = 0;
   }
 });
 
+// ── Validate ──
 const validate = () => {
-  if (!form.value.shippingAddress) { alert("Nhập địa chỉ"); return false; }
-  if (!form.value.phone) { alert("Nhập SĐT"); return false; }
+  if (!form.value.shippingAddress) { alert("Vui lòng nhập địa chỉ giao hàng"); return false; }
+  if (!form.value.phone)           { alert("Vui lòng nhập số điện thoại");     return false; }
   return true;
 };
 
 const normalize = (r) => r?.data ?? r;
 
+// ── Success overlay ──
 const showOrderSuccess = () => {
   showSuccessAnim.value = true;
   barWidth.value = 0;
   setTimeout(() => { barWidth.value = 100; }, 50);
   setTimeout(() => {
-    // Xóa checkoutItems khỏi sessionStorage sau khi đặt hàng xong
     sessionStorage.removeItem("checkoutItems");
     showSuccessAnim.value = false;
     router.push("/orders");
-  }, 2500);
+  }, 2800);
 };
 
+// ── Đặt hàng COD ──
 const placeOrder = async () => {
   if (!validate()) return;
   loading.value = true;
   try {
+    const pointsToUse = usePoints.value ? redeemPreview.value.pointsUsed : 0;
+
     const res = await OrderService.createOrder({
       ...form.value,
       paymentMethod: "COD",
       items: checkoutItems.value,
+      pointsToUse,
     });
 
     const order = normalize(res);
     if (!order?._id) throw new Error("Lỗi tạo đơn");
 
+    // Lưu thông tin cho overlay
+    lastPointsUsed.value    = pointsToUse;
+    lastDiscount.value      = redeemPreview.value.discount;
+    lastOriginalPrice.value = checkoutTotal.value;
+
     showOrderSuccess();
   } catch (err) {
-    alert(err.message);
+    alert(err.message || "Đặt hàng thất bại");
   } finally {
     loading.value = false;
   }
 };
 
+// ── Thanh toán VNPay ──
 const payVNPay = async () => {
   if (!validate()) return;
   loading.value = true;
   try {
+    const pointsToUse = usePoints.value ? redeemPreview.value.pointsUsed : 0;
+
     const res = await OrderService.createOrder({
       ...form.value,
       paymentMethod: "VNPAY",
       items: checkoutItems.value,
+      pointsToUse,
     });
 
     const order = normalize(res);
     const orderId = order?._id;
-    if (!orderId) throw new Error("Không tạo đơn");
+    if (!orderId) throw new Error("Không tạo được đơn hàng");
 
-    // Xóa checkoutItems sau khi tạo đơn thành công
     sessionStorage.removeItem("checkoutItems");
 
     const paymentRes = await fetch("http://localhost:3000/api/payment/create-vnpay", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ orderId, amount: checkoutTotal.value }),
+      body: JSON.stringify({ orderId, amount: finalTotal.value }),
     });
 
     const data = await paymentRes.json();
-    if (!data?.payment_url) throw new Error("VNPay lỗi");
+    if (!data?.payment_url) throw new Error("Lỗi khởi tạo VNPay");
 
     window.location.href = data.payment_url;
   } catch (err) {
-    alert(err.message);
+    alert(err.message || "Thanh toán thất bại");
   } finally {
     loading.value = false;
   }
@@ -220,12 +327,10 @@ const payVNPay = async () => {
 }
 
 .point-card {
-  background: white;
-  border-radius: 28px;
-  padding: 48px 40px;
-  text-align: center;
+  background: white; border-radius: 28px;
+  padding: 48px 40px; text-align: center;
   box-shadow: 0 32px 80px rgba(0,0,0,0.25);
-  min-width: 320px;
+  min-width: 320px; max-width: 420px;
   animation: popIn .4s cubic-bezier(.34,1.56,.64,1);
 }
 
@@ -235,43 +340,30 @@ const payVNPay = async () => {
 }
 
 .point-star {
-  font-size: 3.5rem;
+  font-size: 3.5rem; display: block; margin-bottom: 12px;
   animation: spin 1s ease-out;
-  display: block; margin-bottom: 12px;
 }
 
 @keyframes spin {
   from { transform: rotate(-180deg) scale(0); opacity: 0; }
-  to   { transform: rotate(0deg) scale(1);   opacity: 1; }
+  to   { transform: rotate(0deg) scale(1);    opacity: 1; }
 }
 
-.point-title {
-  font-size: 1.3rem; font-weight: 900; color: #0f172a; margin-bottom: 12px;
-}
-
-.point-msg {
-  font-size: .9rem; color: #475569; margin-bottom: 8px;
-}
-
-.point-detail {
-  font-size: .85rem; color: #94a3b8; margin-bottom: 24px;
-}
+.point-title { font-size: 1.3rem; font-weight: 900; color: #0f172a; margin-bottom: 12px; }
+.point-msg   { font-size: .9rem;  color: #475569; margin-bottom: 6px; }
+.point-detail { font-size: .85rem; color: #94a3b8; margin: 12px 0 24px; }
 
 .point-bar-wrap {
   height: 6px; background: #f1f5f9;
   border-radius: 999px; overflow: hidden; margin-bottom: 16px;
 }
-
 .point-bar {
   height: 100%;
   background: linear-gradient(90deg, #6366f1, #a855f7);
   border-radius: 999px;
-  transition: width 2.4s ease;
+  transition: width 2.6s ease;
 }
-
-.point-sub {
-  font-size: .8rem; color: #94a3b8;
-}
+.point-sub { font-size: .8rem; color: #94a3b8; }
 
 /* ===== TRANSITION ===== */
 .point-fade-enter-active, .point-fade-leave-active { transition: opacity .3s; }
@@ -310,51 +402,128 @@ const payVNPay = async () => {
   background: linear-gradient(90deg, #6366f1, #a855f7);
   color: white;
 }
+.header h1 { font-size: 1.4rem; font-weight: 900; margin-bottom: 4px; }
+.header p  { font-size: .85rem; opacity: .85; }
 
 .content { display: grid; grid-template-columns: 1fr 1fr; }
 
+/* LEFT */
 .left {
-  padding: 20px; display: flex; flex-direction: column; gap: 10px;
+  padding: 24px; display: flex; flex-direction: column; gap: 12px;
 }
+.left h2 { font-size: 1rem; font-weight: 800; color: #0f172a; margin-bottom: 4px; }
 
 .left input {
-  padding: 10px; border-radius: 10px; border: 1px solid #ddd; transition: 0.2s;
+  padding: 10px 14px; border-radius: 10px;
+  border: 1.5px solid #e2e8f0; transition: .2s;
+  font-size: .9rem; outline: none;
 }
 .left input:focus {
-  outline: none; border-color: #6366f1;
-  transform: translateY(-2px); box-shadow: 0 8px 20px rgba(99,102,241,0.2);
+  border-color: #6366f1;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(99,102,241,0.15);
 }
 
 .btn-cod {
-  background: #000; color: white;
-  padding: 10px; border-radius: 12px; transition: 0.2s;
-  cursor: pointer; border: none;
+  background: #0f172a; color: white;
+  padding: 11px; border-radius: 12px;
+  border: none; cursor: pointer; font-weight: 700;
+  transition: .2s;
 }
-.btn-cod:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
+.btn-cod:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+}
 .btn-cod:disabled { opacity: .6; cursor: not-allowed; }
 
 .btn-vnpay {
   background: linear-gradient(90deg, #22c55e, #10b981);
-  color: white; padding: 10px; border-radius: 12px; transition: 0.2s;
-  cursor: pointer; border: none;
+  color: white; padding: 11px; border-radius: 12px;
+  border: none; cursor: pointer; font-weight: 700;
+  transition: .2s;
 }
-.btn-vnpay:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 10px 25px rgba(16,185,129,0.3); }
+.btn-vnpay:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(16,185,129,0.3);
+}
 .btn-vnpay:disabled { opacity: .6; cursor: not-allowed; }
 
-.right { padding: 20px; background: #f8fafc; }
-
+/* RIGHT */
+.right { padding: 24px; background: #f8fafc; display: flex; flex-direction: column; gap: 0; }
 .right h2 { font-size: 1rem; font-weight: 800; color: #0f172a; margin-bottom: 14px; }
 
 .item {
-  display: flex; justify-content: space-between;
-  padding: 10px; background: white; border-radius: 12px;
-  margin-bottom: 8px; transition: 0.2s; font-size: .9rem;
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 12px; background: white; border-radius: 12px;
+  margin-bottom: 8px; transition: .2s; font-size: .88rem;
 }
 .item:hover { transform: translateX(4px); }
 
-.total { margin-top: 10px; font-weight: bold; }
-.price { color: #ef4444; font-size: 20px; }
+/* DÙNG ĐIỂM */
+.point-redeem-box {
+  margin: 14px 0; padding: 14px 16px;
+  background: #fffbeb; border: 1.5px solid #fde68a;
+  border-radius: 14px;
+}
 
+.redeem-header {
+  display: flex; justify-content: space-between;
+  align-items: center; margin-bottom: 10px;
+}
+
+.redeem-toggle {
+  display: flex; align-items: center; gap: 8px;
+  font-weight: 700; font-size: .9rem; cursor: pointer;
+  color: #78350f;
+}
+.redeem-toggle input[type="checkbox"] { accent-color: #f59e0b; width: 16px; height: 16px; }
+
+.redeem-balance { font-size: .78rem; color: #92400e; }
+
+.redeem-input-row {
+  display: flex; gap: 8px; margin-bottom: 8px;
+}
+.redeem-input {
+  flex: 1; padding: 8px 12px;
+  border-radius: 10px; border: 1.5px solid #fcd34d;
+  font-size: .9rem; outline: none; background: white;
+}
+.redeem-input:focus { border-color: #f59e0b; }
+
+.redeem-max {
+  padding: 8px 14px; background: #f59e0b; color: white;
+  border: none; border-radius: 10px;
+  font-size: .82rem; font-weight: 700; cursor: pointer;
+  transition: .15s;
+}
+.redeem-max:hover { background: #d97706; }
+
+.redeem-result {
+  font-size: .85rem; color: #065f46;
+  background: #d1fae5; border-radius: 8px;
+  padding: 6px 10px; margin-top: 4px;
+}
+.redeem-warn {
+  font-size: .82rem; color: #b45309;
+  margin-top: 6px;
+}
+
+/* TỔNG TIỀN */
+.total {
+  margin-top: 14px; padding-top: 14px;
+  border-top: 1.5px dashed #e2e8f0;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.total-row {
+  display: flex; justify-content: space-between;
+  font-size: .88rem; color: #475569;
+}
+.total-row.discount { color: #16a34a; font-weight: 700; }
+.total-row.final    { margin-top: 4px; }
+.total-row.final span { font-weight: 900; font-size: 1rem; color: #0f172a; }
+.price { color: #ef4444 !important; font-size: 1.25rem !important; }
+
+/* ĐIỂM ƯỚC TÍNH */
 .point-preview {
   margin-top: 14px; padding: 10px 14px;
   background: #fefce8; border: 1.5px solid #fde68a;
@@ -363,7 +532,9 @@ const payVNPay = async () => {
 }
 .preview-ico { font-size: 1.1rem; }
 
+/* MOBILE */
 @media (max-width: 768px) {
   .content { grid-template-columns: 1fr; }
+  .right { border-top: 1.5px solid #e8edf8; }
 }
 </style>

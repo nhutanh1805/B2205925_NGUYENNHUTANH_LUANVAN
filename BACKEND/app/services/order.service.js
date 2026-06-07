@@ -80,7 +80,10 @@ class OrderService {
       userName,
       items,
       totalQuantity:    orderData.totalQuantity,
-      totalPrice:       orderData.totalPrice,
+      originalPrice:    orderData.originalPrice ?? orderData.totalPrice, // giá gốc trước giảm
+      discount:         orderData.discount       ?? 0,                   // số tiền giảm
+      pointsUsed:       orderData.pointsUsed     ?? 0,                   // điểm đã dùng
+      totalPrice:       orderData.totalPrice,                            // giá sau giảm (khách trả)
       shippingAddress:  orderData.shippingAddress,
       phone:            orderData.phone,
       note:             orderData.note,
@@ -88,7 +91,7 @@ class OrderService {
       paymentStatus:    isCOD ? "paid" : "unpaid",
       status:           "pending",
       stockDeducted:    isCOD,
-      paymentExpiredAt: isCOD ? null : new Date(Date.now() + 1 * 60 * 1000),
+      paymentExpiredAt: isCOD ? null : new Date(Date.now() + 15 * 60 * 1000),
       createdAt:        new Date(),
       updatedAt:        new Date(),
     };
@@ -159,7 +162,8 @@ class OrderService {
       { $unwind: { path: "$userInfo", preserveNullAndEmptyArrays: true } },
       {
         $project: {
-          _id: 1, userId: 1, items: 1, totalQuantity: 1, totalPrice: 1,
+          _id: 1, userId: 1, items: 1, totalQuantity: 1,
+          originalPrice: 1, discount: 1, pointsUsed: 1, totalPrice: 1,
           shippingAddress: 1, phone: 1, note: 1, status: 1,
           paymentMethod: 1, paymentStatus: 1, paymentExpiredAt: 1,
           createdAt: 1, updatedAt: 1,
@@ -188,7 +192,8 @@ class OrderService {
       { $unwind: { path: "$userInfo", preserveNullAndEmptyArrays: true } },
       {
         $project: {
-          _id: 1, userId: 1, items: 1, totalQuantity: 1, totalPrice: 1,
+          _id: 1, userId: 1, items: 1, totalQuantity: 1,
+          originalPrice: 1, discount: 1, pointsUsed: 1, totalPrice: 1,
           shippingAddress: 1, phone: 1, note: 1, status: 1,
           paymentMethod: 1, paymentStatus: 1, paymentExpiredAt: 1,
           createdAt: 1, updatedAt: 1,
@@ -218,7 +223,8 @@ class OrderService {
       { $unwind: { path: "$userInfo", preserveNullAndEmptyArrays: true } },
       {
         $project: {
-          _id: 1, userId: 1, items: 1, totalQuantity: 1, totalPrice: 1,
+          _id: 1, userId: 1, items: 1, totalQuantity: 1,
+          originalPrice: 1, discount: 1, pointsUsed: 1, totalPrice: 1,
           shippingAddress: 1, phone: 1, note: 1, status: 1,
           paymentMethod: 1, paymentStatus: 1, paymentExpiredAt: 1,
           stockDeducted: 1, createdAt: 1, updatedAt: 1,
