@@ -125,7 +125,7 @@
             </button>
 
             <button
-              v-if="order.status === 'pending'"
+              v-if="order.paymentMethod === 'COD' ? ['pending','confirmed','preparing'].includes(order.status) : order.status === 'pending'"
               @click="confirmCancel(order._id)"
               class="btn-cancel"
             >
