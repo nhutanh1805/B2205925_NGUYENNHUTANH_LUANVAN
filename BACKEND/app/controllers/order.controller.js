@@ -34,7 +34,8 @@ exports.createOrder = async (req, res, next) => {
       const redeemResult = await pointService.redeemForOrder(
         userId,
         null, // orderId chưa có, cập nhật sau
-        pointsToUse
+        pointsToUse,
+        originalPrice
       );
       pointsUsed = redeemResult.pointsUsed;
       discount   = redeemResult.discount;

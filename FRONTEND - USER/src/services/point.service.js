@@ -1,7 +1,7 @@
 import createApiClient from "./api.service";
 
 const POINT_TO_VND = 100;         // 1 điểm = 100₫
-const MAX_REDEEM_PER_ORDER = 5000; // tối đa 5.000 điểm/đơn = 500.000₫
+
 
 class PointService {
   constructor(baseUrl = "/api/points") {
@@ -35,16 +35,12 @@ class PointService {
   }
 
   // Tính preview giảm giá từ số điểm nhập
-  calcRedeem(pointsRequested, userBalance) {
+  calcRedeem(pointsRequested, userBalance, orderTotal) {
+    const maxByOrder = Math.floor((orderTotal * 0.2) / POINT_TO_VND);
     const affordable = Math.min(pointsRequested, userBalance ?? Infinity);
-    const capped     = Math.min(affordable, MAX_REDEEM_PER_ORDER);
+    const capped     = Math.min(affordable, maxByOrder);
     const discount   = capped * POINT_TO_VND;
     return { pointsUsed: capped, discount };
-  }
-
-  // Số điểm tối đa có thể dùng cho 1 đơn
-  get maxRedeemPerOrder() {
-    return MAX_REDEEM_PER_ORDER;
   }
 }
 

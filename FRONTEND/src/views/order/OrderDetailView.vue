@@ -270,9 +270,19 @@
                 <span>Tổng số lượng</span>
                 <b>{{ order.totalQuantity }} sản phẩm</b>
               </div>
+              <div class="summary-row">
+                <span>Tạm tính</span>
+                <span>{{ formatPrice(order.originalPrice) }}₫</span>
+              </div>
+              <template v-if="order.discount > 0">
+                <div class="summary-row discount-row">
+                  <span>Giảm giá ({{ order.pointsUsed }} điểm)</span>
+                  <span class="discount-val">-{{ formatPrice(order.discount) }}₫</span>
+                </div>
+              </template>
               <div class="summary-divider"></div>
               <div class="summary-row total">
-                <span>Tổng tiền</span>
+                <span>Khách trả</span>
                 <span class="summary-price">{{ formatPrice(order.totalPrice) }}₫</span>
               </div>
             </div>
@@ -812,4 +822,6 @@ onMounted(loadOrder)
   .info-grid { grid-template-columns: 1fr; }
   .step-name { font-size: .58rem; }
 }
+.discount-row { color: #059669; }
+.discount-val { font-weight: 700; color: #059669; }
 </style>

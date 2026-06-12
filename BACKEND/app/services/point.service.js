@@ -1,7 +1,7 @@
 const { ObjectId } = require("mongodb");
 
 const POINT_TO_VND = 100;         // 1 điểm = 100₫
-const MAX_REDEEM_PER_ORDER = 5000; // tối đa 5.000 điểm/đơn = 500.000₫
+
 
 class PointService {
   constructor(client) {
@@ -93,9 +93,10 @@ class PointService {
 
   // Dùng điểm khi thanh toán đơn hàng
   // Tự động giới hạn MAX_REDEEM_PER_ORDER
-  async redeemForOrder(userId, orderId, pointsRequested) {
-    const capped   = Math.min(pointsRequested, MAX_REDEEM_PER_ORDER);
-    const discount = capped * POINT_TO_VND;
+  async redeemForOrder(userId, orderId, pointsRequested, orderTotal) {
+    const maxByOrder = Math.floor((orderTotal * 0.2) / POINT_TO_VND);
+    const capped     = Math.min(pointsRequested, maxByOrder);
+    const discount   = capped * POINT_TO_VND;
 
     const balance = await this.getBalance(userId);
     if (balance < capped) throw new Error("Không đủ điểm");

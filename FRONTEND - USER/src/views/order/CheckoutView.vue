@@ -100,7 +100,7 @@
             </div>
 
             <div v-if="usePoints && pointsInput > 0 && redeemPreview.pointsUsed < pointsInput" class="redeem-warn">
-              Chỉ được dùng tối đa {{ maxPoints.toLocaleString("vi-VN") }} điểm/đơn
+              Chỉ được dùng tối đa {{ maxPoints.toLocaleString("vi-VN") }} điểm (20% giá trị đơn)
             </div>
           </div>
 
@@ -170,14 +170,15 @@ const userBalance  = ref(0);
 const usePoints    = ref(false);
 const pointsInput  = ref(0);
 
-const maxPoints = computed(() =>
-  Math.min(userBalance.value, PointService.maxRedeemPerOrder)
-);
+const maxPoints = computed(() => {
+  const maxByOrder = Math.floor((checkoutTotal.value * 0.2) / 100);
+  return Math.min(userBalance.value, maxByOrder);
+});
 
 const redeemPreview = computed(() => {
   if (!usePoints.value || pointsInput.value <= 0)
     return { pointsUsed: 0, discount: 0 };
-  return PointService.calcRedeem(pointsInput.value, userBalance.value);
+  return PointService.calcRedeem(pointsInput.value, userBalance.value, checkoutTotal.value);
 });
 
 const finalTotal = computed(() =>
