@@ -5,7 +5,10 @@
     <div v-if="collaborative.length" class="rec-section">
       <div class="rec-header">
         <span class="rec-label">Thường mua kèm</span>
-        <h3 class="rec-title">Gợi ý chuyên sâu</h3>
+        <h3 class="rec-title">
+          Gợi ý chuyên sâu
+          <span class="ai-badge">✦ AI</span>
+        </h3>
       </div>
       <div class="rec-grid">
         <div
@@ -23,12 +26,25 @@
           <div class="rcard-body">
             <p class="rcard-brand">{{ product.brand }}</p>
             <h4 class="rcard-name">{{ product.name }}</h4>
-            <p class="rcard-orders">Có trong {{ product.coOccurrenceCount }} đơn hàng</p>
+
+            <!-- AI Reason -->
+            <p v-if="product.aiReason" class="rcard-reason">
+              <span class="reason-icon">✦</span> {{ product.aiReason }}
+            </p>
+
+            <p v-if="product.coOccurrenceCount > 0" class="rcard-orders">
+  Có trong {{ product.coOccurrenceCount }} đơn hàng
+</p>
             <div class="rcard-price-row">
               <span class="rcard-price">{{ formatPrice(product.salePrice || product.price) }}₫</span>
               <span v-if="product.salePrice" class="rcard-origin">{{ formatPrice(product.price) }}₫</span>
             </div>
-            <button class="rcard-btn" :class="{ disabled: product.stock === 0 }" :disabled="product.stock === 0" @click.stop="addToCart(product)">
+            <button
+              class="rcard-btn"
+              :class="{ disabled: product.stock === 0 }"
+              :disabled="product.stock === 0"
+              @click.stop="addToCart(product)"
+            >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" class="cart-icon">
                 <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
                 <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
@@ -44,7 +60,10 @@
     <div v-if="sameCategory.length" class="rec-section">
       <div class="rec-header">
         <span class="rec-label">Khám phá thêm</span>
-        <h3 class="rec-title">Sản phẩm cùng danh mục</h3>
+        <h3 class="rec-title">
+          Sản phẩm cùng danh mục
+          <span class="ai-badge">✦ AI</span>
+        </h3>
       </div>
       <div class="rec-grid">
         <div
@@ -62,11 +81,22 @@
           <div class="rcard-body">
             <p class="rcard-brand">{{ product.brand }}</p>
             <h4 class="rcard-name">{{ product.name }}</h4>
+
+            <!-- AI Reason -->
+            <p v-if="product.aiReason" class="rcard-reason">
+              <span class="reason-icon">✦</span> {{ product.aiReason }}
+            </p>
+
             <div class="rcard-price-row">
               <span class="rcard-price">{{ formatPrice(product.salePrice || product.price) }}₫</span>
               <span v-if="product.salePrice" class="rcard-origin">{{ formatPrice(product.price) }}₫</span>
             </div>
-            <button class="rcard-btn" :class="{ disabled: product.stock === 0 }" :disabled="product.stock === 0" @click.stop="addToCart(product)">
+            <button
+              class="rcard-btn"
+              :class="{ disabled: product.stock === 0 }"
+              :disabled="product.stock === 0"
+              @click.stop="addToCart(product)"
+            >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" class="cart-icon">
                 <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
                 <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
@@ -94,10 +124,10 @@ const props = defineProps({
 
 const emit = defineEmits(["add-to-cart"]);
 
-const router       = useRouter();
+const router        = useRouter();
 const collaborative = ref([]);
 const sameCategory  = ref([]);
-const placeholder  = "https://via.placeholder.com/200x260?text=No+Image";
+const placeholder   = "https://via.placeholder.com/200x260?text=No+Image";
 
 const loadRecommendations = async () => {
   if (!props.productId) return;
@@ -138,7 +168,19 @@ const addToCart = async (product) => {
   font-size: .7rem; font-weight: 700; color: #2563eb;
   text-transform: uppercase; letter-spacing: .1em; margin-bottom: 6px;
 }
-.rec-title { font-size: 1.3rem; font-weight: 800; color: #0f172a; margin: 0; }
+.rec-title {
+  font-size: 1.3rem; font-weight: 800; color: #0f172a; margin: 0;
+  display: flex; align-items: center; gap: 10px;
+}
+
+/* AI badge cạnh tiêu đề */
+.ai-badge {
+  font-size: .65rem; font-weight: 800;
+  padding: 3px 10px; border-radius: 999px;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: white; letter-spacing: .06em;
+  box-shadow: 0 2px 8px rgba(99,102,241,.3);
+}
 
 .rec-grid {
   display: grid;
@@ -185,6 +227,24 @@ const addToCart = async (product) => {
   font-size: .83rem; font-weight: 700; color: #0f172a;
   height: 2.5em; overflow: hidden; line-height: 1.3; margin-bottom: 4px;
 }
+
+/* AI Reason */
+.rcard-reason {
+  font-size: .68rem; font-weight: 600;
+  color: #7c3aed;
+  background: linear-gradient(135deg, #f5f3ff, #ede9fe);
+  border: 1px solid #ddd6fe;
+  border-radius: 8px;
+  padding: 5px 8px;
+  margin-bottom: 6px;
+  display: flex; align-items: flex-start; gap: 4px;
+  line-height: 1.4;
+}
+.reason-icon {
+  font-size: .6rem; color: #8b5cf6;
+  flex-shrink: 0; margin-top: 1px;
+}
+
 .rcard-orders { font-size: .65rem; font-weight: 600; color: #2563eb; margin-bottom: 6px; }
 
 .rcard-price-row { display: flex; align-items: baseline; gap: 5px; margin-bottom: 10px; }
