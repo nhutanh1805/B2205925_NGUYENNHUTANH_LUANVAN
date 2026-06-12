@@ -9,8 +9,15 @@ class RecommendationService {
   async getRecommendations(productId, limit = 4) {
     if (!productId || !/^[0-9a-fA-F]{24}$/.test(productId)) return [];
 
-    // DEBUG
-    const testMatch = await this.Order.find({ "items.productId": new ObjectId(productId) }).toArray();
+    const oid = new ObjectId(productId);
+
+    // — tìm cả string lẫn ObjectId
+    const testMatch = await this.Order.find({
+      $or: [
+        { "items.productId": oid },
+        { "items.productId": productId }
+      ]
+    }).toArray();
     console.log("=== DEBUG RECOMMENDATION ===");
     console.log("productId:", productId);
     console.log("Orders found:", testMatch.length);
@@ -18,14 +25,17 @@ class RecommendationService {
     const result = await this.Order.aggregate([
       {
         $match: {
-          "items.productId": new ObjectId(productId),
+          $or: [
+            { "items.productId": oid },
+            { "items.productId": productId }
+          ],
           status: { $nin: ["cancelled"] }
         }
       },
       { $unwind: "$items" },
       {
         $match: {
-          "items.productId": { $ne: new ObjectId(productId) }
+          "items.productId": { $nin: [oid, productId] }
         }
       },
       {
@@ -37,9 +47,20 @@ class RecommendationService {
       { $sort: { count: -1 } },
       { $limit: limit },
       {
+        $addFields: {
+          pidAsOid: {
+            $cond: {
+              if: { $eq: [{ $type: "$_id" }, "string"] },
+              then: { $toObjectId: "$_id" },
+              else: "$_id"
+            }
+          }
+        }
+      },
+      {
         $lookup: {
           from: "products",
-          let: { pid: "$_id" },
+          let: { pid: "$pidAsOid" },
           pipeline: [
             {
               $match: {
@@ -89,7 +110,6 @@ class RecommendationService {
       _id:      { $ne: new ObjectId(productId) },
       category: product.category,
       isActive: true,
-      stock:    { $gt: 0 }
     })
       .sort({ sold: -1 })
       .limit(limit)

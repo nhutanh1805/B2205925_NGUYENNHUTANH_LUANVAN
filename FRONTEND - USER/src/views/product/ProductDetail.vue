@@ -218,7 +218,7 @@ import { useRoute, useRouter } from "vue-router";
 import ProductService from "@/services/product.service";
 import CartService from "@/services/cart.service";
 import ProductReview from "@/components/ProductReview.vue";
-import ProductRecommendation from "@/components/ProductRecommendation.vue"; // 👈 thêm
+import ProductRecommendation from "@/components/ProductRecommendation.vue"; 
 
 const route = useRoute();
 const router = useRouter();
@@ -227,7 +227,7 @@ const product         = ref(null);
 const currentImage    = ref("");
 const quantity        = ref(1);
 const showToast       = ref(false);
-const toastProductName = ref(""); // 👈 tách riêng để toast hiện đúng tên
+const toastProductName = ref(""); // 
 const isFavorited     = ref(false);
 
 const tabs = ["Mô tả", "Thông số", "Đánh giá"];
@@ -272,7 +272,7 @@ async function buyNow() {
   router.push("/checkout");
 }
 
-// 👈 Khi ProductRecommendation emit add-to-cart
+// Khi ProductRecommendation emit add-to-cart
 function onRecommendationAddToCart(recommendedProduct) {
   showToastMsg(recommendedProduct.name);
 }
