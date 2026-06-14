@@ -321,18 +321,24 @@ const initSpecs = (category) => {
   const config = CATEGORY_CONFIG[category];
   if (!config) { categorySpecs.value = []; return; }
   categorySpecs.value = config.specs;
-  config.specs.forEach(s => {
-    if (!product.value.specs[s.key]) product.value.specs[s.key] = "";
-  });
+ config.specs.forEach(s => {
+  if (product.value.specs[s.key] === undefined) product.value.specs[s.key] = "";
+});
 };
 
 /* ══ WATCH CATEGORY ══ */
+let isFirstLoad = true;
+
 watch(() => product.value?.category, (newCat) => {
   if (!product.value) return;
+  if (isFirstLoad) {
+    isFirstLoad = false;
+    initSpecs(newCat);
+    return;
+  }
   product.value.specs = {};
   initSpecs(newCat);
 });
-
 /* ══ COMPATIBILITY ══ */
 const addCompatibility = () => {
   const items = compatibilityInput.value.split(",").map(s => s.trim()).filter(Boolean);
@@ -359,10 +365,17 @@ const removeImage = i => product.value.images.splice(i, 1);
 
 /* ══ SUBMIT ══ */
 const submit = async () => {
+  if (compatibilityInput.value.trim()) {
+    const items = compatibilityInput.value.split(",").map(s => s.trim()).filter(Boolean);
+    items.forEach(item => {
+      if (!product.value.compatibility.includes(item)) product.value.compatibility.push(item);
+    });
+    compatibilityInput.value = "";
+  }
   if (!product.value.images.length) return alert("Phải có ít nhất 1 ảnh");
   isSubmitting.value = true;
   try {
-    await ProductService.update(route.params.id, product.value);
+    await ProductService.update(route.params.id, JSON.parse(JSON.stringify(product.value)));
     alert("Cập nhật thành công!");
     router.push("/products");
   } catch (err) {
