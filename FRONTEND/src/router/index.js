@@ -4,6 +4,7 @@ import orderRoutes from "./order.router";
 import userRoutes from "./userAuth.router";
 import statisticRoutes from "./statistic.router";
 import stockReceiptRoutes from "./stockReceipt.router";
+import adminSupportRoutes from "./support.router";
 
 const routes = [
   {
@@ -48,6 +49,9 @@ const routes = [
 // ===== STOCK RECEIPT =====
   ...stockReceiptRoutes,
   ...userRoutes,
+
+...adminSupportRoutes,
+
   // ===== NOT FOUND =====
   {
     path: "/:pathMatch(.*)*",

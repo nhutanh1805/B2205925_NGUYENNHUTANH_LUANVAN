@@ -39,6 +39,14 @@
           Thống kê
         </router-link>
 
+       <router-link
+  to="/support"
+  class="nav-link support-link"
+  active-class="support-active"
+>
+  CSKH
+</router-link>
+
         <AdminMenu v-if="admin" :admin="admin" @logout="handleLogout" />
 
         <button v-else class="login-btn" @click="router.push('/admin/login')">

@@ -42,6 +42,16 @@
           Điểm thưởng
         </router-link>
 
+        <!-- CSKH - Chỉ hiện khi đã đăng nhập -->
+        <router-link
+          v-if="user"
+          to="/support"
+          class="nav-link"
+          active-class="nav-active"
+        >
+          CSKH
+        </router-link>
+
         <UserMenu v-if="user" :user="user" @logout="handleLogout" />
 
         <button v-else class="login-btn" @click="router.push('/user/login')">
@@ -132,7 +142,7 @@ const localUI = reactive({
   time: props.ui.time ?? true,
   iphone: props.ui.iphone ?? true,
   idle: props.ui.idle ?? true,
-  model: props.ui.model ?? true, // <-- thêm toggle Model Viewer
+  model: props.ui.model ?? true,
   dark: props.ui.dark ?? localStorage.getItem("darkMode") === "true",
   lang: props.ui.lang ?? localStorage.getItem("language") ?? "vi",
 });

@@ -3,6 +3,7 @@ import userRoutes from "./user.router";
 import cartRoutes from "./cart.router";
 import orderRoutes from "./order.router";
 import pointRoutes from "./point.router";
+import supportRoutes from "./support.router";
 
 const routes = [
   {
@@ -47,6 +48,9 @@ const routes = [
   ...orderRoutes,
 
 ...pointRoutes,
+
+// ===== SUPPORT =====
+  ...supportRoutes,
 
   // ===== NOT FOUND =====
   {
