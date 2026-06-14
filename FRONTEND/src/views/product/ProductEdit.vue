@@ -335,8 +335,12 @@ watch(() => product.value?.category, (newCat) => {
 
 /* ══ COMPATIBILITY ══ */
 const addCompatibility = () => {
-  if (!compatibilityInput.value.trim()) return;
-  product.value.compatibility.push(compatibilityInput.value.trim());
+  const items = compatibilityInput.value.split(",").map(s => s.trim()).filter(Boolean);
+  items.forEach(item => {
+    if (!product.value.compatibility.includes(item)) {
+      product.value.compatibility.push(item);
+    }
+  });
   compatibilityInput.value = "";
 };
 const removeCompatibility = i => product.value.compatibility.splice(i, 1);

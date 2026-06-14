@@ -313,8 +313,12 @@ watch(() => form.category, (category) => {
 /* ══ COMPATIBILITY ══ */
 const compatibilityInput = ref("");
 const addCompatibility = () => {
-  if (!compatibilityInput.value.trim()) return;
-  form.compatibility.push(compatibilityInput.value.trim());
+  const items = compatibilityInput.value.split(",").map(s => s.trim()).filter(Boolean);
+  items.forEach(item => {
+    if (!form.compatibility.includes(item)) {
+      form.compatibility.push(item);
+    }
+  });
   compatibilityInput.value = "";
 };
 const removeCompatibility = i => form.compatibility.splice(i, 1);
