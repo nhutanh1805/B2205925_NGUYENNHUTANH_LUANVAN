@@ -2,7 +2,6 @@ const { ObjectId } = require("mongodb");
 const axios = require("axios");
 const config = require("../config/recommendation.config");
 
-// ── Groq caller ────────────────────────────────────────────────────────────
 const provider = config.providers[0];
 
 let _keyIndex = 0;
@@ -44,8 +43,6 @@ async function callGroq(messages) {
   }
 }
 
-// ── Helpers ────────────────────────────────────────────────────────────────
-
 function formatSpecs(specs = {}) {
   if (!specs || typeof specs !== "object") return "";
   return Object.entries(specs)
@@ -62,7 +59,9 @@ function inferUserIntent(product) {
   const name     = (product.name        || "").toLowerCase();
   const category = (product.category    || "").toLowerCase();
   const desc     = (product.description || "").toLowerCase();
-  const combined = `${name} ${category} ${desc}`;
+  const compat   = (product.compatibility || []).join(" ").toLowerCase();
+  const specText = Object.values(product.specs || {}).join(" ").toLowerCase();
+  const combined = `${name} ${category} ${desc} ${compat} ${specText}`;
 
   const intents = [];
 
@@ -88,12 +87,10 @@ function inferUserIntent(product) {
   return intents.length > 0 ? intents.join(", ") : "sử dụng hàng ngày";
 }
 
-// ── Service ────────────────────────────────────────────────────────────────
 class RecommendationService {
   constructor(client) {
     this.Order           = client.db().collection("orders");
     this.Product         = client.db().collection("products");
-    // Thay recommendation_cache → product_recommendations (lưu vĩnh viễn, không TTL)
     this.Recommendations = client.db().collection("product_recommendations");
 
     this.Recommendations.createIndex(
@@ -101,8 +98,6 @@ class RecommendationService {
       { unique: true, background: true }
     ).catch(() => {});
   }
-
-  // ── LƯU / ĐỌC TỪ DB ─────────────────────────────────────────────────────
 
   async getStored(productId) {
     try {
@@ -112,7 +107,11 @@ class RecommendationService {
         return null;
       }
       console.log(`[Rec] DB HIT  — productId=${productId} | updatedAt=${doc.updatedAt?.toISOString()}`);
-      return { collaborative: doc.collaborative, sameCategory: doc.sameCategory };
+      return {
+        collaborative: doc.collaborative,
+        sameCategory:  doc.sameCategory,
+        bundle:        doc.bundle || [],
+      };
     } catch (err) {
       console.error("[Rec] Lỗi đọc DB:", err.message);
       return null;
@@ -128,18 +127,18 @@ class RecommendationService {
             productId,
             collaborative: result.collaborative,
             sameCategory:  result.sameCategory,
+            bundle:        result.bundle,
             updatedAt:     new Date(),
           },
         },
         { upsert: true }
       );
-      console.log(`[Rec] DB SAVED — productId=${productId} | collaborative=${result.collaborative.length} | sameCategory=${result.sameCategory.length}`);
+      console.log(`[Rec] DB SAVED — productId=${productId} | collaborative=${result.collaborative.length} | sameCategory=${result.sameCategory.length} | bundle=${result.bundle.length}`);
     } catch (err) {
       console.error("[Rec] Lỗi lưu DB:", err.message);
     }
   }
 
-  /** Xóa gợi ý của 1 SP → lần load tiếp sẽ tính lại */
   async invalidate(productId) {
     try {
       const res = await this.Recommendations.deleteOne({ productId });
@@ -151,7 +150,6 @@ class RecommendationService {
     }
   }
 
-  /** Xóa toàn bộ gợi ý đã lưu */
   async invalidateAll() {
     try {
       const res = await this.Recommendations.deleteMany({});
@@ -163,12 +161,10 @@ class RecommendationService {
     }
   }
 
-  // ── THU THẬP DỮ LIỆU THÔ ────────────────────────────────────────────────
-
   async getCurrentProduct(productId) {
     return this.Product.findOne(
       { _id: new ObjectId(productId) },
-      { projection: { _id:1, name:1, brand:1, category:1, description:1, price:1, specs:1 } }
+      { projection: { _id:1, name:1, brand:1, category:1, description:1, price:1, specs:1, compatibility:1 } }
     );
   }
 
@@ -205,11 +201,9 @@ class RecommendationService {
     })
       .sort({ sold: -1 })
       .limit(limit)
-      .project({ _id:1, name:1, brand:1, category:1, description:1, price:1, salePrice:1, images:1, stock:1, specs:1 })
+      .project({ _id:1, name:1, brand:1, category:1, description:1, price:1, salePrice:1, images:1, stock:1, specs:1, compatibility:1 })
       .toArray();
   }
-
-  // ── LLM ─────────────────────────────────────────────────────────────────
 
   async getLLMRecommendations(currentProduct, purchaseHistory, catalog, limit = 4) {
     if (!catalog.length) return [];
@@ -227,10 +221,10 @@ class RecommendationService {
       return [
         `[${i}] ${p.name}`,
         `    Brand: ${p.brand || "N/A"} | Danh mục: ${p.category || "N/A"}`,
-        specs         ? `    Specs: ${specs}`                        : null,
-        p.description ? `    Mô tả: ${p.description.slice(0, 80)}`  : null,
+        specs         ? `    Specs: ${specs}`                       : null,
+        p.description ? `    Mô tả: ${p.description.slice(0, 80)}` : null,
         `    Giá: ${priceInfo}`,
-        histCount > 0 ? `    ★ Đã mua kèm ${histCount} lần`         : null,
+        histCount > 0 ? `    ★ Đã mua kèm ${histCount} lần`        : null,
       ].filter(Boolean).join("\n");
     }).join("\n\n");
 
@@ -238,7 +232,8 @@ class RecommendationService {
 Tên: ${currentProduct.name}
 Brand: ${currentProduct.brand || "N/A"}
 Danh mục: ${currentProduct.category || "N/A"}
-${currentSpecs            ? `Specs: ${currentSpecs}`                              : ""}
+Tương thích: ${(currentProduct.compatibility || []).join(", ") || "N/A"}
+${currentSpecs ? `Specs: ${currentSpecs}` : ""}
 ${currentProduct.description ? `Mô tả: ${currentProduct.description.slice(0, 200)}` : ""}
 
 ## MỤC ĐÍCH KHÁCH HÀNG (đã phân tích):
@@ -249,15 +244,15 @@ ${catalogInfo}
 
 ## YÊU CẦU:
 Chọn đúng ${limit} sản phẩm PHÙ HỢP NHẤT để gợi ý kèm.
-KHÔNG chọn SP dành cho thiết bị khác (VD: SP đang xem là iPhone thì không chọn SP Galaxy/Android).
+Ưu tiên SP tương thích đúng thiết bị trong danh sách "Tương thích" ở trên.
+KHÔNG chọn SP dành cho thiết bị khác hệ.
 KHÔNG chọn SP cùng loại với SP đang xem.
 Nếu không đủ SP phù hợp, trả về ít hơn ${limit} phần tử.
 
 Khi viết aiReason:
 - Phải liên quan trực tiếp đến "${currentProduct.name}"
-- Nêu rõ lợi ích cụ thể khách nhận được
+- Mỗi reason riêng biệt, không copy sang SP khác
 - Tối đa 15 từ tiếng Việt, không dùng dấu chấm cuối câu
-- Ví dụ hay: "Bảo vệ camera khỏi trầy khi để túi cùng ốp lưng"
 
 Trả về JSON hợp lệ:
 [
@@ -273,16 +268,27 @@ Trả về JSON hợp lệ:
 
       const picks = JSON.parse(jsonMatch[0]);
       const result = [];
+      const usedProductIds = new Set();
+
       for (const pick of picks) {
         const product = catalog[pick.index];
-        if (product) result.push({ ...product, aiReason: pick.reason || null });
+        if (!product) continue;
+        const pid = product._id.toString();
+        if (usedProductIds.has(pid)) continue;
+        usedProductIds.add(pid);
+        result.push({ ...product, aiReason: pick.reason || null });
         if (result.length >= limit) break;
       }
 
       if (result.length < limit) {
         const usedIdx = new Set(picks.map(p => p.index));
         for (let i = 0; i < catalog.length && result.length < limit; i++) {
-          if (!usedIdx.has(i)) result.push({ ...catalog[i], aiReason: null });
+          const product = catalog[i];
+          const pid = product._id.toString();
+          if (!usedIdx.has(i) && !usedProductIds.has(pid)) {
+            usedProductIds.add(pid);
+            result.push({ ...product, aiReason: null });
+          }
         }
       }
 
@@ -297,14 +303,12 @@ Trả về JSON hợp lệ:
 
   async getSmartRecommendations(productId, limit = 4) {
     if (!productId || !/^[0-9a-fA-F]{24}$/.test(productId)) {
-      return { collaborative: [], sameCategory: [] };
+      return { collaborative: [], sameCategory: [], bundle: [] };
     }
 
-    // 1. Đọc từ DB — nếu có thì trả về luôn, không gọi LLM
     const stored = await this.getStored(productId);
     if (stored) return stored;
 
-    // 2. Chưa có → tính toán bằng LLM
     console.log(`[Rec] Tính toán mới cho productId=${productId}`);
 
     const [currentProduct, purchaseHistory, catalog] = await Promise.all([
@@ -315,7 +319,7 @@ Trả về JSON hợp lệ:
 
     if (!currentProduct) {
       console.warn(`[Rec] Không tìm thấy sản phẩm productId=${productId}`);
-      return { collaborative: [], sameCategory: [] };
+      return { collaborative: [], sameCategory: [], bundle: [] };
     }
 
     const userIntent = inferUserIntent(currentProduct);
@@ -327,37 +331,44 @@ Trả về JSON hợp lệ:
       .filter(p => historyIds.has(p._id.toString()))
       .map(p => ({ ...p, coOccurrenceCount: purchaseHistory[p._id.toString()] || 0 }));
 
-    const poolAIds  = new Set(poolA.map(p => p._id.toString()));
-    const poolB     = catalog.filter(p => !poolAIds.has(p._id.toString()) && p.category === currentProduct.category);
-    const poolBFull = poolB.length >= limit
-      ? poolB
-      : [
-          ...poolB,
-          ...catalog
-            .filter(p => !poolAIds.has(p._id.toString()) && p.category !== currentProduct.category)
-            .slice(0, limit * 2),
-        ];
+    const poolAIds = new Set(poolA.map(p => p._id.toString()));
 
-    console.log(`[Rec] Pool A: ${poolA.length} SP | Pool B: ${poolBFull.length} SP`);
+    // Pool B: cùng danh mục, chưa có trong poolA
+    const poolB = catalog.filter(p =>
+      !poolAIds.has(p._id.toString()) &&
+      p.category === currentProduct.category
+    );
 
-    const [collaborative, sameCategoryRaw] = await Promise.all([
+    // Pool C: khác danh mục, chưa có trong poolA — dùng cho "Hoàn thiện bộ"
+    const poolC = catalog.filter(p =>
+      !poolAIds.has(p._id.toString()) &&
+      p.category !== currentProduct.category
+    );
+
+    console.log(`[Rec] Pool A: ${poolA.length} SP | Pool B: ${poolB.length} SP | Pool C: ${poolC.length} SP`);
+
+    const [collaborative, sameCategoryRaw, bundleRaw] = await Promise.all([
       poolA.length > 0
-        ? this.getLLMRecommendations(currentProduct, purchaseHistory, poolA, limit)
+        ? this.getLLMRecommendations(currentProduct, purchaseHistory, poolA, Math.min(limit, poolA.length))
         : Promise.resolve([]),
-      poolBFull.length >= 2
-        ? this.getLLMRecommendations(currentProduct, {}, poolBFull, limit)
+      poolB.length >= 1
+        ? this.getLLMRecommendations(currentProduct, {}, poolB, Math.min(limit, poolB.length))
+        : Promise.resolve([]),
+      poolC.length >= 1
+        ? this.getLLMRecommendations(currentProduct, {}, poolC, Math.min(limit, poolC.length))
         : Promise.resolve([]),
     ]);
 
-    const collabIds = new Set(collaborative.map(p => p._id.toString()));
+    const collabIds   = new Set(collaborative.map(p => p._id.toString()));
+    const sameCatIds  = new Set(sameCategoryRaw.map(p => p._id.toString()));
+
     const result = {
       collaborative,
       sameCategory: sameCategoryRaw.filter(p => !collabIds.has(p._id.toString())),
+      bundle:       bundleRaw.filter(p => !collabIds.has(p._id.toString()) && !sameCatIds.has(p._id.toString())),
     };
 
-    // 3. Lưu vào DB vĩnh viễn
     await this.saveToDb(productId, result);
-
     return result;
   }
 }

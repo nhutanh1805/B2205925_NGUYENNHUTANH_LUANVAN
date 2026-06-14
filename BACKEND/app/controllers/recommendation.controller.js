@@ -8,9 +8,9 @@ exports.getRecommendations = async (req, res, next) => {
     const limit = Math.min(parseInt(req.query.limit) || 4, 10);
 
     const service = new RecommendationService(MongoDB.client);
-    const { collaborative, sameCategory } = await service.getSmartRecommendations(productId, limit);
+    const { collaborative, sameCategory, bundle } = await service.getSmartRecommendations(productId, limit);
 
-    return res.status(200).json({ status: "success", collaborative, sameCategory });
+    return res.status(200).json({ status: "success", collaborative, sameCategory, bundle });
   } catch (error) {
     console.error("Recommendation Error:", error);
     return next(new ApiError(500, "Lỗi gợi ý sản phẩm: " + error.message));
