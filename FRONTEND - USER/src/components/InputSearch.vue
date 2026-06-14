@@ -1,17 +1,21 @@
 <script setup>
 import { ref } from "vue";
 
-defineProps({
-  modelValue: { type: String, default: "" }
+const props = defineProps({
+  modelValue: { type: String, default: "" },
+  products: { type: Array, default: () => [] }
 });
 
 const emit = defineEmits(["update:modelValue", "submit"]);
 
 const isListening = ref(false);
+const isAnalyzing = ref(false);
 let recognition = null;
 let hasResult = false;
 const debounceTimer = ref(null);
+const fileInput = ref(null);
 
+// ─── Text search ───────────────────────────────────────
 function onInput(e) {
   emit("update:modelValue", e.target.value);
   clearTimeout(debounceTimer.value);
@@ -24,17 +28,16 @@ function submit() {
   emit("submit");
 }
 
+// ─── Voice search ──────────────────────────────────────
 function toggleVoice() {
   if (!("webkitSpeechRecognition" in window || "SpeechRecognition" in window)) {
     alert("Trình duyệt không hỗ trợ nhận giọng nói!");
     return;
   }
-
   if (isListening.value) {
     recognition?.stop();
     return;
   }
-
   startRecognition();
 }
 
@@ -61,7 +64,6 @@ function startRecognition() {
   recognition.onresult = (e) => {
     let interim = "";
     let final = "";
-
     for (let i = e.resultIndex; i < e.results.length; i++) {
       if (e.results[i].isFinal) {
         final += e.results[i][0].transcript;
@@ -69,10 +71,8 @@ function startRecognition() {
         interim += e.results[i][0].transcript;
       }
     }
-
     emit("update:modelValue", final || interim);
     emit("submit");
-
     if (final) {
       hasResult = true;
       recognition?.stop();
@@ -85,6 +85,90 @@ function startRecognition() {
   };
 
   recognition.start();
+}
+
+// ─── Image search ──────────────────────────────────────
+function openImagePicker() {
+  fileInput.value.click();
+}
+
+async function onImageSelected(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  e.target.value = "";
+  isAnalyzing.value = true;
+
+  try {
+    const base64 = await toBase64(file);
+
+    const productList = props.products.map(p => p.name).join(", ");
+
+    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${import.meta.env.VITE_GROQ_API_KEY}`
+      },
+      body: JSON.stringify({
+        model: "meta-llama/llama-4-scout-17b-16e-instruct",
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "image_url",
+                image_url: { url: `data:${file.type};base64,${base64}` }
+              },
+              {
+                type: "text",
+                text: `Đây là ảnh sản phẩm gì?
+Danh sách sản phẩm hiện có: ${productList}
+
+Nếu ảnh khớp với sản phẩm nào trong danh sách, trả về đúng tên sản phẩm đó.
+Nếu ảnh KHÔNG khớp với bất kỳ sản phẩm nào, trả về chính xác: KHÔNG_TÌM_THẤY
+Chỉ trả về tên sản phẩm hoặc KHÔNG_TÌM_THẤY, không giải thích.`
+              }
+            ]
+          }
+        ],
+        max_tokens: 100
+      })
+    });
+
+    const data = await response.json();
+    console.log("Groq response:", data);
+
+    if (!response.ok) {
+      console.error("Groq error:", data);
+      alert(`Lỗi: ${data.error?.message || "Unknown error"}`);
+      return;
+    }
+
+    const keyword = data.choices[0].message.content.trim();
+
+    if (keyword === "KHÔNG_TÌM_THẤY") {
+      alert("Không tìm thấy sản phẩm phù hợp với ảnh này!");
+      return;
+    }
+
+    emit("update:modelValue", keyword);
+    emit("submit");
+  } catch (err) {
+    console.error("Fetch error:", err);
+    alert(`Lỗi: ${err.message}`);
+  } finally {
+    isAnalyzing.value = false;
+  }
+}
+
+function toBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result.split(",")[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
 }
 </script>
 
@@ -101,12 +185,33 @@ function startRecognition() {
       @keyup.enter="submit"
     />
 
+    <input
+      ref="fileInput"
+      type="file"
+      accept="image/*"
+      style="display: none"
+      @change="onImageSelected"
+    />
+
     <button
       v-if="modelValue"
       class="clear-btn"
       @click="emit('update:modelValue', ''); emit('submit')"
     >
       ✕
+    </button>
+
+    <button class="img-btn" :class="{ loading: isAnalyzing }" :disabled="isAnalyzing" @click="openImagePicker">
+      <svg v-if="!isAnalyzing" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="3" width="18" height="18" rx="2" />
+        <circle cx="8.5" cy="8.5" r="1.5" />
+        <polyline points="21 15 16 10 5 21" />
+      </svg>
+      <svg v-else class="spin" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+      </svg>
     </button>
 
     <button class="mic-btn" :class="{ active: isListening }" @click="toggleVoice">
@@ -170,8 +275,8 @@ function startRecognition() {
   color: white;
 }
 
+.img-btn,
 .mic-btn {
-  background: #f1f5f9;
   border-radius: 999px;
   width: 32px;
   height: 32px;
@@ -181,13 +286,26 @@ function startRecognition() {
   margin-left: 6px;
   transition: .2s;
   flex-shrink: 0;
-  color: #64748b;
   padding: 7px;
+  background: #f1f5f9;
+  color: #64748b;
 }
 
+.img-btn svg,
 .mic-btn svg {
   width: 100%;
   height: 100%;
+}
+
+.img-btn:hover,
+.img-btn.loading {
+  background: #8b5cf6;
+  color: white;
+}
+
+.img-btn:disabled {
+  cursor: not-allowed;
+  opacity: .8;
 }
 
 .mic-btn:hover {
@@ -199,6 +317,15 @@ function startRecognition() {
   background: #ef4444;
   color: white;
   animation: pulse 1s infinite;
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 @keyframes pulse {

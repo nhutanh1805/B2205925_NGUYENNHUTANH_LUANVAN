@@ -121,7 +121,7 @@ class ChatbotTuvanService {
                             continue;
                         }
 
-                        console.log(`[ChatbotTuvan] Dùng model: ${model}`);
+                        console.log(`[ChatbotTuvan] Dùng model: ${model} | Key: ...${apiKey.slice(-6)}`);
                         return content;
                     } catch (err) {
                         console.warn(`[ChatbotTuvan] ${model} exception:`, err.message);

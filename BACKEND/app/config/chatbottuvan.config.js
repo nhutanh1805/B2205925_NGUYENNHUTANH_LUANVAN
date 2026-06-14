@@ -3,9 +3,10 @@ const chatbotTuvanConfig = {
         {
             url: "https://api.groq.com/openai/v1/chat/completions",
             apiKeys: [
-    process.env.GROQ_API_KEY   || "",
-    process.env.GROQ_API_KEY_2 || "",
-].filter(Boolean),
+                process.env.GROQ_API_KEY   || "",
+                process.env.GROQ_API_KEY_2 || "",
+                process.env.GROQ_API_KEY_3 || "",
+            ].filter(Boolean),
             models: [
                 "llama-3.3-70b-versatile",
                 "llama-3.1-8b-instant",
