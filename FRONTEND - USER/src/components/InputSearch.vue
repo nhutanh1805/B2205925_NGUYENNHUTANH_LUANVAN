@@ -14,10 +14,12 @@ let recognition = null;
 let hasResult = false;
 const debounceTimer = ref(null);
 const fileInput = ref(null);
+const aiMessage = ref("");
 
 // ─── Text search ───────────────────────────────────────
 function onInput(e) {
   emit("update:modelValue", e.target.value);
+  aiMessage.value = "";
   clearTimeout(debounceTimer.value);
   debounceTimer.value = setTimeout(() => {
     emit("submit");
@@ -98,14 +100,19 @@ async function onImageSelected(e) {
 
   e.target.value = "";
   isAnalyzing.value = true;
+  aiMessage.value = "";
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000);
 
   try {
     const base64 = await toBase64(file);
 
-    const productList = props.products.map(p => p.name).join(", ");
+    const productList = props.products.map((p, i) => `${i + 1}. ${p.name}`).join("\n");
 
     const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
+      signal: controller.signal,
       headers: {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${import.meta.env.VITE_GROQ_API_KEY}`
@@ -122,41 +129,65 @@ async function onImageSelected(e) {
               },
               {
                 type: "text",
-                text: `Đây là ảnh sản phẩm gì?
-Danh sách sản phẩm hiện có: ${productList}
+                text: `Hãy phân tích ảnh này và xác định đây là sản phẩm gì (thương hiệu, dòng sản phẩm, model, màu sắc...).
 
-Nếu ảnh khớp với sản phẩm nào trong danh sách, trả về đúng tên sản phẩm đó.
-Nếu ảnh KHÔNG khớp với bất kỳ sản phẩm nào, trả về chính xác: KHÔNG_TÌM_THẤY
-Chỉ trả về tên sản phẩm hoặc KHÔNG_TÌM_THẤY, không giải thích.`
+Danh sách sản phẩm trong hệ thống:
+${productList}
+
+Tìm sản phẩm trong danh sách TƯƠNG TỰ NHẤT với ảnh dựa trên loại sản phẩm, thương hiệu, dòng sản phẩm.
+Không cần khớp 100% — ví dụ ảnh chụp iPhone 14 ngoài đường có thể match "Apple iPhone 14 128GB" trong danh sách.
+Hãy cố gắng tìm sản phẩm gần nhất có thể, chỉ trả về null nếu thực sự không liên quan gì.
+
+Chỉ trả về JSON duy nhất, không giải thích, không markdown, không text thêm:
+{"match": "Tên sản phẩm trong danh sách", "confidence": 85, "description": "Hình ảnh của bạn có thể là [mô tả ngắn gọn sản phẩm trong ảnh]"}
+Nếu không có sản phẩm nào liên quan: {"match": null, "confidence": 0, "description": "Hình ảnh của bạn không khớp với sản phẩm nào trong hệ thống"}`
               }
             ]
           }
         ],
-        max_tokens: 100
+        max_tokens: 200
       })
     });
 
+    clearTimeout(timeout);
     const data = await response.json();
-    console.log("Groq response:", data);
 
     if (!response.ok) {
-      console.error("Groq error:", data);
-      alert(`Lỗi: ${data.error?.message || "Unknown error"}`);
+      if (response.status === 429) {
+        aiMessage.value = "⏳ Đang bị giới hạn request, vui lòng chờ 1-2 phút rồi thử lại!";
+      } else {
+        aiMessage.value = `❌ Lỗi: ${data.error?.message || "Unknown error"}`;
+      }
       return;
     }
 
-    const keyword = data.choices[0].message.content.trim();
+    const raw = data.choices[0].message.content.trim();
+    const jsonMatch = raw.match(/\{[\s\S]*\}/);
 
-    if (keyword === "KHÔNG_TÌM_THẤY") {
-      alert("Không tìm thấy sản phẩm phù hợp với ảnh này!");
+    if (!jsonMatch) {
+      aiMessage.value = "❌ Không thể phân tích ảnh này, vui lòng thử lại!";
       return;
     }
 
-    emit("update:modelValue", keyword);
+    const parsed = JSON.parse(jsonMatch[0]);
+
+    if (!parsed.match) {
+      aiMessage.value = `🔍 ${parsed.description || "Không tìm thấy sản phẩm tương tự trong hệ thống!"}`;
+      return;
+    }
+
+    aiMessage.value = `✨ ${parsed.description} Mình đã tìm thấy sản phẩm tương tự: "${parsed.match}"!`;
+
+    emit("update:modelValue", parsed.match);
     emit("submit");
+
   } catch (err) {
-    console.error("Fetch error:", err);
-    alert(`Lỗi: ${err.message}`);
+    clearTimeout(timeout);
+    if (err.name === "AbortError") {
+      aiMessage.value = "⏳ Phân tích quá lâu, vui lòng thử lại!";
+    } else {
+      aiMessage.value = "❌ Lỗi phân tích ảnh, vui lòng thử lại!";
+    }
   } finally {
     isAnalyzing.value = false;
   }
@@ -173,60 +204,75 @@ function toBase64(file) {
 </script>
 
 <template>
-  <div class="search-wrapper">
-    <i class="icon-search">🔍</i>
+  <div class="search-container">
+    <div class="search-wrapper">
+      <i class="icon-search">🔍</i>
 
-    <input
-      type="text"
-      class="search-input"
-      placeholder="Tìm theo tên, hãng, IMEI..."
-      :value="modelValue"
-      @input="onInput"
-      @keyup.enter="submit"
-    />
+      <input
+        type="text"
+        class="search-input"
+        placeholder="Tìm theo tên, hãng, IMEI..."
+        :value="modelValue"
+        @input="onInput"
+        @keyup.enter="submit"
+      />
 
-    <input
-      ref="fileInput"
-      type="file"
-      accept="image/*"
-      style="display: none"
-      @change="onImageSelected"
-    />
+      <input
+        ref="fileInput"
+        type="file"
+        accept="image/*"
+        style="display: none"
+        @change="onImageSelected"
+      />
 
-    <button
-      v-if="modelValue"
-      class="clear-btn"
-      @click="emit('update:modelValue', ''); emit('submit')"
-    >
-      ✕
-    </button>
+      <button
+        v-if="modelValue"
+        class="clear-btn"
+        @click="emit('update:modelValue', ''); emit('submit'); aiMessage = ''"
+      >
+        ✕
+      </button>
 
-    <button class="img-btn" :class="{ loading: isAnalyzing }" :disabled="isAnalyzing" @click="openImagePicker">
-      <svg v-if="!isAnalyzing" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
-        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <rect x="3" y="3" width="18" height="18" rx="2" />
-        <circle cx="8.5" cy="8.5" r="1.5" />
-        <polyline points="21 15 16 10 5 21" />
-      </svg>
-      <svg v-else class="spin" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
-        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-      </svg>
-    </button>
+      <button class="img-btn" :class="{ loading: isAnalyzing }" :disabled="isAnalyzing" @click="openImagePicker">
+        <svg v-if="!isAnalyzing" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="2" />
+          <circle cx="8.5" cy="8.5" r="1.5" />
+          <polyline points="21 15 16 10 5 21" />
+        </svg>
+        <svg v-else class="spin" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+        </svg>
+      </button>
 
-    <button class="mic-btn" :class="{ active: isListening }" @click="toggleVoice">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
-        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <rect x="9" y="2" width="6" height="11" rx="3" />
-        <path d="M5 10a7 7 0 0 0 14 0" />
-        <line x1="12" y1="19" x2="12" y2="22" />
-        <line x1="9" y1="22" x2="15" y2="22" />
-      </svg>
-    </button>
+      <button class="mic-btn" :class="{ active: isListening }" @click="toggleVoice">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="9" y="2" width="6" height="11" rx="3" />
+          <path d="M5 10a7 7 0 0 0 14 0" />
+          <line x1="12" y1="19" x2="12" y2="22" />
+          <line x1="9" y1="22" x2="15" y2="22" />
+        </svg>
+      </button>
+    </div>
+
+    <!-- AI message -->
+    <transition name="fade">
+      <div v-if="aiMessage" class="ai-message">
+        <span>{{ aiMessage }}</span>
+      </div>
+    </transition>
   </div>
 </template>
 
 <style scoped>
+.search-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
 .search-wrapper {
   position: relative;
   display: flex;
@@ -319,8 +365,29 @@ function toBase64(file) {
   animation: pulse 1s infinite;
 }
 
+.ai-message {
+  background: linear-gradient(135deg, #eff6ff, #f5f3ff);
+  border: 1px solid #bfdbfe;
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-size: .875rem;
+  color: #3730a3;
+  line-height: 1.5;
+}
+
 .spin {
   animation: spin 1s linear infinite;
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: all .3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+  transform: translateY(-6px);
 }
 
 @keyframes spin {
