@@ -8,64 +8,66 @@
         <div class="auth-orb orb2"></div>
       </div>
 
-      <div class="auth-card">
-        <div class="auth-logo">🛵</div>
-        <h2 class="auth-title">Shipper App</h2>
+      <div class="auth-scroll">
+        <div class="auth-card">
+          <div class="auth-logo">🛵</div>
+          <h2 class="auth-title">Shipper App</h2>
 
-        <!-- Tab switch -->
-        <div class="auth-tabs">
-          <button class="auth-tab" :class="{ active: authMode === 'login' }" @click="switchMode('login')">Đăng nhập</button>
-          <button class="auth-tab" :class="{ active: authMode === 'register' }" @click="switchMode('register')">Đăng ký</button>
-        </div>
+          <!-- Tab switch -->
+          <div class="auth-tabs">
+            <button class="auth-tab" :class="{ active: authMode === 'login' }" @click="switchMode('login')">Đăng nhập</button>
+            <button class="auth-tab" :class="{ active: authMode === 'register' }" @click="switchMode('register')">Đăng ký</button>
+          </div>
 
-        <!-- LOGIN -->
-        <div v-if="authMode === 'login'" class="auth-form">
-          <div class="form-group">
-            <label>Email</label>
-            <input v-model="loginForm.email" type="email" placeholder="shipper@example.com" class="form-input" @keyup.enter="doLogin"/>
-          </div>
-          <div class="form-group">
-            <label>Mật khẩu</label>
-            <input v-model="loginForm.password" type="password" placeholder="••••••••" class="form-input" @keyup.enter="doLogin"/>
-          </div>
-          <p v-if="authError" class="auth-error">{{ authError }}</p>
-          <button class="btn-auth" :disabled="authLoading" @click="doLogin">
-            <span v-if="authLoading" class="spinner"></span>
-            <span v-else>Đăng nhập</span>
-          </button>
-          <p class="auth-switch">Chưa có tài khoản? <a @click="switchMode('register')">Đăng ký ngay</a></p>
-        </div>
-
-        <!-- REGISTER -->
-        <div v-else class="auth-form">
-          <div class="form-group">
-            <label>Họ và tên</label>
-            <input v-model="registerForm.name" type="text" placeholder="Nguyễn Văn A" class="form-input"/>
-          </div>
-          <div class="form-row">
+          <!-- LOGIN -->
+          <div v-if="authMode === 'login'" class="auth-form">
             <div class="form-group">
-              <label>Số điện thoại</label>
-              <input v-model="registerForm.phone" type="tel" placeholder="09xxxxxxxx" class="form-input"/>
+              <label>Email</label>
+              <input v-model="loginForm.email" type="email" placeholder="shipper@example.com" class="form-input" @keyup.enter="doLogin"/>
             </div>
             <div class="form-group">
-              <label>Phương tiện</label>
-              <input v-model="registerForm.vehicle" type="text" placeholder="Xe máy, Ô tô…" class="form-input"/>
+              <label>Mật khẩu</label>
+              <input v-model="loginForm.password" type="password" placeholder="••••••••" class="form-input" @keyup.enter="doLogin"/>
             </div>
+            <p v-if="authError" class="auth-error">{{ authError }}</p>
+            <button class="btn-auth" :disabled="authLoading" @click="doLogin">
+              <span v-if="authLoading" class="spinner"></span>
+              <span v-else>Đăng nhập</span>
+            </button>
+            <p class="auth-switch">Chưa có tài khoản? <a @click="switchMode('register')">Đăng ký ngay</a></p>
           </div>
-          <div class="form-group">
-            <label>Email</label>
-            <input v-model="registerForm.email" type="email" placeholder="shipper@example.com" class="form-input"/>
+
+          <!-- REGISTER -->
+          <div v-else class="auth-form">
+            <div class="form-group">
+              <label>Họ và tên</label>
+              <input v-model="registerForm.name" type="text" placeholder="Nguyễn Văn A" class="form-input"/>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>SĐT</label>
+                <input v-model="registerForm.phone" type="tel" placeholder="09xxxxxxxx" class="form-input"/>
+              </div>
+              <div class="form-group">
+                <label>Phương tiện</label>
+                <input v-model="registerForm.vehicle" type="text" placeholder="Xe máy…" class="form-input"/>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Email</label>
+              <input v-model="registerForm.email" type="email" placeholder="shipper@example.com" class="form-input"/>
+            </div>
+            <div class="form-group">
+              <label>Mật khẩu</label>
+              <input v-model="registerForm.password" type="password" placeholder="Tối thiểu 6 ký tự" class="form-input" @keyup.enter="doRegister"/>
+            </div>
+            <p v-if="authError" class="auth-error">{{ authError }}</p>
+            <button class="btn-auth" :disabled="authLoading" @click="doRegister">
+              <span v-if="authLoading" class="spinner"></span>
+              <span v-else>Đăng ký &amp; Dùng ngay</span>
+            </button>
+            <p class="auth-switch">Đã có tài khoản? <a @click="switchMode('login')">Đăng nhập</a></p>
           </div>
-          <div class="form-group">
-            <label>Mật khẩu</label>
-            <input v-model="registerForm.password" type="password" placeholder="Tối thiểu 6 ký tự" class="form-input" @keyup.enter="doRegister"/>
-          </div>
-          <p v-if="authError" class="auth-error">{{ authError }}</p>
-          <button class="btn-auth" :disabled="authLoading" @click="doRegister">
-            <span v-if="authLoading" class="spinner"></span>
-            <span v-else>Đăng ký &amp; Dùng ngay</span>
-          </button>
-          <p class="auth-switch">Đã có tài khoản? <a @click="switchMode('login')">Đăng nhập</a></p>
         </div>
       </div>
     </div>
@@ -75,14 +77,15 @@
 
       <!-- HEADER -->
       <div class="app-header">
+        <div class="header-mesh"></div>
         <div class="header-top">
-          <div class="avatar"></div>
+          <div class="avatar">🛵</div>
           <div class="header-info">
             <span class="header-greeting">{{ currentShipper.name }}</span>
             <span class="header-sub">{{ todayStr }}</span>
           </div>
           <button class="logout-btn" @click="logout" title="Đăng xuất">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
           </button>
         </div>
 
@@ -185,7 +188,7 @@
                 </button>
               </template>
               <template v-else-if="order.status === 'delivered'">
-                <div class="done-label">📬 Đã giao — chờ admin xác nhận</div>
+                <div class="done-label">📬 Chờ admin xác nhận</div>
               </template>
               <template v-else-if="order.status === 'completed'">
                 <div class="done-label">✅ Đã hoàn thành</div>
@@ -380,86 +383,101 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+/*
+  Component này được thiết kế để nhúng vào BÊN TRONG khung iPhone
+  (.iphone-wrapper: 240x520px, border-radius 45px, overflow hidden).
+  => .shipper-app PHẢI lấp đầy khung cha bằng absolute/inset, tuyệt đối
+     không dùng min-height:100vh hay position:fixed ở đây.
+*/
 .shipper-app {
-  position: relative;
-  min-height: 100vh;
+  position: absolute;
+  inset: 0;
   display: flex;
   flex-direction: column;
   background: #f0f2f8;
   font-family: 'SF Pro Display', 'Segoe UI', system-ui, sans-serif;
+  overflow: hidden;
+  border-radius: inherit;
+  font-size: 10px; /* base scale cho toàn bộ rem bên trong */
 }
 
 /* ══ AUTH ════════════════════════════════════════════ */
 .auth-screen {
-  flex: 1; min-height: 100vh;
-  display: flex; align-items: center; justify-content: center;
-  padding: 24px; position: relative;
+  flex: 1; position: relative;
   background: linear-gradient(145deg, #0f1225 0%, #1e2442 100%);
   overflow: hidden;
+  display: flex; flex-direction: column;
 }
 .auth-bg { position: absolute; inset: 0; pointer-events: none; }
-.auth-orb { position: absolute; border-radius: 50%; filter: blur(80px); }
-.orb1 { width: 280px; height: 280px; background: rgba(99,102,241,.25); top: -60px; left: -60px; }
-.orb2 { width: 220px; height: 220px; background: rgba(139,92,246,.2); bottom: -40px; right: -40px; }
+.auth-orb { position: absolute; border-radius: 50%; filter: blur(40px); }
+.orb1 { width: 140px; height: 140px; background: rgba(99,102,241,.3); top: -30px; left: -30px; }
+.orb2 { width: 110px; height: 110px; background: rgba(139,92,246,.25); bottom: -20px; right: -20px; }
+
+.auth-scroll {
+  flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
+  display: flex; align-items: center; justify-content: center;
+  padding: 16px 12px; position: relative; z-index: 2;
+  scrollbar-width: none;
+}
+.auth-scroll::-webkit-scrollbar { display: none; }
 
 .auth-card {
-  position: relative; z-index: 2;
   background: rgba(255,255,255,.97);
-  border-radius: 24px; padding: 36px 28px 28px;
-  width: 100%; max-width: 400px;
-  box-shadow: 0 32px 80px rgba(0,0,0,.35);
+  border-radius: 16px; padding: 18px 14px 14px;
+  width: 100%;
+  box-shadow: 0 14px 30px rgba(0,0,0,.35);
 }
-.auth-logo { font-size: 2.8rem; text-align: center; margin-bottom: 8px; }
+.auth-logo { font-size: 1.7rem; text-align: center; margin-bottom: 4px; }
 .auth-title {
-  font-size: 1.5rem; font-weight: 900; color: #0f172a;
-  text-align: center; margin: 0 0 20px;
+  font-size: 1rem; font-weight: 900; color: #0f172a;
+  text-align: center; margin: 0 0 12px;
 }
 
 .auth-tabs {
   display: flex; background: #f1f5f9;
-  border-radius: 12px; padding: 4px; margin-bottom: 20px; gap: 4px;
+  border-radius: 9px; padding: 3px; margin-bottom: 12px; gap: 3px;
 }
 .auth-tab {
-  flex: 1; padding: 8px; border-radius: 9px; border: none;
-  font-size: .82rem; font-weight: 700; cursor: pointer;
+  flex: 1; padding: 6px; border-radius: 7px; border: none;
+  font-size: .68rem; font-weight: 700; cursor: pointer;
   color: #64748b; background: transparent; transition: all .2s;
 }
 .auth-tab.active {
   background: white; color: #4f46e5;
-  box-shadow: 0 2px 8px rgba(0,0,0,.1);
+  box-shadow: 0 2px 5px rgba(0,0,0,.1);
 }
 
-.auth-form { display: flex; flex-direction: column; gap: 14px; }
-.form-row { display: flex; gap: 10px; }
+.auth-form { display: flex; flex-direction: column; gap: 9px; }
+.form-row { display: flex; gap: 7px; }
 .form-row .form-group { flex: 1; min-width: 0; }
-.form-group { display: flex; flex-direction: column; gap: 5px; }
-.form-group label { font-size: .73rem; font-weight: 700; color: #475569; letter-spacing: .02em; }
+.form-group { display: flex; flex-direction: column; gap: 3px; }
+.form-group label { font-size: .62rem; font-weight: 700; color: #475569; }
 .form-input {
-  padding: 10px 13px; border-radius: 10px;
-  border: 1.5px solid #e0e7ff; font-size: .88rem; color: #0f172a;
+  padding: 7px 9px; border-radius: 8px;
+  border: 1.3px solid #e0e7ff; font-size: .7rem; color: #0f172a;
   outline: none; transition: border-color .2s; background: #fafbff;
   width: 100%; box-sizing: border-box;
 }
 .form-input:focus { border-color: #6366f1; background: white; }
 
 .auth-error {
-  font-size: .75rem; color: #dc2626;
-  background: #fee2e2; border-radius: 8px;
-  padding: 8px 12px; margin: 0;
+  font-size: .62rem; color: #dc2626;
+  background: #fee2e2; border-radius: 7px;
+  padding: 6px 9px; margin: 0;
 }
 
 .btn-auth {
-  width: 100%; padding: 12px; border-radius: 12px;
+  width: 100%; padding: 9px; border-radius: 9px;
   background: linear-gradient(135deg, #4f46e5, #7c3aed);
-  color: white; font-size: .9rem; font-weight: 800; border: none; cursor: pointer;
-  display: flex; align-items: center; justify-content: center; gap: 8px;
-  box-shadow: 0 8px 24px rgba(79,70,229,.3); transition: all .2s; margin-top: 4px;
+  color: white; font-size: .72rem; font-weight: 800; border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  box-shadow: 0 5px 14px rgba(79,70,229,.3); transition: all .2s; margin-top: 2px;
 }
-.btn-auth:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 12px 32px rgba(79,70,229,.4); }
+.btn-auth:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 7px 18px rgba(79,70,229,.4); }
 .btn-auth:disabled { opacity: .6; cursor: not-allowed; transform: none; }
 
 .auth-switch {
-  text-align: center; font-size: .75rem; color: #94a3b8; margin: 0;
+  text-align: center; font-size: .62rem; color: #94a3b8; margin: 0;
 }
 .auth-switch a {
   color: #4f46e5; font-weight: 700; cursor: pointer; text-decoration: underline;
@@ -467,87 +485,94 @@ onMounted(async () => {
 
 /* ══ HEADER ══════════════════════════════════════════ */
 .app-header {
+  position: relative; overflow: hidden;
   background: linear-gradient(145deg, #1a1f3c 0%, #2d3561 100%);
-  padding: 14px; flex-shrink: 0;
+  padding: 8px 10px 9px; flex-shrink: 0;
 }
-.header-top { display: flex; align-items: center; gap: 9px; margin-bottom: 12px; }
+.header-mesh {
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse 70% 60% at 15% 0%, rgba(124,58,237,.35), transparent);
+  pointer-events: none;
+}
+.header-top { position: relative; display: flex; align-items: center; gap: 7px; margin-bottom: 8px; }
 .avatar {
-  width: 36px; height: 36px; border-radius: 50%;
-  background: rgba(255,255,255,.12);
+  width: 24px; height: 24px; border-radius: 50%;
+  background: rgba(255,255,255,.14);
   display: flex; align-items: center; justify-content: center;
-  font-size: 1.1rem; flex-shrink: 0;
+  font-size: .75rem; flex-shrink: 0;
 }
-.header-info { flex: 1; display: flex; flex-direction: column; }
-.header-greeting { font-size: .78rem; font-weight: 700; color: #fff; }
-.header-sub { font-size: .62rem; color: rgba(255,255,255,.5); text-transform: capitalize; }
+.header-info { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.header-greeting { font-size: .68rem; font-weight: 700; color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.header-sub { font-size: .54rem; color: rgba(255,255,255,.5); text-transform: capitalize; }
 .logout-btn {
   background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.2);
-  color: rgba(255,255,255,.8); border-radius: 8px; padding: 6px 8px;
-  cursor: pointer; display: flex; align-items: center; transition: all .2s;
+  color: rgba(255,255,255,.8); border-radius: 6px; padding: 4px 5px;
+  cursor: pointer; display: flex; align-items: center; transition: all .2s; flex-shrink: 0;
 }
 .logout-btn:hover { background: rgba(255,255,255,.2); }
 
-.stats-row { display: flex; gap: 8px; }
-.stat-pill { flex: 1; border-radius: 10px; padding: 8px 6px; text-align: center; backdrop-filter: blur(8px); }
+.stats-row { position: relative; display: flex; gap: 5px; }
+.stat-pill { flex: 1; border-radius: 8px; padding: 5px 3px; text-align: center; }
 .stat-confirm { background: rgba(251,191,36,.18); border: 1px solid rgba(251,191,36,.3); }
 .stat-ship    { background: rgba(139,92,246,.2);  border: 1px solid rgba(139,92,246,.3); }
 .stat-done    { background: rgba(52,211,153,.18); border: 1px solid rgba(52,211,153,.3); }
-.sp-num { display: block; font-size: 1.2rem; font-weight: 900; color: #fff; line-height: 1; }
-.sp-lbl { font-size: .58rem; color: rgba(255,255,255,.6); letter-spacing: .04em; text-transform: uppercase; }
+.sp-num { display: block; font-size: .82rem; font-weight: 900; color: #fff; line-height: 1; }
+.sp-lbl { font-size: .5rem; color: rgba(255,255,255,.6); letter-spacing: .02em; text-transform: uppercase; }
 
 /* ══ FILTER TABS ══════════════════════════════════════ */
 .filter-tabs {
-  display: flex; gap: 6px; padding: 10px 12px 8px;
+  display: flex; gap: 4px; padding: 7px 8px 6px;
   background: #fff; border-bottom: 1px solid #e8edf8;
   flex-shrink: 0; overflow-x: auto; scrollbar-width: none;
 }
 .filter-tabs::-webkit-scrollbar { display: none; }
 .tab-btn {
-  flex-shrink: 0; display: inline-flex; align-items: center; gap: 4px;
-  padding: 6px 13px; border-radius: 999px;
-  border: 1.5px solid #e0e7ff; background: #f8faff;
-  color: #64748b; font-size: .68rem; font-weight: 700; cursor: pointer; transition: all .2s;
+  flex-shrink: 0; display: inline-flex; align-items: center; gap: 3px;
+  padding: 4px 9px; border-radius: 999px;
+  border: 1.3px solid #e0e7ff; background: #f8faff;
+  color: #64748b; font-size: .6rem; font-weight: 700; cursor: pointer; transition: all .2s;
 }
 .tab-btn.active {
   background: linear-gradient(135deg, #2d3561, #4f46e5);
   color: #fff; border-color: transparent;
-  box-shadow: 0 3px 10px rgba(79,70,229,.3);
+  box-shadow: 0 2px 7px rgba(79,70,229,.3);
 }
 .tab-badge {
   background: #ef4444; color: #fff; border-radius: 999px;
-  padding: 1px 5px; font-size: .55rem; font-weight: 900;
+  padding: 1px 4px; font-size: .48rem; font-weight: 900;
 }
 
 /* ══ ORDER LIST ══════════════════════════════════════ */
 .order-list {
-  flex: 1; overflow-y: auto; padding: 10px 10px 80px;
-  display: flex; flex-direction: column; gap: 10px; scrollbar-width: none;
+  flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
+  padding: 8px 8px 64px;
+  display: flex; flex-direction: column; gap: 7px; scrollbar-width: none;
 }
 .order-list::-webkit-scrollbar { display: none; }
 
 .skel-card {
-  background: #fff; border-radius: 14px; padding: 16px;
-  display: flex; flex-direction: column; gap: 8px;
+  background: #fff; border-radius: 11px; padding: 10px;
+  display: flex; flex-direction: column; gap: 6px;
   animation: shimmer 1.5s ease-in-out infinite;
 }
-.skel { background: #e8edf8; border-radius: 6px; }
-.skel-top { height: 10px; width: 60%; }
-.skel-mid { height: 8px; width: 85%; }
-.skel-bot { height: 8px; width: 40%; }
+.skel { background: #e8edf8; border-radius: 5px; }
+.skel-top { height: 7px; width: 60%; }
+.skel-mid { height: 6px; width: 85%; }
+.skel-bot { height: 6px; width: 40%; }
 @keyframes shimmer { 0%,100%{ opacity:.5 } 50%{ opacity:1 } }
 
-.empty-box { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 0; }
-.empty-emoji { font-size: 3rem; margin-bottom: 10px; }
-.empty-txt { font-size: .85rem; color: #94a3b8; font-weight: 600; }
+.empty-box { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 36px 0; }
+.empty-emoji { font-size: 1.8rem; margin-bottom: 6px; }
+.empty-txt { font-size: .68rem; color: #94a3b8; font-weight: 600; }
 
 /* ══ ORDER CARD ══════════════════════════════════════ */
 .order-card {
-  background: #fff; border-radius: 16px;
-  border: 1.5px solid #e8edf8; border-left-width: 4px;
-  padding: 14px; animation: cardIn .35s ease both;
-  box-shadow: 0 2px 12px rgba(0,0,0,.05);
+  background: #fff; border-radius: 12px;
+  border: 1.3px solid #e8edf8; border-left-width: 3px;
+  padding: 9px; animation: cardIn .35s ease both;
+  box-shadow: 0 2px 8px rgba(0,0,0,.05);
 }
-@keyframes cardIn { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+@keyframes cardIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
 .card-confirmed { border-left-color: #f59e0b; }
 .card-paid      { border-left-color: #f59e0b; }
 .card-preparing { border-left-color: #f59e0b; }
@@ -555,9 +580,9 @@ onMounted(async () => {
 .card-delivered { border-left-color: #10b981; }
 .card-completed { border-left-color: #16a34a; }
 
-.card-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
-.card-id { font-size: .78rem; font-weight: 900; color: #1e293b; letter-spacing: .04em; }
-.status-chip { font-size: .62rem; font-weight: 700; padding: 3px 10px; border-radius: 999px; }
+.card-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 7px; }
+.card-id { font-size: .62rem; font-weight: 900; color: #1e293b; letter-spacing: .02em; }
+.status-chip { font-size: .52rem; font-weight: 700; padding: 2px 7px; border-radius: 999px; }
 .chip-confirmed { background: #fef3c7; color: #d97706; border: 1px solid #fde68a; }
 .chip-paid      { background: #fef3c7; color: #d97706; border: 1px solid #fde68a; }
 .chip-shipping  { background: #f3e8ff; color: #7c3aed; border: 1px solid #ddd6fe; }
@@ -565,68 +590,68 @@ onMounted(async () => {
 .chip-preparing { background: #fef3c7; color: #d97706; border: 1px solid #fde68a; }
 .chip-completed { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
 
-.card-info { display: flex; flex-direction: column; gap: 5px; margin-bottom: 10px; }
-.info-row { display: flex; align-items: flex-start; gap: 6px; }
-.info-icon { font-size: .72rem; flex-shrink: 0; margin-top: 1px; }
-.info-txt { font-size: .7rem; color: #475569; line-height: 1.3; }
+.card-info { display: flex; flex-direction: column; gap: 4px; margin-bottom: 7px; }
+.info-row { display: flex; align-items: flex-start; gap: 5px; }
+.info-icon { font-size: .6rem; flex-shrink: 0; margin-top: 1px; }
+.info-txt { font-size: .58rem; color: #475569; line-height: 1.3; word-break: break-word; }
 .address-txt { font-weight: 600; color: #1e293b; }
 .phone-link { font-weight: 700; color: #2563eb; text-decoration: none; }
-.price-txt { font-weight: 800; color: #e11d48; font-size: .78rem; }
+.price-txt { font-weight: 800; color: #e11d48; font-size: .64rem; }
 .note-txt { font-style: italic; color: #64748b; }
 
-.items-row { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 10px; }
+.items-row { display: flex; flex-wrap: wrap; gap: 3px; margin-bottom: 7px; }
 .item-chip {
-  font-size: .6rem; background: #f1f5f9; color: #475569;
-  border: 1px solid #e2e8f0; border-radius: 6px;
-  padding: 2px 7px; font-weight: 600;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100px;
+  font-size: .5rem; background: #f1f5f9; color: #475569;
+  border: 1px solid #e2e8f0; border-radius: 5px;
+  padding: 2px 6px; font-weight: 600;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 80px;
 }
 .item-more {
-  font-size: .6rem; background: #dbeafe; color: #2563eb;
-  border: 1px solid #bfdbfe; border-radius: 6px; padding: 2px 7px; font-weight: 700;
+  font-size: .5rem; background: #dbeafe; color: #2563eb;
+  border: 1px solid #bfdbfe; border-radius: 5px; padding: 2px 6px; font-weight: 700;
 }
 
 .card-action { display: flex; }
 .action-btn {
-  flex: 1; padding: 10px; border-radius: 12px; border: none;
-  font-size: .75rem; font-weight: 800; cursor: pointer;
-  display: flex; align-items: center; justify-content: center; gap: 5px; transition: all .2s;
+  flex: 1; padding: 7px; border-radius: 9px; border: none;
+  font-size: .62rem; font-weight: 800; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 4px; transition: all .2s;
 }
 .btn-pickup {
   background: linear-gradient(135deg, #f59e0b, #d97706);
-  color: #fff; box-shadow: 0 4px 12px rgba(245,158,11,.35);
+  color: #fff; box-shadow: 0 3px 8px rgba(245,158,11,.35);
 }
-.btn-pickup:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(245,158,11,.45); }
+.btn-pickup:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(245,158,11,.45); }
 .btn-done {
   background: linear-gradient(135deg, #10b981, #059669);
-  color: #fff; box-shadow: 0 4px 12px rgba(16,185,129,.35);
+  color: #fff; box-shadow: 0 3px 8px rgba(16,185,129,.35);
 }
-.btn-done:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(16,185,129,.45); }
+.btn-done:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(16,185,129,.45); }
 .action-btn:disabled { opacity: .6; cursor: not-allowed; transform: none; }
 .done-label {
-  flex: 1; text-align: center; font-size: .7rem; font-weight: 700;
-  color: #059669; background: #d1fae5; border-radius: 12px; padding: 9px; border: 1px solid #6ee7b7;
+  flex: 1; text-align: center; font-size: .58rem; font-weight: 700;
+  color: #059669; background: #d1fae5; border-radius: 9px; padding: 6px; border: 1px solid #6ee7b7;
 }
 
 .spinner {
-  width: 14px; height: 14px;
-  border: 2px solid rgba(255,255,255,.4); border-top-color: #fff;
+  width: 10px; height: 10px;
+  border: 1.6px solid rgba(255,255,255,.4); border-top-color: #fff;
   border-radius: 50%; animation: spin .6s linear infinite;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* ══ BOTTOM NAV ══════════════════════════════════════ */
 .bottom-nav {
-  position: fixed; bottom: 0; left: 0; right: 0;
+  position: absolute; bottom: 0; left: 0; right: 0;
   display: flex; background: #fff; border-top: 1px solid #e8edf8;
-  padding: 8px 0 14px; z-index: 100;
+  padding: 5px 0 14px; z-index: 50;
 }
 .nav-btn {
-  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px;
-  background: none; border: none; cursor: pointer; padding: 4px; transition: opacity .2s;
+  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 1px;
+  background: none; border: none; cursor: pointer; padding: 3px; transition: opacity .2s;
 }
-.nav-icon { font-size: 1.2rem; }
-.nav-lbl { font-size: .58rem; font-weight: 700; color: #94a3b8; letter-spacing: .04em; }
+.nav-icon { font-size: .85rem; }
+.nav-lbl { font-size: .48rem; font-weight: 700; color: #94a3b8; letter-spacing: .02em; }
 .nav-btn.active .nav-lbl { color: #4f46e5; }
-.nav-btn.active .nav-icon { filter: drop-shadow(0 2px 4px rgba(79,70,229,.4)); }
+.nav-btn.active .nav-icon { filter: drop-shadow(0 1px 3px rgba(79,70,229,.4)); }
 </style>

@@ -53,9 +53,9 @@
         </div>
 
         <div class="ts-hero-stats">
-          <div class="ts-stat"><strong>10K+</strong><span>Sản phẩm</span></div>
+          <div class="ts-stat"><strong>20+</strong><span>Sản phẩm</span></div>
           <div class="ts-stat-divider"></div>
-          <div class="ts-stat"><strong>50K+</strong><span>Khách hàng</span></div>
+          <div class="ts-stat"><strong>20+</strong><span>Khách hàng</span></div>
           <div class="ts-stat-divider"></div>
           <div class="ts-stat"><strong>4.9★</strong><span>Đánh giá</span></div>
         </div>

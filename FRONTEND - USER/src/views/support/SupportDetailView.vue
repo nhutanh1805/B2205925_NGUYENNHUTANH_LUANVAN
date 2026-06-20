@@ -1,95 +1,135 @@
 <template>
-  <div class="support-detail">
-    <div class="support-detail__header">
-      <button class="btn-back" @click="$router.push('/support')">← Quay lại</button>
-      <h2>Chi tiết yêu cầu</h2>
+  <div class="support-page">
+
+    <div class="hero">
+      <div class="hero-mesh"></div>
+      <div class="hero-orb hero-orb-1"></div>
+      <div class="hero-orb hero-orb-2"></div>
+      <div class="hero-orb hero-orb-3"></div>
+
+      <div class="hero-content">
+        <button class="back-btn" @click="$router.push('/support')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" class="back-icon">
+            <polyline points="15 18 9 12 15 6"/>
+          </svg>
+          Quay lại
+        </button>
+
+        <div class="hero-eyebrow">
+          <span class="eyebrow-dot"></span>
+          Trung tâm hỗ trợ
+        </div>
+        <h1 class="hero-title">Chi tiết<br/><em>yêu cầu</em></h1>
+      </div>
     </div>
 
-    <div v-if="loading" class="state-msg">Đang tải...</div>
-    <div v-else-if="error" class="state-msg state-msg--error">{{ error }}</div>
+    <div class="main-panel">
 
-    <template v-else-if="request">
-      <!-- Thông tin yêu cầu -->
-      <div class="info-card">
-        <div class="info-card__row">
-          <span class="info-label">Loại</span>
-          <span>{{ request.type === "warranty" ? "Bảo hành" : "Đổi trả" }}</span>
-        </div>
-        <div class="info-card__row">
-          <span class="info-label">Trạng thái</span>
-          <span :class="['badge', `badge--${request.status}`]">
-            {{ statusLabel(request.status) }}
-          </span>
-        </div>
-        <div v-if="request.orderId" class="info-card__row">
-          <span class="info-label">Mã đơn</span>
-          <span>{{ request.orderId }}</span>
-        </div>
-        <div class="info-card__row">
-          <span class="info-label">Ngày tạo</span>
-          <span>{{ formatDate(request.createdAt) }}</span>
-        </div>
-        <div class="info-card__row info-card__row--full">
-          <span class="info-label">Lý do</span>
-          <p class="info-reason">{{ request.reason }}</p>
-        </div>
-        <div v-if="request.adminNote" class="info-card__row info-card__row--full">
-          <span class="info-label">Ghi chú từ admin</span>
-          <p class="info-admin-note">{{ request.adminNote }}</p>
-        </div>
-        <div v-if="request.images?.length" class="info-images">
-          <img
-            v-for="(url, i) in request.images"
-            :key="i"
-            :src="url"
-            class="info-img"
-            @click="lightboxUrl = url"
-          />
-        </div>
+      <div v-if="loading" class="state-box">
+        <div class="spinner"></div>
+        <p>Đang tải...</p>
+      </div>
+      <div v-else-if="error" class="state-box state-box--error">
+        <div class="state-icon">⚠</div>
+        <p>{{ error }}</p>
       </div>
 
-      <!-- Tin nhắn -->
-      <div class="chat-card">
-        <h3 class="chat-title">Tin nhắn trao đổi</h3>
+      <template v-else-if="request">
 
-        <div class="chat-messages" ref="chatBox">
-          <div v-if="messages.length === 0" class="chat-empty">
-            Chưa có tin nhắn nào.
+        <!-- ══ INFO CARD ══ -->
+        <div class="info-card">
+          <div class="info-row">
+            <span class="info-label">Loại</span>
+            <span class="type-pill" :class="`type-pill--${request.type}`">
+              {{ request.type === "warranty" ? "Bảo hành" : "Đổi trả" }}
+            </span>
           </div>
-          <div
-            v-for="msg in messages"
-            :key="msg._id"
-            :class="['msg-bubble', msg.role === 'user' ? 'bubble--user' : 'bubble--admin']"
-          >
-            <span class="msg-role">{{ msg.senderName || (msg.role === 'user' ? 'Khách' : 'Admin') }}</span>
-            <p class="msg-content">{{ msg.content }}</p>
-            <time class="msg-time">{{ formatDate(msg.createdAt) }}</time>
+          <div class="info-row">
+            <span class="info-label">Trạng thái</span>
+            <span class="status-pill" :class="`status--${request.status}`">
+              {{ statusLabel(request.status) }}
+            </span>
+          </div>
+          <div class="info-row" v-if="request.orderId">
+            <span class="info-label">Mã đơn</span>
+            <span class="info-value">{{ request.orderId }}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Ngày tạo</span>
+            <span class="info-value">{{ formatDate(request.createdAt) }}</span>
+          </div>
+
+          <div class="info-block">
+            <span class="info-label">Lý do</span>
+            <p class="info-reason">{{ request.reason }}</p>
+          </div>
+
+          <div class="info-block" v-if="request.adminNote">
+            <span class="info-label">Ghi chú từ admin</span>
+            <p class="info-admin-note">{{ request.adminNote }}</p>
+          </div>
+
+          <div class="info-images" v-if="request.images?.length">
+            <div
+              v-for="(url, i) in request.images"
+              :key="i"
+              class="info-img-wrap"
+              @click="lightboxUrl = url"
+            >
+              <img :src="url" class="info-img" />
+            </div>
           </div>
         </div>
 
-        <div class="chat-input">
-          <input
-            v-model="newMessage"
-            type="text"
-            placeholder="Nhập tin nhắn..."
-            class="chat-input__field"
-            @keyup.enter="handleSend"
-          />
-          <button
-            class="btn btn--primary"
-            :disabled="sending || !newMessage.trim()"
-            @click="handleSend"
-          >
-            {{ sending ? "..." : "Gửi" }}
-          </button>
+        <!-- ══ CHAT CARD ══ -->
+        <div class="chat-card">
+          <h3 class="chat-title">Tin nhắn trao đổi</h3>
+
+          <div class="chat-messages" ref="chatBox">
+            <div v-if="messages.length === 0" class="chat-empty">
+              Chưa có tin nhắn nào.
+            </div>
+            <div
+              v-for="msg in messages"
+              :key="msg._id"
+              class="msg-bubble"
+              :class="msg.role === 'user' ? 'bubble--user' : 'bubble--admin'"
+            >
+              <span class="msg-role">{{ msg.senderName || (msg.role === 'user' ? 'Khách' : 'Admin') }}</span>
+              <p class="msg-content">{{ msg.content }}</p>
+              <time class="msg-time">{{ formatDate(msg.createdAt) }}</time>
+            </div>
+          </div>
+
+          <div class="chat-input-row">
+            <input
+              v-model="newMessage"
+              type="text"
+              placeholder="Nhập tin nhắn..."
+              class="chat-input-field"
+              @keyup.enter="handleSend"
+            />
+            <button
+              class="send-btn"
+              :disabled="sending || !newMessage.trim()"
+              @click="handleSend"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" class="send-icon" v-if="!sending">
+                <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+              </svg>
+              <span v-else class="send-dots">...</span>
+            </button>
+          </div>
+          <p v-if="sendError" class="form-error">{{ sendError }}</p>
         </div>
-        <p v-if="sendError" class="form-error">{{ sendError }}</p>
-      </div>
-    </template>
+      </template>
+
+    </div>
 
     <div v-if="lightboxUrl" class="lightbox" @click="lightboxUrl = null">
-      <img :src="lightboxUrl" class="lightbox__img" />
+      <img :src="lightboxUrl" class="lightbox-img" />
     </div>
+
   </div>
 </template>
 
@@ -171,161 +211,192 @@ onMounted(fetchDetail);
 </script>
 
 <style scoped>
-.support-detail {
-  max-width: 680px;
-  margin: 0 auto;
-  padding: 1.5rem 1rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
-}
-.support-detail__header {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-.support-detail__header h2 { font-size: 1.2rem; font-weight: 600; }
-.btn-back {
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: #2563eb;
-  font-size: 0.9rem;
-  padding: 0;
+.support-page {
+  min-height: 100vh;
+  background: #f0f4ff;
+  font-family: 'Segoe UI', system-ui, sans-serif;
 }
 
-.state-msg { text-align: center; color: #6b7280; padding: 2rem 0; }
-.state-msg--error { color: #dc2626; }
+/* ══ HERO ══ */
+.hero {
+  position: relative; overflow: hidden;
+  background: #0a0f1e; padding: 60px 32px 80px; text-align: center;
+}
+.hero-mesh {
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(ellipse 80% 60% at 20% 0%, rgba(37,99,235,.35), transparent),
+    radial-gradient(ellipse 60% 50% at 80% 100%, rgba(124,58,237,.3), transparent),
+    radial-gradient(ellipse 50% 40% at 50% 50%, rgba(16,185,129,.08), transparent);
+}
+.hero-orb { position: absolute; border-radius: 50%; filter: blur(60px); pointer-events: none; }
+.hero-orb-1 { width: 300px; height: 300px; background: rgba(37,99,235,.25); top: -80px; left: -60px; }
+.hero-orb-2 { width: 250px; height: 250px; background: rgba(124,58,237,.2); bottom: -60px; right: -40px; }
+.hero-orb-3 { width: 180px; height: 180px; background: rgba(16,185,129,.15); top: 40%; left: 55%; }
 
-/* Info card */
+.hero-content { position: relative; z-index: 2; max-width: 700px; margin: auto; }
+
+.back-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.15);
+  border-radius: 999px; padding: 7px 16px 7px 12px;
+  color: rgba(255,255,255,.75); font-size: .82rem; font-weight: 600;
+  cursor: pointer; margin-bottom: 26px; transition: all .2s;
+}
+.back-btn:hover { background: rgba(255,255,255,.14); color: white; }
+.back-icon { width: 15px; height: 15px; }
+
+.hero-eyebrow {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.15);
+  border-radius: 999px; padding: 6px 18px;
+  font-size: .75rem; font-weight: 700; color: rgba(255,255,255,.8);
+  letter-spacing: .08em; text-transform: uppercase;
+  margin-bottom: 22px; backdrop-filter: blur(8px);
+}
+.eyebrow-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: #10b981; box-shadow: 0 0 8px #10b981;
+  animation: blink 1.8s ease-in-out infinite;
+}
+@keyframes blink {
+  0%,100% { opacity:1; transform:scale(1); }
+  50%      { opacity:.4; transform:scale(1.5); }
+}
+.hero-title {
+  font-size: clamp(2.1rem, 6vw, 3.4rem); font-weight: 900; color: white;
+  line-height: 1.1; letter-spacing: -.02em;
+  text-shadow: 0 2px 30px rgba(0,0,0,.4);
+}
+.hero-title em {
+  font-style: normal;
+  background: linear-gradient(90deg, #60a5fa, #a78bfa, #34d399);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
+
+/* ══ MAIN PANEL ══ */
+.main-panel {
+  max-width: 680px; margin: -32px auto 0;
+  padding: 0 24px 60px; position: relative; z-index: 10;
+  display: flex; flex-direction: column; gap: 18px;
+}
+
+/* ══ STATE BOX ══ */
+.state-box {
+  background: white; border-radius: 22px; padding: 60px 20px;
+  text-align: center; color: #94a3b8; font-size: .95rem;
+  border: 1.5px solid #e8edf8; box-shadow: 0 4px 20px rgba(37,99,235,.05);
+}
+.state-icon { font-size: 2.6rem; margin-bottom: 12px; display: block; }
+.state-box--error p { color: #e11d48; font-weight: 600; }
+.spinner {
+  width: 34px; height: 34px; margin: 0 auto 16px;
+  border: 3px solid #e0e7ff; border-top-color: #2563eb;
+  border-radius: 50%; animation: spin .8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ══ INFO CARD ══ */
 .info-card {
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  padding: 1rem 1.25rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
+  background: white; border-radius: 22px; padding: 26px 28px;
+  border: 1.5px solid #e8edf8; box-shadow: 0 4px 24px rgba(37,99,235,.06);
 }
-.info-card__row {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.75rem;
-  font-size: 0.875rem;
+.info-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 11px 0; border-bottom: 1px solid #f8faff;
 }
-.info-card__row--full { flex-direction: column; gap: 0.25rem; }
-.info-label { color: #6b7280; min-width: 80px; }
-.info-reason { margin: 0; color: #374151; line-height: 1.5; }
+.info-row:last-of-type { border-bottom: none; }
+.info-label {
+  font-size: .76rem; font-weight: 700; color: #4f46e5;
+  text-transform: uppercase; letter-spacing: .04em;
+}
+.info-value { font-size: .9rem; font-weight: 600; color: #0f172a; }
+
+.type-pill, .status-pill { font-size: .76rem; font-weight: 700; padding: 4px 12px; border-radius: 999px; }
+.type-pill--warranty { background: #eff6ff; color: #2563eb; }
+.type-pill--return    { background: #f5f3ff; color: #7c3aed; }
+.status--pending    { background: #fef3c7; color: #92400e; }
+.status--processing { background: #dbeafe; color: #1e40af; }
+.status--done        { background: #d1fae5; color: #065f46; }
+.status--rejected    { background: #fee2e2; color: #991b1b; }
+.status--refunded    { background: #ede9fe; color: #5b21b6; }
+
+.info-block { padding: 14px 0 0; }
+.info-reason { margin: 8px 0 0; font-size: .9rem; color: #334155; line-height: 1.6; }
 .info-admin-note {
-  margin: 0;
-  background: #fef9c3;
-  border-left: 3px solid #facc15;
-  padding: 0.4rem 0.75rem;
-  border-radius: 4px;
-}
-.info-images { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.25rem; }
-.info-img {
-  width: 80px;
-  height: 80px;
-  object-fit: cover;
-  border-radius: 6px;
-  border: 1px solid #e5e7eb;
-  cursor: zoom-in;
+  margin: 8px 0 0; font-size: .88rem; color: #713f12; line-height: 1.6;
+  background: #fef9c3; border-left: 3px solid #facc15;
+  padding: 10px 14px; border-radius: 10px;
 }
 
-/* Badge */
-.badge {
-  display: inline-block;
-  font-size: 0.78rem;
-  padding: 2px 10px;
-  border-radius: 999px;
-  font-weight: 500;
+.info-images { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+.info-img-wrap {
+  width: 76px; height: 76px; border-radius: 12px; overflow: hidden;
+  border: 1.5px solid #e0e7ff; cursor: zoom-in; transition: transform .2s;
 }
-.badge--pending    { background: #fef3c7; color: #92400e; }
-.badge--processing { background: #dbeafe; color: #1e40af; }
-.badge--done       { background: #d1fae5; color: #065f46; }
-.badge--rejected   { background: #fee2e2; color: #991b1b; }
-.badge--refunded   { background: #ede9fe; color: #5b21b6; }
+.info-img-wrap:hover { transform: scale(1.05); }
+.info-img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
-/* Chat */
+/* ══ CHAT CARD ══ */
 .chat-card {
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  padding: 1rem 1.25rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
+  background: white; border-radius: 22px; padding: 26px 28px;
+  border: 1.5px solid #e8edf8; box-shadow: 0 4px 24px rgba(37,99,235,.06);
 }
-.chat-title { font-size: 0.95rem; font-weight: 600; margin: 0; }
+.chat-title { font-size: 1rem; font-weight: 800; color: #0f172a; margin: 0 0 16px; }
 
 .chat-messages {
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-  max-height: 360px;
-  overflow-y: auto;
-  padding-right: 0.25rem;
+  display: flex; flex-direction: column; gap: 10px;
+  max-height: 360px; overflow-y: auto; padding-right: 4px; margin-bottom: 16px;
 }
-.chat-empty { text-align: center; color: #9ca3af; font-size: 0.85rem; padding: 1rem 0; }
+.chat-empty { text-align: center; color: #94a3b8; font-size: .85rem; padding: 24px 0; }
 
 .msg-bubble {
-  display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
-  max-width: 80%;
-  padding: 0.55rem 0.85rem;
-  border-radius: 10px;
+  display: flex; flex-direction: column; gap: 3px;
+  max-width: 78%; padding: 10px 14px; border-radius: 14px;
 }
-.bubble--user {
-  background: #eff6ff;
-  border-left: 3px solid #2563eb;
-  align-self: flex-end;
-}
-.bubble--admin {
-  background: #f9fafb;
-  border-left: 3px solid #d1d5db;
-  align-self: flex-start;
-}
-.msg-content { margin: 0; font-size: 0.875rem; color: #111827; line-height: 1.45; }
-.msg-time { font-size: 0.7rem; color: #9ca3af; }
+.bubble--user { background: #eff6ff; border: 1px solid #dbeafe; align-self: flex-end; border-bottom-right-radius: 4px; }
+.bubble--admin { background: #f8faff; border: 1px solid #f1f5f9; align-self: flex-start; border-bottom-left-radius: 4px; }
+.msg-role { font-size: .7rem; font-weight: 700; color: #4f46e5; text-transform: uppercase; letter-spacing: .03em; }
+.msg-content { margin: 0; font-size: .88rem; color: #0f172a; line-height: 1.5; }
+.msg-time { font-size: .68rem; color: #94a3b8; }
 
-.chat-input {
-  display: flex;
-  gap: 0.5rem;
+.chat-input-row { display: flex; gap: 10px; }
+.chat-input-field {
+  flex: 1; padding: 12px 16px; border-radius: 12px;
+  border: 1.5px solid #e0e7ff; font-size: .9rem; color: #0f172a;
+  background: #f8faff; transition: all .2s;
 }
-.chat-input__field {
-  flex: 1;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-  padding: 0.5rem 0.75rem;
-  font-size: 0.875rem;
-  outline: none;
+.chat-input-field:focus {
+  outline: none; border-color: #2563eb; background: white;
+  box-shadow: 0 0 0 4px rgba(37,99,235,.12);
 }
-.chat-input__field:focus { border-color: #2563eb; }
-
-.btn {
-  padding: 0.5rem 1rem;
-  border-radius: 8px;
-  border: none;
-  font-size: 0.875rem;
-  font-weight: 500;
-  cursor: pointer;
+.send-btn {
+  width: 46px; height: 46px; flex-shrink: 0; border-radius: 12px; border: none; cursor: pointer;
+  background: linear-gradient(135deg, #2563eb, #4f46e5); color: white;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 4px 14px rgba(37,99,235,.3); transition: transform .2s, box-shadow .2s;
 }
-.btn--primary { background: #2563eb; color: #fff; }
-.btn--primary:hover:not(:disabled) { background: #1d4ed8; }
-.btn--primary:disabled { background: #93c5fd; cursor: not-allowed; }
+.send-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 22px rgba(37,99,235,.4); }
+.send-btn:disabled { background: #cbd5e1; box-shadow: none; cursor: not-allowed; }
+.send-icon { width: 18px; height: 18px; }
+.send-dots { font-weight: 900; }
 
-.form-error { color: #dc2626; font-size: 0.82rem; margin: 0; }
+.form-error { color: #e11d48; font-size: .82rem; font-weight: 700; margin: 10px 0 0; text-align: center; }
 
-/* Lightbox */
+/* ══ LIGHTBOX ══ */
 .lightbox {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.75);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 9999;
-  cursor: zoom-out;
+  position: fixed; inset: 0; z-index: 300;
+  background: rgba(10,15,30,.85); backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px; cursor: zoom-out;
 }
-.lightbox__img { max-width: 90vw; max-height: 90vh; border-radius: 8px; }
+.lightbox-img { max-width: 90vw; max-height: 90vh; border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,.4); }
+
+/* ── MOBILE ── */
+@media (max-width: 640px) {
+  .hero { padding: 40px 20px 60px; }
+  .main-panel { margin-top: -24px; padding: 0 14px 40px; }
+  .info-card, .chat-card { padding: 20px 18px; }
+  .msg-bubble { max-width: 90%; }
+}
 </style>
