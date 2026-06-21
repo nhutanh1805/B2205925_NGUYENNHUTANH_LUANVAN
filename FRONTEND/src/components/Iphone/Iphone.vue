@@ -65,7 +65,7 @@ import homeBgImg from "@/assets/img/BackIphone.jpg";
 
 const time = ref("");
 const date = ref("");
-const isUnlocked = ref(false);
+const isUnlocked = ref(localStorage.getItem('iphone_unlocked') === 'true');
 
 // ── Face ID bridge ──
 const faceIdCallback = ref(null);
@@ -77,10 +77,12 @@ const onStartFaceId = (cb) => {
 
 const unlock = () => {
   isUnlocked.value = true;
+  localStorage.setItem('iphone_unlocked', 'true');
 };
 
 const lockScreen = () => {
   isUnlocked.value = false;
+  localStorage.setItem('iphone_unlocked', 'false');
 };
 
 const updateDateTime = () => {
