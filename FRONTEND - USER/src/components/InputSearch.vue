@@ -16,6 +16,13 @@ const debounceTimer = ref(null);
 const fileInput = ref(null);
 const aiMessage = ref("");
 
+// ─── API keys fallback ─────────────────────────────────
+const API_KEYS = [
+  import.meta.env.VITE_GROQ_API_KEY,
+  import.meta.env.VITE_GROQ_API_KEY_2,
+].filter(Boolean);
+const currentKeyIndex = ref(0);
+
 // ─── Text search ───────────────────────────────────────
 function onInput(e) {
   emit("update:modelValue", e.target.value);
@@ -94,6 +101,57 @@ function openImagePicker() {
   fileInput.value.click();
 }
 
+async function callGroqAPI(base64, fileType, productList, signal) {
+  const key = API_KEYS[currentKeyIndex.value];
+
+  const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    method: "POST",
+    signal,
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${key}`
+    },
+    body: JSON.stringify({
+      model: "meta-llama/llama-4-scout-17b-16e-instruct",
+      messages: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "image_url",
+              image_url: { url: `data:${fileType};base64,${base64}` }
+            },
+            {
+              type: "text",
+              text: `Hãy phân tích ảnh này và xác định đây là sản phẩm gì (thương hiệu, dòng sản phẩm, model, màu sắc...).
+
+Danh sách sản phẩm trong hệ thống:
+${productList}
+
+Tìm sản phẩm trong danh sách TƯƠNG TỰ NHẤT với ảnh dựa trên loại sản phẩm, thương hiệu, dòng sản phẩm.
+Không cần khớp 100% — ví dụ ảnh chụp iPhone 14 ngoài đường có thể match "Apple iPhone 14 128GB" trong danh sách.
+Hãy cố gắng tìm sản phẩm gần nhất có thể, chỉ trả về null nếu thực sự không liên quan gì.
+
+Chỉ trả về JSON duy nhất, không giải thích, không markdown, không text thêm:
+{"match": "Tên sản phẩm trong danh sách", "confidence": 85, "description": "Hình ảnh của bạn có thể là [mô tả ngắn gọn sản phẩm trong ảnh]"}
+Nếu không có sản phẩm nào liên quan: {"match": null, "confidence": 0, "description": "Hình ảnh của bạn không khớp với sản phẩm nào trong hệ thống"}`
+            }
+          ]
+        }
+      ],
+      max_tokens: 200
+    })
+  });
+
+  // Nếu bị rate limit và còn key dự phòng → chuyển key và retry
+  if (response.status === 429 && currentKeyIndex.value < API_KEYS.length - 1) {
+    currentKeyIndex.value++;
+    return callGroqAPI(base64, fileType, productList, signal);
+  }
+
+  return response;
+}
+
 async function onImageSelected(e) {
   const file = e.target.files[0];
   if (!file) return;
@@ -107,56 +165,18 @@ async function onImageSelected(e) {
 
   try {
     const base64 = await toBase64(file);
-
     const productList = props.products.map((p, i) => `${i + 1}. ${p.name}`).join("\n");
 
-    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-      method: "POST",
-      signal: controller.signal,
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${import.meta.env.VITE_GROQ_API_KEY}`
-      },
-      body: JSON.stringify({
-        model: "meta-llama/llama-4-scout-17b-16e-instruct",
-        messages: [
-          {
-            role: "user",
-            content: [
-              {
-                type: "image_url",
-                image_url: { url: `data:${file.type};base64,${base64}` }
-              },
-              {
-                type: "text",
-                text: `Hãy phân tích ảnh này và xác định đây là sản phẩm gì (thương hiệu, dòng sản phẩm, model, màu sắc...).
-
-Danh sách sản phẩm trong hệ thống:
-${productList}
-
-Tìm sản phẩm trong danh sách TƯƠNG TỰ NHẤT với ảnh dựa trên loại sản phẩm, thương hiệu, dòng sản phẩm.
-Không cần khớp 100% — ví dụ ảnh chụp iPhone 14 ngoài đường có thể match "Apple iPhone 14 128GB" trong danh sách.
-Hãy cố gắng tìm sản phẩm gần nhất có thể, chỉ trả về null nếu thực sự không liên quan gì.
-
-Chỉ trả về JSON duy nhất, không giải thích, không markdown, không text thêm:
-{"match": "Tên sản phẩm trong danh sách", "confidence": 85, "description": "Hình ảnh của bạn có thể là [mô tả ngắn gọn sản phẩm trong ảnh]"}
-Nếu không có sản phẩm nào liên quan: {"match": null, "confidence": 0, "description": "Hình ảnh của bạn không khớp với sản phẩm nào trong hệ thống"}`
-              }
-            ]
-          }
-        ],
-        max_tokens: 200
-      })
-    });
+    const response = await callGroqAPI(base64, file.type, productList, controller.signal);
 
     clearTimeout(timeout);
     const data = await response.json();
 
     if (!response.ok) {
       if (response.status === 429) {
-        aiMessage.value = "⏳ Đang bị giới hạn request, vui lòng chờ 1-2 phút rồi thử lại!";
+        aiMessage.value = "Tất cả API key đang bị giới hạn request, vui lòng chờ 1-2 phút rồi thử lại!";
       } else {
-        aiMessage.value = `❌ Lỗi: ${data.error?.message || "Unknown error"}`;
+        aiMessage.value = `Lỗi: ${data.error?.message || "Unknown error"}`;
       }
       return;
     }
@@ -165,18 +185,18 @@ Nếu không có sản phẩm nào liên quan: {"match": null, "confidence": 0, 
     const jsonMatch = raw.match(/\{[\s\S]*\}/);
 
     if (!jsonMatch) {
-      aiMessage.value = "❌ Không thể phân tích ảnh này, vui lòng thử lại!";
+      aiMessage.value = "Không thể phân tích ảnh này, vui lòng thử lại!";
       return;
     }
 
     const parsed = JSON.parse(jsonMatch[0]);
 
     if (!parsed.match) {
-      aiMessage.value = `🔍 ${parsed.description || "Không tìm thấy sản phẩm tương tự trong hệ thống!"}`;
+      aiMessage.value = ` ${parsed.description || "Không tìm thấy sản phẩm tương tự trong hệ thống!"}`;
       return;
     }
 
-    aiMessage.value = `✨ ${parsed.description} Mình đã tìm thấy sản phẩm tương tự: "${parsed.match}"!`;
+    aiMessage.value = ` ${parsed.description} Mình đã tìm thấy sản phẩm tương tự: "${parsed.match}"!`;
 
     emit("update:modelValue", parsed.match);
     emit("submit");
@@ -184,9 +204,9 @@ Nếu không có sản phẩm nào liên quan: {"match": null, "confidence": 0, 
   } catch (err) {
     clearTimeout(timeout);
     if (err.name === "AbortError") {
-      aiMessage.value = "⏳ Phân tích quá lâu, vui lòng thử lại!";
+      aiMessage.value = "Phân tích quá lâu, vui lòng thử lại!";
     } else {
-      aiMessage.value = "❌ Lỗi phân tích ảnh, vui lòng thử lại!";
+      aiMessage.value = "Lỗi phân tích ảnh, vui lòng thử lại!";
     }
   } finally {
     isAnalyzing.value = false;

@@ -1,5 +1,4 @@
 <template>
-  <!-- LOADING -->
   <div v-if="!product" class="loading-screen">
     <div class="spinner"></div>
     <p>Đang tải sản phẩm…</p>
@@ -123,6 +122,39 @@
           </div>
         </div>
 
+        <!-- INLINE PRICE EDITOR -->
+        <div class="price-editor" v-if="!isEditingPrice">
+          <button class="btn-edit-price" @click="openPriceEditor">
+            Chỉnh sửa giá
+          </button>
+        </div>
+
+        <div class="price-editor-form" v-else>
+          <div class="price-editor-row">
+            <div class="price-editor-field">
+              <label>Giá gốc</label>
+              <div class="input-prefix-wrap">
+                <span class="input-prefix">₫</span>
+                <input v-model.number="editPrice" type="number" class="price-input" placeholder="0"/>
+              </div>
+            </div>
+            <div class="price-editor-field">
+              <label>Giá khuyến mãi</label>
+              <div class="input-prefix-wrap">
+                <span class="input-prefix">₫</span>
+                <input v-model.number="editSalePrice" type="number" class="price-input" placeholder="Để trống nếu không KM"/>
+              </div>
+            </div>
+          </div>
+          <div class="price-editor-actions">
+            <button class="btn-price-cancel" @click="isEditingPrice = false">Hủy</button>
+            <button class="btn-price-save" @click="savePrice" :disabled="isSavingPrice">
+              <span v-if="isSavingPrice" class="spinner-sm"></span>
+              {{ isSavingPrice ? 'Đang lưu...' : '✓ Lưu giá' }}
+            </button>
+          </div>
+        </div>
+
         <!-- STOCK -->
         <div class="stock-row">
           <span class="stock-dot" :class="{ out: product.stock === 0 }"></span>
@@ -179,7 +211,6 @@
       </div>
     </div>
 
-    <!-- ═══════════ SPEC TABLE ═══════════ -->
     <div v-if="specEntries.length" class="spec-block">
       <div class="section-header">
         <h2 class="section-title">Thông số kỹ thuật</h2>
@@ -214,6 +245,11 @@ const currentImage = ref("");
 const isDeleting = ref(false);
 const showConfirm = ref(false);
 
+const isEditingPrice = ref(false);
+const isSavingPrice = ref(false);
+const editPrice = ref(0);
+const editSalePrice = ref(0);
+
 const discountPercent = computed(() => {
   if (!product.value?.salePrice) return 0;
   return Math.round(100 - (product.value.salePrice / product.value.price) * 100);
@@ -240,6 +276,31 @@ async function deleteProduct() {
     alert("Xóa thất bại: " + (e.message || "Lỗi không xác định"));
   } finally {
     isDeleting.value = false;
+  }
+}
+
+// sửa giá
+function openPriceEditor() {
+  editPrice.value = product.value.price;
+  editSalePrice.value = product.value.salePrice || 0;
+  isEditingPrice.value = true;
+}
+
+async function savePrice() {
+  isSavingPrice.value = true;
+  try {
+    await ProductService.update(product.value._id, {
+      ...product.value,
+      price: editPrice.value,
+      salePrice: editSalePrice.value || null,
+    });
+    product.value.price = editPrice.value;
+    product.value.salePrice = editSalePrice.value || null;
+    isEditingPrice.value = false;
+  } catch (err) {
+    alert(err.response?.data?.message || err.message);
+  } finally {
+    isSavingPrice.value = false;
   }
 }
 
@@ -468,6 +529,58 @@ onMounted(async () => {
   padding: 3px 10px; border-radius: 999px;
 }
 
+/* INLINE PRICE EDITOR */
+.price-editor { margin-top: -4px; }
+
+.btn-edit-price {
+  font-size: .78rem; font-weight: 600; color: #94a3b8;
+  background: none; border: 1px dashed #e2e8f0;
+  border-radius: 8px; padding: 6px 14px; cursor: pointer;
+  transition: all .2s;
+}
+.btn-edit-price:hover { border-color: #2563eb; color: #2563eb; background: #eff6ff; }
+
+.price-editor-form {
+  background: #f8faff; border: 1.5px solid #e0e7ff;
+  border-radius: 16px; padding: 16px;
+  display: flex; flex-direction: column; gap: 12px;
+}
+.price-editor-row { display: flex; gap: 12px; }
+.price-editor-field { flex: 1; display: flex; flex-direction: column; gap: 5px; }
+.price-editor-field label { font-size: .74rem; font-weight: 700; color: #374151; }
+
+.input-prefix-wrap { position: relative; }
+.input-prefix {
+  position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
+  font-size: .82rem; font-weight: 700; color: #94a3b8;
+}
+.price-input {
+  width: 100%; padding: 9px 10px 9px 24px;
+  border: 1.5px solid #e2e8f0; border-radius: 10px;
+  font-size: .85rem; color: #0f172a; background: white;
+  outline: none; transition: border-color .2s; box-sizing: border-box;
+}
+.price-input:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,.1); }
+
+.price-editor-actions { display: flex; gap: 8px; justify-content: flex-end; }
+.btn-price-cancel {
+  padding: 8px 18px; border-radius: 9px;
+  background: #f1f5f9; color: #475569;
+  font-weight: 600; font-size: .82rem; border: none; cursor: pointer; transition: background .2s;
+}
+.btn-price-cancel:hover { background: #e2e8f0; }
+.btn-price-save {
+  padding: 8px 20px; border-radius: 9px;
+  background: linear-gradient(135deg, #2563eb, #4f46e5);
+  color: white; font-weight: 700; font-size: .82rem;
+  border: none; cursor: pointer;
+  display: flex; align-items: center; gap: 6px;
+  box-shadow: 0 4px 14px rgba(37,99,235,.3);
+  transition: all .2s;
+}
+.btn-price-save:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(37,99,235,.4); }
+.btn-price-save:disabled { opacity: .6; cursor: not-allowed; }
+
 /* STOCK */
 .stock-row { display: flex; align-items: center; gap: 8px; }
 .stock-dot {
@@ -584,8 +697,8 @@ onMounted(async () => {
 }
 .spinner-sm {
   width: 14px; height: 14px;
-  border: 2px solid rgba(220,38,38,.3);
-  border-top-color: #fca5a5;
+  border: 2px solid rgba(255,255,255,.3);
+  border-top-color: white;
   border-radius: 50%;
   display: inline-block;
   animation: spin .6s linear infinite;
@@ -605,5 +718,6 @@ onMounted(async () => {
   .toolbar-actions { width: 100%; }
   .btn-edit, .btn-delete { flex: 1; justify-content: center; }
   .buy-actions { flex-direction: column; }
+  .price-editor-row { flex-direction: column; }
 }
 </style>

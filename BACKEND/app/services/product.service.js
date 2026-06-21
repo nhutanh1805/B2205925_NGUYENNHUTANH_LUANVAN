@@ -145,8 +145,8 @@ class ProductService {
 
       price: Number(payload.price),
       salePrice: payload.salePrice
-        ? Number(payload.salePrice)
-        : undefined,
+  ? Number(payload.salePrice)
+  : null,
 
       sku: payload.sku,
       stock: Number(payload.stock || 0),
@@ -259,13 +259,24 @@ class ProductService {
   const update = this.extractProductData(payload);
   update.updatedAt = new Date();
 
+  // Tách salePrice ra khỏi $set nếu null, dùng $unset để xóa hẳn
+  const setData = { ...update };
+  const unsetData = {};
+  if (setData.salePrice === null) {
+    delete setData.salePrice;
+    unsetData.salePrice = "";
+  }
+
   const result = await this.Product.findOneAndUpdate(
     filter,
-    { $set: update },
+    {
+      $set: setData,
+      ...(Object.keys(unsetData).length ? { $unset: unsetData } : {})
+    },
     { returnDocument: "after" }
   );
 
-  return result; 
+  return result;
 }
 
 async delete(id) {
