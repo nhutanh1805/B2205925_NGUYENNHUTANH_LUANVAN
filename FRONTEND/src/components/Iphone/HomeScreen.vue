@@ -224,10 +224,10 @@ const dockApps = [
 
 // Messages
 const messages = [
-  { name: 'Minh Tuấn', text: 'Ok bro, tí gặp nha!',   time: '9:41',    color: '#007aff' },
+  { name: 'Nhựt Anh', text: 'Ok bro, tí gặp nha!',   time: '9:41',    color: '#007aff' },
   { name: 'Mẹ',        text: 'Con ăn cơm chưa?',       time: '9:20',    color: '#ff2d55' },
   { name: 'Nhóm lớp',  text: 'Có ai làm BT chưa?',    time: 'Hôm qua', color: '#34c759' },
-  { name: 'Lan Anh',   text: '😂😂 oke hen',           time: 'Hôm qua', color: '#ff9500' },
+  { name: 'Bạn',   text: '😂😂 oke hen',           time: 'Hôm qua', color: '#ff9500' },
 ]
 
 // Photos

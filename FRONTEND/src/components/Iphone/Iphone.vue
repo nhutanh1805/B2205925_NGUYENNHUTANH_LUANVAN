@@ -61,7 +61,7 @@ import BottomIcons from "./BottomIcons.vue";
 import HomeIndicator from "./HomeIndicator.vue";
 import HomeScreen from "./HomeScreen.vue";
 
-import homeBgImg from "@/assets/img/BackIphone.jpg";
+import homeBgImg from "@/assets/img/NenIphone.jpg";
 
 const time = ref("");
 const date = ref("");

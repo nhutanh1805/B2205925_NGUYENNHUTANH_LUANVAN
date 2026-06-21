@@ -63,7 +63,7 @@
           </div>
         </div>
 
-        <p class="version-text">iOS Simulator v1.0.0 · Build 2025</p>
+        <p class="version-text">iOS Simulator v1.0.0 · Nhựt Anh 2026</p>
       </div>
     </transition>
 
@@ -124,9 +124,9 @@ const settingsGroups = [
     { label: 'Vị trí',     icon: 'bi bi-geo-alt-fill',   color: '#34c759', key: 'locationServices', toggle: true },
   ],
   [
-    { label: 'Bộ nhớ',     icon: 'bi bi-hdd-fill',       color: '#ff9500', section: 'storage', value: '23 GB' },
-    { label: 'Pin',        icon: 'bi bi-battery-half',    color: '#34c759', section: 'battery', value: '84%'  },
-    { label: 'Cập nhật',   icon: 'bi bi-arrow-repeat',    color: '#0a84ff', section: 'update',  value: 'iOS 18.4' },
+    { label: 'Bộ nhớ',     icon: 'bi bi-hdd-fill',       color: '#ff9500', section: 'storage', value: '234 GB' },
+    { label: 'Pin',        icon: 'bi bi-battery-half',    color: '#34c759', section: 'battery', value: '100%'  },
+    { label: 'Cập nhật',   icon: 'bi bi-arrow-repeat',    color: '#0a84ff', section: 'update',  value: 'iOS 26.0' },
   ],
 ]
 
