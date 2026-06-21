@@ -50,6 +50,16 @@
               Làm mới
             </button>
 
+            <!-- NÚT GIẢM GIÁ HÀNG LOẠT -->
+            <button class="btn-sale" @click="showSaleModal = true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="add-icon">
+                <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                <path d="M2 17l10 5 10-5"/>
+                <path d="M2 12l10 5 10-5"/>
+              </svg>
+              Giảm giá hàng loạt
+            </button>
+
             <router-link to="/admin/stock-receipts" class="btn-stock">
               <span class="add-icon-wrap">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="add-icon">
@@ -75,6 +85,67 @@
         </div>
       </div>
     </div>
+
+    <!-- ═══════════ MODAL GIẢM GIÁ HÀNG LOẠT ═══════════ -->
+    <Transition name="modal">
+      <div v-if="showSaleModal" class="modal-overlay" @click.self="showSaleModal = false">
+        <div class="modal-box">
+          <div class="modal-icon-wrap"></div>
+          <h3 class="modal-title">Giảm giá hàng loạt</h3>
+          <p class="modal-desc">Áp dụng cho <b>{{ totalProducts }} sản phẩm</b>. Giá khuyến mãi sẽ được tính từ giá gốc.</p>
+
+          <div class="modal-input-wrap">
+            <div class="percent-display">{{ salePercent }}%</div>
+            <input
+              type="range"
+              v-model.number="salePercent"
+              min="1" max="90" step="1"
+              class="percent-slider"
+            />
+            <div class="slider-labels">
+              <span>1%</span>
+              <span>90%</span>
+            </div>
+            <div class="percent-input-wrap">
+              <input
+                type="number"
+                v-model.number="salePercent"
+                min="1" max="90"
+                class="percent-input"
+                placeholder="Nhập %"
+              />
+              <span class="percent-unit">%</span>
+            </div>
+            <p class="modal-hint">
+              VD: Sản phẩm giá <b>1.000.000₫</b> sẽ còn
+              <b>{{ formatPrice(Math.round(1000000 * (1 - salePercent / 100))) }}₫</b>
+            </p>
+          </div>
+
+          <div class="modal-actions">
+            <button class="modal-cancel" @click="showSaleModal = false">Hủy</button>
+            <button
+              class="modal-confirm-sale"
+              @click="applyBulkSale"
+              :disabled="isApplyingSale"
+            >
+              <span v-if="isApplyingSale" class="spinner-sm"></span>
+              {{ isApplyingSale ? 'Đang áp dụng...' : `Áp dụng giảm ${salePercent}%` }}
+            </button>
+          </div>
+
+          <!-- NÚT XÓA KM HÀNG LOẠT -->
+          <button
+            class="btn-clear-sale"
+            @click="clearBulkSale"
+            :disabled="isClearingSale"
+          >
+            <span v-if="isClearingSale" class="spinner-sm spinner-red"></span>
+            {{ isClearingSale ? 'Đang xóa...' : 'Xóa khuyến mãi tất cả sản phẩm' }}
+          </button>
+        </div>
+      </div>
+    </Transition>
 
     <!-- ═══════════ MAIN CONTENT ═══════════ -->
     <div class="content-shell">
@@ -155,10 +226,7 @@
               <span class="sold-chip">Đã bán {{ product.sold || 0 }}</span>
             </div>
 
-            <button
-              class="pcard-btn"
-              @click.stop="goEdit(product._id)"
-            >
+            <button class="pcard-btn" @click.stop="goEdit(product._id)">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" class="edit-icon">
                 <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
                 <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
@@ -186,23 +254,29 @@ import InputSearch from "@/components/InputSearch.vue";
 
 const router = useRouter();
 
-const products       = ref([]);
-const totalProducts  = ref(0);
-const searchText     = ref("");
+const products         = ref([]);
+const totalProducts    = ref(0);
+const searchText       = ref("");
 const selectedCategory = ref("");
-const isRefreshing   = ref(false);
-const sortOption     = ref("createdAt-desc");
-const placeholder    = "https://via.placeholder.com/200x260?text=No+Image";
+const isRefreshing     = ref(false);
+const sortOption       = ref("createdAt-desc");
+const placeholder      = "https://via.placeholder.com/200x260?text=No+Image";
+
+// ─── Bulk sale ────────────────────────────────────────
+const showSaleModal   = ref(false);
+const salePercent     = ref(10);
+const isApplyingSale  = ref(false);
+const isClearingSale  = ref(false);
 
 const categories = [
-  { value: "",              label: "Tất cả" },
-  { value: "tai_nghe",     label: "Tai nghe" },
-  { value: "cap_sac",      label: "Cáp sạc" },
-  { value: "cu_sac",       label: "Củ sạc" },
-  { value: "sac_khong_day",label: "Sạc không dây" },
-  { value: "pin_du_phong", label: "Pin dự phòng" },
+  { value: "",               label: "Tất cả" },
+  { value: "tai_nghe",      label: "Tai nghe" },
+  { value: "cap_sac",       label: "Cáp sạc" },
+  { value: "cu_sac",        label: "Củ sạc" },
+  { value: "sac_khong_day", label: "Sạc không dây" },
+  { value: "pin_du_phong",  label: "Pin dự phòng" },
   { value: "kinh_cuong_luc",label: "Kính cường lực" },
-  { value: "op_lung",      label: "Ốp lưng" },
+  { value: "op_lung",       label: "Ốp lưng" },
 ];
 
 const inStockCount = computed(() => products.value.filter(p => p.stock > 0).length);
@@ -240,6 +314,65 @@ const goEdit   = (id) => router.push(`/products/edit/${id}`);
 
 const formatPrice = v => new Intl.NumberFormat("vi-VN").format(v);
 const discountOf  = p => Math.round(100 - (p.salePrice / p.price) * 100);
+
+// ─── Áp dụng giảm giá hàng loạt ─────────────────────
+async function applyBulkSale() {
+  if (salePercent.value < 1 || salePercent.value > 90) {
+    alert("Phần trăm giảm giá phải từ 1% đến 90%!");
+    return;
+  }
+  isApplyingSale.value = true;
+  try {
+    // Lấy toàn bộ sản phẩm (không lọc category/search)
+    const res = await ProductService.getAll({ page: 1, limit: 9999 });
+    const allProducts = res.products || res;
+
+    // Update từng sản phẩm song song
+    await Promise.all(
+      allProducts.map(p =>
+        ProductService.update(p._id, {
+          ...p,
+          salePrice: Math.round(p.price * (1 - salePercent.value / 100)),
+        })
+      )
+    );
+
+    showSaleModal.value = false;
+    await refreshList();
+    alert(`Đã áp dụng giảm ${salePercent.value}% cho ${allProducts.length} sản phẩm!`);
+  } catch (err) {
+    alert("Lỗi: " + (err.response?.data?.message || err.message));
+  } finally {
+    isApplyingSale.value = false;
+  }
+}
+
+// ─── Xóa khuyến mãi hàng loạt ────────────────────────
+async function clearBulkSale() {
+  if (!confirm("Xóa khuyến mãi toàn bộ sản phẩm?")) return;
+  isClearingSale.value = true;
+  try {
+    const res = await ProductService.getAll({ page: 1, limit: 9999 });
+    const allProducts = res.products || res;
+
+    await Promise.all(
+      allProducts.map(p =>
+        ProductService.update(p._id, {
+          ...p,
+          salePrice: null,
+        })
+      )
+    );
+
+    showSaleModal.value = false;
+    await refreshList();
+    alert(`Đã xóa khuyến mãi cho ${allProducts.length} sản phẩm!`);
+  } catch (err) {
+    alert("Lỗi: " + (err.response?.data?.message || err.message));
+  } finally {
+    isClearingSale.value = false;
+  }
+}
 </script>
 
 <style scoped>
@@ -339,6 +472,19 @@ const discountOf  = p => Math.round(100 - (p.salePrice / p.price) * 100);
 .btn-refresh.spinning .refresh-icon { animation: spin .6s linear; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
+/* NÚT GIẢM GIÁ HÀNG LOẠT */
+.btn-sale {
+  display: inline-flex; align-items: center; gap: 10px;
+  padding: 11px 20px; border-radius: 13px;
+  font-size: .88rem; font-weight: 700; color: white;
+  background: linear-gradient(135deg, #e11d48, #f97316);
+  border: none; cursor: pointer;
+  box-shadow: 0 6px 20px rgba(225,29,72,.4);
+  transition: transform .2s, box-shadow .2s;
+}
+.btn-sale:hover { transform: translateY(-2px); box-shadow: 0 10px 26px rgba(225,29,72,.5); }
+.btn-sale svg { width: 16px; height: 16px; }
+
 .btn-stock {
   display: inline-flex; align-items: center; gap: 10px;
   padding: 11px 20px; border-radius: 13px;
@@ -368,6 +514,93 @@ const discountOf  = p => Math.round(100 - (p.salePrice / p.price) * 100);
   flex-shrink: 0;
 }
 .add-icon { width: 13px; height: 13px; }
+
+/* ═══ MODAL ═══ */
+.modal-overlay {
+  position: fixed; inset: 0; z-index: 100;
+  background: rgba(10,15,30,.7);
+  backdrop-filter: blur(8px);
+  display: flex; align-items: center; justify-content: center; padding: 20px;
+}
+.modal-box {
+  background: white; border-radius: 24px;
+  padding: 36px 32px; max-width: 420px; width: 100%;
+  text-align: center;
+  box-shadow: 0 30px 70px rgba(0,0,0,.3);
+  animation: modalPop .3s cubic-bezier(.175,.885,.32,1.275);
+  display: flex; flex-direction: column; gap: 16px;
+}
+@keyframes modalPop { from { opacity:0; transform:scale(.9); } to { opacity:1; transform:scale(1); } }
+.modal-icon-wrap { font-size: 2.8rem; }
+.modal-title { font-size: 1.2rem; font-weight: 800; color: #0f172a; margin: 0; }
+.modal-desc  { font-size: .88rem; color: #64748b; line-height: 1.6; margin: 0; }
+
+/* PERCENT SLIDER */
+.modal-input-wrap { display: flex; flex-direction: column; gap: 10px; }
+.percent-display {
+  font-size: 3rem; font-weight: 900; line-height: 1;
+  background: linear-gradient(135deg, #e11d48, #f97316);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
+.percent-slider {
+  width: 100%; height: 6px; border-radius: 999px;
+  accent-color: #e11d48; cursor: pointer;
+}
+.slider-labels {
+  display: flex; justify-content: space-between;
+  font-size: .72rem; color: #94a3b8; font-weight: 600;
+}
+.percent-input-wrap {
+  position: relative; display: flex; align-items: center;
+}
+.percent-input {
+  width: 100%; padding: 10px 36px 10px 14px;
+  border: 1.5px solid #e0e7ff; border-radius: 12px;
+  font-size: 1rem; font-weight: 700; color: #0f172a;
+  text-align: center; outline: none;
+  transition: border-color .2s;
+}
+.percent-input:focus { border-color: #e11d48; box-shadow: 0 0 0 3px rgba(225,29,72,.1); }
+.percent-unit {
+  position: absolute; right: 14px;
+  font-size: .9rem; font-weight: 700; color: #94a3b8;
+}
+.modal-hint {
+  font-size: .8rem; color: #64748b; margin: 0;
+  background: #f8faff; border-radius: 10px; padding: 10px 14px;
+  border: 1px solid #e0e7ff; line-height: 1.6;
+}
+
+.modal-actions { display: flex; gap: 10px; }
+.modal-cancel {
+  flex: 1; padding: 12px; border-radius: 12px;
+  background: #f1f5f9; color: #475569;
+  font-weight: 700; border: none; cursor: pointer; transition: background .2s;
+}
+.modal-cancel:hover { background: #e2e8f0; }
+.modal-confirm-sale {
+  flex: 2; padding: 12px; border-radius: 12px;
+  background: linear-gradient(135deg, #e11d48, #f97316);
+  color: white; font-weight: 700; border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  box-shadow: 0 4px 14px rgba(225,29,72,.35);
+  transition: all .2s;
+}
+.modal-confirm-sale:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 8px 22px rgba(225,29,72,.45); }
+.modal-confirm-sale:disabled { opacity: .6; cursor: not-allowed; }
+
+.btn-clear-sale {
+  width: 100%; padding: 10px; border-radius: 12px;
+  background: none; border: 1.5px dashed #fca5a5;
+  color: #e11d48; font-weight: 600; font-size: .82rem;
+  cursor: pointer; transition: all .2s;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+}
+.btn-clear-sale:hover:not(:disabled) { background: #fff1f2; border-color: #e11d48; }
+.btn-clear-sale:disabled { opacity: .5; cursor: not-allowed; }
+
+.modal-enter-active, .modal-leave-active { transition: opacity .25s; }
+.modal-enter-from, .modal-leave-to { opacity: 0; }
 
 /* ═══ CONTENT SHELL ═══ */
 .content-shell {
@@ -516,16 +749,30 @@ const discountOf  = p => Math.round(100 - (p.salePrice / p.price) * 100);
 }
 .empty-icon { font-size: 3rem; margin-bottom: 12px; display: block; }
 
+/* ═══ SPINNER ═══ */
+.spinner-sm {
+  width: 14px; height: 14px;
+  border: 2px solid rgba(255,255,255,.3);
+  border-top-color: white; border-radius: 50%;
+  display: inline-block;
+  animation: spin .6s linear infinite;
+}
+.spinner-red {
+  border-color: rgba(225,29,72,.2);
+  border-top-color: #e11d48;
+}
+
 /* ═══ RESPONSIVE ═══ */
 @media (max-width: 640px) {
   .hero-banner   { padding-bottom: 56px; }
   .hero-content  { padding: 20px 14px 0; }
   .content-shell { padding: 0 14px; margin-top: -24px; }
   .toolbar-actions { width: 100%; }
-  .btn-add, .btn-stock, .btn-refresh { flex: 1; justify-content: center; }
+  .btn-add, .btn-stock, .btn-refresh, .btn-sale { flex: 1; justify-content: center; }
   .hero-title { font-size: 1.3rem; }
   .product-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
   .filter-bar { flex-direction: column; align-items: stretch; }
   .sort-wrap { justify-content: center; }
+  .modal-box { padding: 24px 20px; }
 }
 </style>
