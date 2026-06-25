@@ -44,7 +44,7 @@
 
           <!-- Mã đơn hàng -->
           <div class="field">
-            <label class="field-label">Đơn hàng <span class="opt">(tuỳ chọn)</span></label>
+            <label class="field-label">Đơn hàng <span class="req">*</span></label>
 
             <!-- Đã chọn đơn -->
             <div v-if="selectedOrder" class="order-selected">
@@ -68,25 +68,32 @@
             </button>
           </div>
 
-          <!-- ══ SẢN PHẨM TRONG ĐƠN (tự động hiển thị sau khi chọn đơn) ══ -->
+          <!-- ══ CHỌN SẢN PHẨM TRONG ĐƠN (khách tick chọn) ══ -->
           <div class="field" v-if="selectedOrder && selectedOrder.items?.length">
             <label class="field-label">
-              Sản phẩm trong đơn
-              <span class="opt">({{ selectedOrder.items.length }} sản phẩm — tất cả sẽ được đính kèm)</span>
+              Chọn sản phẩm cần {{ form.type === "warranty" ? "bảo hành" : "đổi trả" }} <span class="req">*</span>
+              <span class="opt">({{ selectedItems.length }}/{{ selectedOrder.items.length }} đã chọn)</span>
             </label>
             <div class="product-list">
-              <div
+              <label
                 v-for="item in selectedOrder.items"
                 :key="item.productId || item._id"
                 class="product-item"
+                :class="{ active: isChecked(item.productId) }"
               >
+                <input
+                  type="checkbox"
+                  class="product-checkbox"
+                  :checked="isChecked(item.productId)"
+                  @change="toggleItem(item)"
+                />
                 <div class="product-img-wrap">
                   <img
-  v-if="item.images?.[0] || item.image"
-  :src="item.images?.[0] || item.image"
-  class="product-img"
-  :alt="item.name"
-/>
+                    v-if="item.images?.[0] || item.image"
+                    :src="item.images?.[0] || item.image"
+                    class="product-img"
+                    :alt="item.name"
+                  />
                   <div v-else class="product-img-placeholder">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                       <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/>
@@ -99,16 +106,20 @@
                     {{ item.variantInfo || item.variant }}
                   </p>
                   <div class="product-price-row">
-                    <span class="product-qty">x{{ item.quantity }}</span>
+                    <span class="product-qty">Đã mua: x{{ item.quantity }}</span>
                     <span class="product-price">{{ formatPrice(item.price) }}₫</span>
                   </div>
                 </div>
-                <div class="product-check">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                    <polyline points="20 6 9 17 4 12"/>
-                  </svg>
-                </div>
-              </div>
+                <input
+                  v-if="isChecked(item.productId)"
+                  type="number"
+                  min="1"
+                  :max="item.quantity"
+                  v-model.number="getSelected(item.productId).quantity"
+                  class="qty-input"
+                  @click.stop
+                />
+              </label>
             </div>
           </div>
 
@@ -129,12 +140,14 @@
                     <p>Đang tải đơn hàng...</p>
                   </div>
                   <div v-else-if="ordersError" class="order-state order-state--error">{{ ordersError }}</div>
-                  <div v-else-if="orders.length === 0" class="order-state">Bạn chưa có đơn hàng nào.</div>
+                  <div v-else-if="orders.length === 0" class="order-state">
+                    Bạn chưa có đơn hàng nào hoàn thành để đổi trả/bảo hành.
+                  </div>
                   <ul v-else class="order-list">
                     <li v-for="o in orders" :key="o._id" class="order-item" @click="selectOrder(o)">
                       <div class="order-item-top">
                         <span class="order-item-code">Đơn #{{ shortId(o._id) }}</span>
-                        <span class="order-item-status" :class="`order-status--${o.status}`">{{ orderStatusLabel(o.status) }}</span>
+                        <span class="order-item-status order-status--completed">Hoàn thành</span>
                       </div>
                       <!-- Mini product list trong modal -->
                       <div class="order-item-products" v-if="o.items?.length">
@@ -207,7 +220,6 @@
 import { ref, reactive, computed } from "vue";
 import { useRouter } from "vue-router";
 import { SupportAPI } from "@/services/support.service";
-import OrderService from "@/services/order.service";
 
 const router = useRouter();
 const userId = JSON.parse(localStorage.getItem("user") || "{}")?._id ?? null;
@@ -225,11 +237,11 @@ const form = reactive({
 });
 
 // ── Chọn đơn hàng ──
-const orders         = ref([]);
-const ordersLoading  = ref(false);
-const ordersError    = ref(null);
-const ordersLoaded   = ref(false);
-const showOrderPicker = ref(false);
+const orders          = ref([]);
+const ordersLoading    = ref(false);
+const ordersError      = ref(null);
+const ordersLoaded     = ref(false);
+const showOrderPicker  = ref(false);
 
 const selectedOrder = computed(() =>
   orders.value.find((o) => o._id === form.orderId) || null
@@ -240,8 +252,8 @@ async function fetchOrders() {
   ordersLoading.value = true;
   ordersError.value   = null;
   try {
-    const data = await OrderService.getOrders();
-    orders.value = Array.isArray(data) ? data : (data.orders || data.data || []);
+    const { data } = await SupportAPI.getEligibleOrders(userId);
+    orders.value = data.orders || [];
     ordersLoaded.value = true;
   } catch (e) {
     ordersError.value = e?.response?.data?.message || "Không tải được danh sách đơn hàng";
@@ -257,38 +269,38 @@ function openOrderPicker() {
 
 function selectOrder(order) {
   form.orderId = order._id;
+  selectedItems.value = []; // reset sản phẩm đã chọn khi đổi đơn
   showOrderPicker.value = false;
 }
 
 function clearOrder() {
   form.orderId = "";
+  selectedItems.value = [];
 }
 
-// Tạo snapshot sản phẩm từ đơn đã chọn
-function buildProductSnapshot(order) {
-  if (!order?.items?.length) return [];
-  return order.items.map((item) => ({
-    productId:   item.productId || null,
-    name:        item.name,
-    image:       Array.isArray(item.images) ? item.images[0] : (item.image || null),
-    price:       item.price,
-    quantity:    item.quantity,
-    variantInfo: item.variantInfo || item.variant || null,
-  }));
-}
+// ── Chọn sản phẩm trong đơn ──
+const selectedItems = ref([]); // [{ productId, name, image, price, quantity, variantInfo }]
 
-function orderStatusLabel(status) {
-  const map = {
-    pending:   "Chờ xác nhận",
-    confirmed: "Đã xác nhận",
-    paid:      "Đã thanh toán",
-    preparing: "Đang chuẩn bị",
-    shipping:  "Đang giao",
-    delivered: "Đã giao",
-    completed: "Hoàn thành",
-    cancelled: "Đã huỷ",
-  };
-  return map[status] ?? status;
+function isChecked(productId) {
+  return selectedItems.value.some((p) => p.productId === productId);
+}
+function getSelected(productId) {
+  return selectedItems.value.find((p) => p.productId === productId);
+}
+function toggleItem(item) {
+  const idx = selectedItems.value.findIndex((p) => p.productId === item.productId);
+  if (idx >= 0) {
+    selectedItems.value.splice(idx, 1);
+  } else {
+    selectedItems.value.push({
+      productId:   item.productId,
+      name:        item.name,
+      image:       Array.isArray(item.images) ? item.images[0] : (item.image || null),
+      price:       item.price,
+      quantity:    1, // mặc định, khách có thể chỉnh tối đa = item.quantity
+      variantInfo: item.variantInfo || item.variant || null,
+    });
+  }
 }
 
 function shortId(id) {
@@ -307,16 +319,18 @@ function handleImages(e) {
 async function handleSubmit() {
   error.value = null;
   if (!form.type)          { error.value = "Vui lòng chọn loại yêu cầu"; return; }
+  if (!form.orderId)       { error.value = "Vui lòng chọn đơn hàng"; return; }
+  if (selectedItems.value.length === 0) { error.value = "Vui lòng chọn ít nhất 1 sản phẩm"; return; }
   if (!form.reason.trim()) { error.value = "Vui lòng nhập lý do"; return; }
 
   loading.value = true;
   try {
     const { data } = await SupportAPI.createRequest(userId, {
       type:             form.type,
-      orderId:          form.orderId || undefined,
+      orderId:          form.orderId,
       reason:           form.reason.trim(),
       images:           form.images,
-      selectedProducts: buildProductSnapshot(selectedOrder.value),
+      selectedProducts: selectedItems.value, // chỉ gửi sản phẩm đã tick chọn
       userName,
     });
     router.push(`/support/${data.request._id}`);
@@ -468,8 +482,14 @@ async function handleSubmit() {
   padding: 12px 14px; border-radius: 14px;
   border: 1.5px solid #e0e7ff; background: #f8faff;
   animation: fadeUp .25s ease both;
+  cursor: pointer; transition: all .2s;
 }
+.product-item.active { border-color: #2563eb; background: #eff6ff; }
 @keyframes fadeUp { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+
+.product-checkbox {
+  width: 19px; height: 19px; flex-shrink: 0; accent-color: #2563eb; cursor: pointer;
+}
 
 .product-img-wrap {
   width: 54px; height: 54px; border-radius: 10px; overflow: hidden;
@@ -492,12 +512,12 @@ async function handleSubmit() {
 .product-qty { font-size: .75rem; color: #94a3b8; font-weight: 600; }
 .product-price { font-size: .82rem; font-weight: 700; color: #e11d48; }
 
-.product-check {
-  width: 24px; height: 24px; border-radius: 50%;
-  background: linear-gradient(135deg, #2563eb, #4f46e5);
-  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+.qty-input {
+  width: 56px; flex-shrink: 0; padding: 6px 8px; text-align: center;
+  border: 1.5px solid #c7d2fe; border-radius: 8px; font-size: .85rem;
+  font-weight: 700; color: #1e3a8a;
 }
-.product-check svg { width: 13px; height: 13px; stroke: white; }
+.qty-input:focus { outline: none; border-color: #2563eb; }
 
 /* ══ ORDER PICKER MODAL ══ */
 .modal-backdrop {
@@ -544,14 +564,7 @@ async function handleSubmit() {
 .order-item-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
 .order-item-code { font-size: .88rem; font-weight: 800; color: #0f172a; }
 .order-item-status { font-size: .7rem; font-weight: 700; padding: 3px 10px; border-radius: 999px; }
-.order-status--pending   { background: #fef3c7; color: #92400e; }
-.order-status--confirmed { background: #dbeafe; color: #1e40af; }
-.order-status--paid      { background: #cffafe; color: #155e75; }
-.order-status--preparing { background: #fae8ff; color: #86198f; }
-.order-status--shipping  { background: #e0e7ff; color: #4338ca; }
-.order-status--delivered { background: #d1fae5; color: #065f46; }
 .order-status--completed { background: #dcfce7; color: #14532d; }
-.order-status--cancelled { background: #fee2e2; color: #991b1b; }
 
 /* Mini product preview trong modal */
 .order-item-products { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }

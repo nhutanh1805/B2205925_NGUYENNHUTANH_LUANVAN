@@ -8,7 +8,7 @@ const VALID_STATUSES = ["pending", "processing", "done", "rejected", "refunded"]
 
 exports.createRequest = async (req, res, next) => {
   const { userId, userName, type, orderId, reason, images, selectedProducts } = req.body;
-  if (!userId || !type || !reason)
+  if (!userId || !type || !reason || !orderId)
     return next(new ApiError(400, "Thiếu thông tin bắt buộc"));
   if (!["warranty", "return"].includes(type))
     return next(new ApiError(400, "Loại yêu cầu không hợp lệ"));
@@ -21,12 +21,27 @@ exports.createRequest = async (req, res, next) => {
       reason,
       images,
       userName,
-      // selectedProducts: mảng snapshot [{ productId, name, image, price, quantity, variantInfo }]
+      // selectedProducts: mảng sản phẩm khách chọn [{ productId, quantity, ... }]
+      // sẽ được service đối chiếu lại với order thật trước khi lưu
       selectedProducts: Array.isArray(selectedProducts) ? selectedProducts : [],
     });
     return res.status(201).json({ message: "Gửi yêu cầu thành công", request });
   } catch (error) {
-    return next(new ApiError(500, "Lỗi tạo yêu cầu"));
+    // error có thể là { status, message } do service throw, hoặc lỗi hệ thống khác
+    return next(new ApiError(error.status || 500, error.message || "Lỗi tạo yêu cầu"));
+  }
+};
+
+exports.getEligibleOrders = async (req, res, next) => {
+  const { userId } = req.body;
+  if (!userId) return next(new ApiError(400, "Thiếu userId"));
+
+  try {
+    const service = new SupportService(MongoDB.client);
+    const orders = await service.getEligibleOrders(userId);
+    return res.json({ orders });
+  } catch (error) {
+    return next(new ApiError(error.status || 500, error.message || "Lỗi lấy danh sách đơn hàng"));
   }
 };
 

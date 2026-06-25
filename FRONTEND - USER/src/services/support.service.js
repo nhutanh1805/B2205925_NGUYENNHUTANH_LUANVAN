@@ -7,6 +7,10 @@ export const SupportAPI = {
     return axios.post(BASE, { userId, ...payload });
   },
 
+  getEligibleOrders(userId) {
+    return axios.post(`${BASE}/eligible-orders`, { userId });
+  },
+
   getMyRequests(userId) {
     return axios.post(`${BASE}/my`, { userId });
   },
