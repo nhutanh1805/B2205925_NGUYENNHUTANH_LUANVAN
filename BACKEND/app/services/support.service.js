@@ -8,13 +8,16 @@ class SupportService {
 
   // YÊU CẦU
 
-  async createRequest(userId, { type, orderId, reason, images = [] }) {
+  async createRequest(userId, { type, orderId, reason, images = [], selectedProducts = [], userName = "" }) {
     const doc = {
       userId,
+      userName,
       type,
       orderId: orderId ? new ObjectId(orderId) : null,
       reason,
       images,
+      // Snapshot sản phẩm tại thời điểm gửi yêu cầu
+      selectedProducts, // [{ productId, name, image, price, quantity, variantInfo }]
       status: "pending",
       adminNote: null,
       createdAt: new Date(),

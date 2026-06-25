@@ -7,7 +7,7 @@ const VALID_STATUSES = ["pending", "processing", "done", "rejected", "refunded"]
 // KHÁCH HÀNG
 
 exports.createRequest = async (req, res, next) => {
-  const { userId, type, orderId, reason, images } = req.body;
+  const { userId, userName, type, orderId, reason, images, selectedProducts } = req.body;
   if (!userId || !type || !reason)
     return next(new ApiError(400, "Thiếu thông tin bắt buộc"));
   if (!["warranty", "return"].includes(type))
@@ -15,7 +15,15 @@ exports.createRequest = async (req, res, next) => {
 
   try {
     const service = new SupportService(MongoDB.client);
-    const request = await service.createRequest(userId, { type, orderId, reason, images });
+    const request = await service.createRequest(userId, {
+      type,
+      orderId,
+      reason,
+      images,
+      userName,
+      // selectedProducts: mảng snapshot [{ productId, name, image, price, quantity, variantInfo }]
+      selectedProducts: Array.isArray(selectedProducts) ? selectedProducts : [],
+    });
     return res.status(201).json({ message: "Gửi yêu cầu thành công", request });
   } catch (error) {
     return next(new ApiError(500, "Lỗi tạo yêu cầu"));

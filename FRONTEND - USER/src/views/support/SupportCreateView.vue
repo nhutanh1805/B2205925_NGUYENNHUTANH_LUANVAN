@@ -33,20 +33,10 @@
           <div class="field">
             <label class="field-label">Loại yêu cầu <span class="req">*</span></label>
             <div class="type-toggle">
-              <button
-                type="button"
-                class="type-btn"
-                :class="{ active: form.type === 'warranty' }"
-                @click="form.type = 'warranty'"
-              >
+              <button type="button" class="type-btn" :class="{ active: form.type === 'warranty' }" @click="form.type = 'warranty'">
                 Bảo hành
               </button>
-              <button
-                type="button"
-                class="type-btn"
-                :class="{ active: form.type === 'return' }"
-                @click="form.type = 'return'"
-              >
+              <button type="button" class="type-btn" :class="{ active: form.type === 'return' }" @click="form.type = 'return'">
                 Đổi trả
               </button>
             </div>
@@ -54,9 +44,9 @@
 
           <!-- Mã đơn hàng -->
           <div class="field">
-            <label class="field-label">Mã đơn hàng <span class="opt">(tuỳ chọn)</span></label>
+            <label class="field-label">Đơn hàng <span class="opt">(tuỳ chọn)</span></label>
 
-            <!-- Đã chọn 1 đơn -->
+            <!-- Đã chọn đơn -->
             <div v-if="selectedOrder" class="order-selected">
               <div class="order-selected-info">
                 <span class="order-selected-code">Đơn #{{ shortId(selectedOrder._id) }}</span>
@@ -64,16 +54,11 @@
                   {{ formatDate(selectedOrder.createdAt) }} · {{ formatPrice(selectedOrder.totalPrice) }}₫
                 </span>
               </div>
-              <button type="button" class="order-change-btn" @click="clearOrder">Đổi đơn hàng</button>
+              <button type="button" class="order-change-btn" @click="clearOrder">Đổi đơn</button>
             </div>
 
             <!-- Chưa chọn -->
-            <button
-              v-else
-              type="button"
-              class="order-pick-btn"
-              @click="openOrderPicker"
-            >
+            <button v-else type="button" class="order-pick-btn" @click="openOrderPicker">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="order-pick-icon">
                 <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
                 <line x1="3" y1="6" x2="21" y2="6"/>
@@ -81,6 +66,50 @@
               </svg>
               Chọn đơn hàng của tôi
             </button>
+          </div>
+
+          <!-- ══ SẢN PHẨM TRONG ĐƠN (tự động hiển thị sau khi chọn đơn) ══ -->
+          <div class="field" v-if="selectedOrder && selectedOrder.items?.length">
+            <label class="field-label">
+              Sản phẩm trong đơn
+              <span class="opt">({{ selectedOrder.items.length }} sản phẩm — tất cả sẽ được đính kèm)</span>
+            </label>
+            <div class="product-list">
+              <div
+                v-for="item in selectedOrder.items"
+                :key="item.productId || item._id"
+                class="product-item"
+              >
+                <div class="product-img-wrap">
+                  <img
+  v-if="item.images?.[0] || item.image"
+  :src="item.images?.[0] || item.image"
+  class="product-img"
+  :alt="item.name"
+/>
+                  <div v-else class="product-img-placeholder">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                      <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/>
+                    </svg>
+                  </div>
+                </div>
+                <div class="product-info">
+                  <p class="product-name">{{ item.name }}</p>
+                  <p class="product-meta" v-if="item.variantInfo || item.variant">
+                    {{ item.variantInfo || item.variant }}
+                  </p>
+                  <div class="product-price-row">
+                    <span class="product-qty">x{{ item.quantity }}</span>
+                    <span class="product-price">{{ formatPrice(item.price) }}₫</span>
+                  </div>
+                </div>
+                <div class="product-check">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <polyline points="20 6 9 17 4 12"/>
+                  </svg>
+                </div>
+              </div>
+            </div>
           </div>
 
           <!-- ══ ORDER PICKER MODAL ══ -->
@@ -99,24 +128,26 @@
                     <div class="spinner"></div>
                     <p>Đang tải đơn hàng...</p>
                   </div>
-                  <div v-else-if="ordersError" class="order-state order-state--error">
-                    {{ ordersError }}
-                  </div>
-                  <div v-else-if="orders.length === 0" class="order-state">
-                    Bạn chưa có đơn hàng nào.
-                  </div>
+                  <div v-else-if="ordersError" class="order-state order-state--error">{{ ordersError }}</div>
+                  <div v-else-if="orders.length === 0" class="order-state">Bạn chưa có đơn hàng nào.</div>
                   <ul v-else class="order-list">
-                    <li
-                      v-for="o in orders"
-                      :key="o._id"
-                      class="order-item"
-                      @click="selectOrder(o)"
-                    >
+                    <li v-for="o in orders" :key="o._id" class="order-item" @click="selectOrder(o)">
                       <div class="order-item-top">
                         <span class="order-item-code">Đơn #{{ shortId(o._id) }}</span>
                         <span class="order-item-status" :class="`order-status--${o.status}`">{{ orderStatusLabel(o.status) }}</span>
                       </div>
-                      <p class="order-item-summary">{{ itemsSummary(o.items) }}</p>
+                      <!-- Mini product list trong modal -->
+                      <div class="order-item-products" v-if="o.items?.length">
+                        <div v-for="(it, i) in o.items.slice(0, 3)" :key="i" class="order-mini-product">
+                         <img v-if="it.images?.[0] || it.image" :src="it.images?.[0] || it.image" class="order-mini-img" />
+                          <div v-else class="order-mini-img order-mini-img--placeholder"></div>
+                          <span class="order-mini-name">{{ it.name }}</span>
+                          <span class="order-mini-qty">x{{ it.quantity }}</span>
+                        </div>
+                        <p v-if="o.items.length > 3" class="order-more">
+                          +{{ o.items.length - 3 }} sản phẩm khác
+                        </p>
+                      </div>
                       <div class="order-item-bottom">
                         <span class="order-item-date">{{ formatDate(o.createdAt) }}</span>
                         <span class="order-item-total">{{ formatPrice(o.totalPrice) }}₫</span>
@@ -149,13 +180,7 @@
                 <line x1="12" y1="3" x2="12" y2="15"/>
               </svg>
               <span class="upload-text">Nhấn để chọn ảnh hoặc kéo thả vào đây</span>
-              <input
-                type="file"
-                accept="image/*"
-                multiple
-                class="upload-input"
-                @change="handleImages"
-              />
+              <input type="file" accept="image/*" multiple class="upload-input" @change="handleImages" />
             </label>
             <div v-if="previewUrls.length" class="preview-grid">
               <div v-for="(url, i) in previewUrls" :key="i" class="preview-item">
@@ -182,10 +207,11 @@
 import { ref, reactive, computed } from "vue";
 import { useRouter } from "vue-router";
 import { SupportAPI } from "@/services/support.service";
-import OrderService from "@/services/order.service"; // gọi OrderService.getOrdersByUser(userId)
+import OrderService from "@/services/order.service";
 
 const router = useRouter();
 const userId = JSON.parse(localStorage.getItem("user") || "{}")?._id ?? null;
+const userName = JSON.parse(localStorage.getItem("user") || "{}")?.name ?? "";
 
 const loading     = ref(false);
 const error       = ref(null);
@@ -195,27 +221,27 @@ const form = reactive({
   type:    "warranty",
   orderId: "",
   reason:  "",
-  images:  [], // mảng URL sau khi upload — tuỳ chỉnh upload logic
+  images:  [],
 });
 
 // ── Chọn đơn hàng ──
-const orders          = ref([]);
-const ordersLoading    = ref(false);
-const ordersError      = ref(null);
-const ordersLoaded     = ref(false);
-const showOrderPicker  = ref(false);
+const orders         = ref([]);
+const ordersLoading  = ref(false);
+const ordersError    = ref(null);
+const ordersLoaded   = ref(false);
+const showOrderPicker = ref(false);
 
 const selectedOrder = computed(() =>
   orders.value.find((o) => o._id === form.orderId) || null
 );
 
 async function fetchOrders() {
-  if (ordersLoaded.value) return; // chỉ tải 1 lần
+  if (ordersLoaded.value) return;
   ordersLoading.value = true;
   ordersError.value   = null;
   try {
-    const { data } = await OrderService.getOrdersByUser(userId);
-    orders.value = data.orders || data; // tuỳ controller bọc { orders } hay trả mảng thẳng
+    const data = await OrderService.getOrders();
+    orders.value = Array.isArray(data) ? data : (data.orders || data.data || []);
     ordersLoaded.value = true;
   } catch (e) {
     ordersError.value = e?.response?.data?.message || "Không tải được danh sách đơn hàng";
@@ -238,8 +264,19 @@ function clearOrder() {
   form.orderId = "";
 }
 
-// status theo OrderService: COD đi qua pending→confirmed→preparing→shipping→delivered→completed
-// non-COD đi qua pending→paid→preparing→shipping→delivered→completed (hoặc cancelled)
+// Tạo snapshot sản phẩm từ đơn đã chọn
+function buildProductSnapshot(order) {
+  if (!order?.items?.length) return [];
+  return order.items.map((item) => ({
+    productId:   item.productId || null,
+    name:        item.name,
+    image:       Array.isArray(item.images) ? item.images[0] : (item.image || null),
+    price:       item.price,
+    quantity:    item.quantity,
+    variantInfo: item.variantInfo || item.variant || null,
+  }));
+}
+
 function orderStatusLabel(status) {
   const map = {
     pending:   "Chờ xác nhận",
@@ -258,36 +295,29 @@ function shortId(id) {
   return id ? String(id).slice(-6).toUpperCase() : "";
 }
 
-function itemsSummary(items) {
-  if (!items?.length) return "";
-  const first = items[0].name;
-  return items.length > 1 ? `${first} và ${items.length - 1} sản phẩm khác` : first;
-}
-
 const formatPrice = (v) => new Intl.NumberFormat("vi-VN").format(v || 0);
 const formatDate  = (iso) => (iso ? new Date(iso).toLocaleDateString("vi-VN") : "");
 
-// Xem trước ảnh (chưa upload thật — tuỳ dự án)
 function handleImages(e) {
   const files = Array.from(e.target.files);
   previewUrls.value = files.map((f) => URL.createObjectURL(f));
   // TODO: upload lên server/cloud để lấy URL thật rồi gán vào form.images
-  // Ví dụ: form.images = await uploadFiles(files);
 }
 
 async function handleSubmit() {
   error.value = null;
-
-  if (!form.type)   { error.value = "Vui lòng chọn loại yêu cầu"; return; }
+  if (!form.type)          { error.value = "Vui lòng chọn loại yêu cầu"; return; }
   if (!form.reason.trim()) { error.value = "Vui lòng nhập lý do"; return; }
 
   loading.value = true;
   try {
     const { data } = await SupportAPI.createRequest(userId, {
-      type:    form.type,
-      orderId: form.orderId || undefined,
-      reason:  form.reason.trim(),
-      images:  form.images,
+      type:             form.type,
+      orderId:          form.orderId || undefined,
+      reason:           form.reason.trim(),
+      images:           form.images,
+      selectedProducts: buildProductSnapshot(selectedOrder.value),
+      userName,
     });
     router.push(`/support/${data.request._id}`);
   } catch (e) {
@@ -321,7 +351,6 @@ async function handleSubmit() {
 .hero-orb-1 { width: 300px; height: 300px; background: rgba(37,99,235,.25); top: -80px; left: -60px; }
 .hero-orb-2 { width: 250px; height: 250px; background: rgba(124,58,237,.2); bottom: -60px; right: -40px; }
 .hero-orb-3 { width: 180px; height: 180px; background: rgba(16,185,129,.15); top: 40%; left: 55%; }
-
 .hero-content { position: relative; z-index: 2; max-width: 700px; margin: auto; }
 
 .back-btn {
@@ -347,10 +376,7 @@ async function handleSubmit() {
   background: #10b981; box-shadow: 0 0 8px #10b981;
   animation: blink 1.8s ease-in-out infinite;
 }
-@keyframes blink {
-  0%,100% { opacity:1; transform:scale(1); }
-  50%      { opacity:.4; transform:scale(1.5); }
-}
+@keyframes blink { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:.4; transform:scale(1.5); } }
 .hero-title {
   font-size: clamp(2.1rem, 6vw, 3.4rem); font-weight: 900; color: white;
   line-height: 1.1; letter-spacing: -.02em; margin-bottom: 14px;
@@ -368,13 +394,11 @@ async function handleSubmit() {
   max-width: 620px; margin: -48px auto 0;
   padding: 0 24px 60px; position: relative; z-index: 10;
 }
-
 .support-card {
   background: white; border-radius: 24px; padding: 36px 32px;
   box-shadow: 0 24px 60px rgba(10,15,30,.16);
   border: 1px solid rgba(37,99,235,.1);
 }
-
 .support-form { display: flex; flex-direction: column; gap: 20px; }
 
 .field-label {
@@ -390,10 +414,7 @@ async function handleSubmit() {
   background: #f8faff; transition: all .2s; box-sizing: border-box;
   font-family: inherit;
 }
-.field-input:focus {
-  outline: none; border-color: #2563eb; background: white;
-  box-shadow: 0 0 0 4px rgba(37,99,235,.12);
-}
+.field-input:focus { outline: none; border-color: #2563eb; background: white; box-shadow: 0 0 0 4px rgba(37,99,235,.12); }
 .field-textarea { resize: vertical; min-height: 100px; }
 
 /* ══ TYPE TOGGLE ══ */
@@ -409,32 +430,6 @@ async function handleSubmit() {
   background: linear-gradient(135deg, #2563eb, #4f46e5);
   color: white; border-color: transparent;
   box-shadow: 0 4px 12px rgba(37,99,235,.3);
-}
-
-/* ══ UPLOAD ══ */
-.upload-box {
-  display: flex; flex-direction: column; align-items: center; gap: 8px;
-  padding: 28px 16px; border-radius: 14px;
-  border: 2px dashed #c7d2fe; background: #f8faff;
-  cursor: pointer; transition: all .2s; position: relative;
-}
-.upload-box:hover { border-color: #818cf8; background: #eff6ff; }
-.upload-icon { width: 26px; height: 26px; color: #6366f1; }
-.upload-text { font-size: .82rem; color: #64748b; font-weight: 600; text-align: center; }
-.upload-input {
-  position: absolute; inset: 0; opacity: 0; cursor: pointer;
-}
-
-.preview-grid { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
-.preview-item {
-  width: 76px; height: 76px; border-radius: 12px; overflow: hidden;
-  border: 1.5px solid #e0e7ff;
-}
-.preview-img { width: 100%; height: 100%; object-fit: cover; display: block; }
-
-.form-error {
-  color: #e11d48; font-size: .85rem; font-weight: 700; margin: 0;
-  text-align: center;
 }
 
 /* ══ ORDER PICK BUTTON ══ */
@@ -454,7 +449,7 @@ async function handleSubmit() {
   padding: 13px 16px; border-radius: 12px;
   border: 1.5px solid #c7d2fe; background: #eff6ff;
 }
-.order-selected-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.order-selected-info { display: flex; flex-direction: column; gap: 2px; }
 .order-selected-code { font-size: .9rem; font-weight: 800; color: #1e3a8a; }
 .order-selected-meta { font-size: .76rem; color: #64748b; }
 .order-change-btn {
@@ -462,6 +457,47 @@ async function handleSubmit() {
   color: #2563eb; font-weight: 700; font-size: .8rem;
 }
 .order-change-btn:hover { text-decoration: underline; }
+
+/* ══ PRODUCT LIST ══ */
+.product-list {
+  display: flex; flex-direction: column; gap: 10px;
+  padding: 4px 0;
+}
+.product-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 14px; border-radius: 14px;
+  border: 1.5px solid #e0e7ff; background: #f8faff;
+  animation: fadeUp .25s ease both;
+}
+@keyframes fadeUp { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+
+.product-img-wrap {
+  width: 54px; height: 54px; border-radius: 10px; overflow: hidden;
+  border: 1px solid #e0e7ff; flex-shrink: 0; background: #f1f5f9;
+}
+.product-img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.product-img-placeholder {
+  width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
+  color: #cbd5e1;
+}
+.product-img-placeholder svg { width: 22px; height: 22px; }
+
+.product-info { flex: 1; min-width: 0; }
+.product-name {
+  font-size: .88rem; font-weight: 700; color: #0f172a;
+  margin: 0 0 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.product-meta { font-size: .74rem; color: #64748b; margin: 0 0 4px; }
+.product-price-row { display: flex; align-items: center; gap: 8px; }
+.product-qty { font-size: .75rem; color: #94a3b8; font-weight: 600; }
+.product-price { font-size: .82rem; font-weight: 700; color: #e11d48; }
+
+.product-check {
+  width: 24px; height: 24px; border-radius: 50%;
+  background: linear-gradient(135deg, #2563eb, #4f46e5);
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.product-check svg { width: 13px; height: 13px; stroke: white; }
 
 /* ══ ORDER PICKER MODAL ══ */
 .modal-backdrop {
@@ -471,7 +507,7 @@ async function handleSubmit() {
 }
 .modal-card {
   background: white; border-radius: 22px; overflow: hidden;
-  max-width: 440px; width: 100%; max-height: 80vh;
+  max-width: 460px; width: 100%; max-height: 82vh;
   display: flex; flex-direction: column;
   box-shadow: 0 30px 70px rgba(0,0,0,.25);
 }
@@ -483,9 +519,7 @@ async function handleSubmit() {
 .modal-close {
   width: 30px; height: 30px; border-radius: 50%; border: none; cursor: pointer;
   background: #f1f5f9; color: #64748b; display: flex; align-items: center; justify-content: center;
-  transition: background .2s;
 }
-.modal-close:hover { background: #e2e8f0; }
 .modal-close svg { width: 15px; height: 15px; }
 .modal-body { padding: 16px 18px 20px; overflow-y: auto; }
 
@@ -507,9 +541,9 @@ async function handleSubmit() {
   border: 1.5px solid #e8edf8; cursor: pointer; transition: all .2s;
 }
 .order-item:hover { border-color: #a5b4fc; background: #f8faff; }
-.order-item-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+.order-item-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
 .order-item-code { font-size: .88rem; font-weight: 800; color: #0f172a; }
-.order-item-status { font-size: .7rem; font-weight: 700; padding: 3px 10px; border-radius: 999px; white-space: nowrap; }
+.order-item-status { font-size: .7rem; font-weight: 700; padding: 3px 10px; border-radius: 999px; }
 .order-status--pending   { background: #fef3c7; color: #92400e; }
 .order-status--confirmed { background: #dbeafe; color: #1e40af; }
 .order-status--paid      { background: #cffafe; color: #155e75; }
@@ -518,12 +552,42 @@ async function handleSubmit() {
 .order-status--delivered { background: #d1fae5; color: #065f46; }
 .order-status--completed { background: #dcfce7; color: #14532d; }
 .order-status--cancelled { background: #fee2e2; color: #991b1b; }
-.order-item-summary { font-size: .8rem; color: #64748b; margin: 0 0 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Mini product preview trong modal */
+.order-item-products { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
+.order-mini-product { display: flex; align-items: center; gap: 8px; }
+.order-mini-img {
+  width: 32px; height: 32px; border-radius: 6px; object-fit: cover;
+  border: 1px solid #e0e7ff; flex-shrink: 0;
+}
+.order-mini-img--placeholder { background: #f1f5f9; }
+.order-mini-name { flex: 1; font-size: .78rem; color: #334155; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.order-mini-qty { font-size: .72rem; color: #94a3b8; flex-shrink: 0; }
+.order-more { font-size: .72rem; color: #94a3b8; margin: 2px 0 0 40px; }
+
 .order-item-bottom { display: flex; align-items: center; justify-content: space-between; }
 .order-item-date { font-size: .78rem; color: #94a3b8; }
 .order-item-total { font-size: .85rem; font-weight: 700; color: #e11d48; }
 
+/* ══ UPLOAD ══ */
+.upload-box {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  padding: 28px 16px; border-radius: 14px;
+  border: 2px dashed #c7d2fe; background: #f8faff;
+  cursor: pointer; transition: all .2s; position: relative;
+}
+.upload-box:hover { border-color: #818cf8; background: #eff6ff; }
+.upload-icon { width: 26px; height: 26px; color: #6366f1; }
+.upload-text { font-size: .82rem; color: #64748b; font-weight: 600; text-align: center; }
+.upload-input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
 
+.preview-grid { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+.preview-item { width: 76px; height: 76px; border-radius: 12px; overflow: hidden; border: 1.5px solid #e0e7ff; }
+.preview-img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+.form-error { color: #e11d48; font-size: .85rem; font-weight: 700; margin: 0; text-align: center; }
+
+/* ══ SUBMIT ══ */
 .submit-btn {
   padding: 14px; border-radius: 13px;
   font-size: .95rem; font-weight: 700; color: white;
