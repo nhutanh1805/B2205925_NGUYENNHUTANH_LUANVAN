@@ -15,8 +15,9 @@ router.get("/top-customers",          stats.getTopCustomers);
 router.get("/cancel-customers",       stats.getTopCancelCustomers);
 
 // Sản phẩm
-router.get("/top-products",           stats.getTopProducts);
-router.get("/cancelled-products",     stats.getMostCancelledProducts);
+router.get("/top-products",                stats.getTopProducts);
+router.get("/cancelled-products",          stats.getMostCancelledProducts);
+router.get("/return-warranty-products",    stats.getTopReturnWarrantyProducts); // thêm
 
 // Thời gian
 router.get("/orders-by-hour",         stats.getOrdersByHour);

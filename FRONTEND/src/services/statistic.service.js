@@ -33,6 +33,10 @@ class StatisticService {
     return (await this.api.get("/cancelled-products", { params: { from, to, limit } })).data;
   }
 
+  async getTopReturnWarrantyProducts({ from, to, type, limit = 10 } = {}) {
+    return (await this.api.get("/return-warranty-products", { params: { from, to, type, limit } })).data;
+  }
+
   async getOrdersByHour({ from, to } = {}) {
     return (await this.api.get("/orders-by-hour", { params: { from, to } })).data;
   }

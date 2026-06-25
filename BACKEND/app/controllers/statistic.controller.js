@@ -2,7 +2,6 @@ const StatisticService = require("../services/statistic.service");
 const MongoDB = require("../utils/mongodb.util");
 const ApiError = require("../api-error");
 
-// Helper lấy query filter
 const getFilter = (query) => ({
   from:   query.from   || null,
   to:     query.to     || null,
@@ -10,7 +9,7 @@ const getFilter = (query) => ({
   limit:  query.limit  || 10,
 });
 
-// TỔNG QUAN (KPIs)
+// TỔNG QUAN
 
 exports.getOverview = async (req, res, next) => {
   try {
@@ -98,6 +97,20 @@ exports.getMostCancelledProducts = async (req, res, next) => {
     return res.json({ message: "Lấy sản phẩm hay bị huỷ thành công", data });
   } catch (err) {
     return next(new ApiError(500, err.message || "Lỗi khi lấy sản phẩm hay bị huỷ"));
+  }
+};
+
+// SẢN PHẨM HAY BỊ ĐỔI TRẢ / BẢO HÀNH
+
+exports.getTopReturnWarrantyProducts = async (req, res, next) => {
+  try {
+    const service = new StatisticService(MongoDB.client);
+    const { from, to, limit } = getFilter(req.query);
+    const type = req.query.type; // optional: "return" | "warranty"
+    const data = await service.getTopReturnWarrantyProducts({ from, to, type, limit });
+    return res.json({ message: "Lấy sản phẩm hay đổi trả/bảo hành thành công", data });
+  } catch (err) {
+    return next(new ApiError(500, err.message || "Lỗi khi lấy thống kê đổi trả/bảo hành"));
   }
 };
 

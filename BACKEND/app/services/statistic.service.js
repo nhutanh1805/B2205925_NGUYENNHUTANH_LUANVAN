@@ -5,6 +5,7 @@ class StatisticService {
     this.client = client;
     this.Order = client.db().collection("orders");
     this.User  = client.db().collection("users");
+    this.SupportRequest = client.db().collection("support_requests"); // thêm
   }
 
   _buildDateFilter(from, to, field = "createdAt") {
@@ -109,13 +110,13 @@ class StatisticService {
           _id:       this._buildGroupByDate(period),
           total:     { $sum: 1 },
           pending:   { $sum: { $cond: [{ $eq: ["$status", "pending"] },   1, 0] } },
-confirmed: { $sum: { $cond: [{ $eq: ["$status", "confirmed"] }, 1, 0] } },
-paid:      { $sum: { $cond: [{ $eq: ["$status", "paid"] },      1, 0] } },
-preparing: { $sum: { $cond: [{ $eq: ["$status", "preparing"] }, 1, 0] } },
-shipping:  { $sum: { $cond: [{ $eq: ["$status", "shipping"] },  1, 0] } },
-delivered: { $sum: { $cond: [{ $eq: ["$status", "delivered"] }, 1, 0] } },
-completed: { $sum: { $cond: [{ $eq: ["$status", "completed"] }, 1, 0] } },
-cancelled: { $sum: { $cond: [{ $eq: ["$status", "cancelled"] }, 1, 0] } },
+          confirmed: { $sum: { $cond: [{ $eq: ["$status", "confirmed"] }, 1, 0] } },
+          paid:      { $sum: { $cond: [{ $eq: ["$status", "paid"] },      1, 0] } },
+          preparing: { $sum: { $cond: [{ $eq: ["$status", "preparing"] }, 1, 0] } },
+          shipping:  { $sum: { $cond: [{ $eq: ["$status", "shipping"] },  1, 0] } },
+          delivered: { $sum: { $cond: [{ $eq: ["$status", "delivered"] }, 1, 0] } },
+          completed: { $sum: { $cond: [{ $eq: ["$status", "completed"] }, 1, 0] } },
+          cancelled: { $sum: { $cond: [{ $eq: ["$status", "cancelled"] }, 1, 0] } },
         },
       },
       { $sort: { "_id.year": 1, "_id.month": 1, "_id.day": 1, "_id.week": 1 } },
@@ -364,7 +365,6 @@ cancelled: { $sum: { $cond: [{ $eq: ["$status", "cancelled"] }, 1, 0] } },
 
     const data = await this.Order.aggregate([
       { $match: { ...dateFilter, status: "completed" } },
-      // Tính cost từng item trước khi group
       {
         $addFields: {
           totalCost: {
@@ -381,8 +381,8 @@ cancelled: { $sum: { $cond: [{ $eq: ["$status", "cancelled"] }, 1, 0] } },
       {
         $group: {
           _id:     this._buildGroupByDate(period),
-          revenue: { $sum: "$totalPrice" },  // giá thực khách trả
-          cost:    { $sum: "$totalCost" },   // tổng giá vốn
+          revenue: { $sum: "$totalPrice" },
+          cost:    { $sum: "$totalCost" },
           orders:  { $sum: 1 },
         },
       },
@@ -406,7 +406,6 @@ cancelled: { $sum: { $cond: [{ $eq: ["$status", "cancelled"] }, 1, 0] } },
       { $sort: { "_id.year": 1, "_id.month": 1, "_id.day": 1, "_id.week": 1 } },
     ]).toArray();
 
-    // Tổng toàn kỳ
     const summary = data.reduce(
       (acc, d) => {
         acc.revenue += d.revenue;
@@ -421,6 +420,35 @@ cancelled: { $sum: { $cond: [{ $eq: ["$status", "cancelled"] }, 1, 0] } },
       : 0;
 
     return { summary, data };
+  }
+
+  // 15. SẢN PHẨM HAY BỊ ĐỔI TRẢ / BẢO HÀNH
+
+  async getTopReturnWarrantyProducts({ from, to, type, limit = 10 } = {}) {
+    const dateFilter = this._buildDateFilter(from, to);
+    const match = { ...dateFilter };
+
+    if (type) match.type = type; // "return" | "warranty"
+    // chỉ tính những yêu cầu đã xử lý xong, không tính pending/processing/rejected
+    match.status = { $in: ["done", "refunded"] };
+
+    const data = await this.SupportRequest.aggregate([
+      { $match: match },
+      { $unwind: "$selectedProducts" },
+      {
+        $group: {
+          _id:      { productId: "$selectedProducts.productId", type: "$type" },
+          name:     { $first: "$selectedProducts.name" },
+          image:    { $first: "$selectedProducts.image" },
+          quantity: { $sum: "$selectedProducts.quantity" },
+          requests: { $sum: 1 },
+        },
+      },
+      { $sort: { quantity: -1 } },
+      { $limit: Number(limit) },
+    ]).toArray();
+
+    return data;
   }
 }
 

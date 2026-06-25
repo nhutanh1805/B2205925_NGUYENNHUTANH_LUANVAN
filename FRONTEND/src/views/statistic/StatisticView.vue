@@ -209,9 +209,9 @@
                   <td>{{ formatPeriodLabel(row._id) }}</td>
                   <td><strong>{{ row.total }}</strong></td>
                   <td>{{ row.pending }}</td>
-<td>{{ row.shipping }}</td>
-<td>{{ row.completed }}</td>
-<td class="cancel">{{ row.cancelled }}</td>
+                  <td>{{ row.shipping }}</td>
+                  <td>{{ row.completed }}</td>
+                  <td class="cancel">{{ row.cancelled }}</td>
                 </tr>
               </tbody>
             </table>
@@ -283,6 +283,30 @@
             </table>
             <p v-else class="empty">Không có dữ liệu</p>
           </div>
+        </div>
+
+        <!-- ══ SẢN PHẨM HAY BỊ ĐỔI TRẢ / BẢO HÀNH ══ -->
+        <div class="card">
+          <h2>Sản phẩm hay bị đổi trả / bảo hành</h2>
+          <table v-if="returnWarrantyProducts?.data?.length">
+            <thead>
+              <tr><th>#</th><th>Sản phẩm</th><th>Loại</th><th>SL</th><th>Số yêu cầu</th></tr>
+            </thead>
+            <tbody>
+              <tr v-for="(p, i) in returnWarrantyProducts.data" :key="p._id.productId + p._id.type">
+                <td><span class="rank">{{ i + 1 }}</span></td>
+                <td>{{ p.name }}</td>
+                <td>
+                  <span class="badge" :class="p._id.type === 'return' ? 'badge-cancel' : 'badge-warn'">
+                    {{ p._id.type === "return" ? "Đổi trả" : "Bảo hành" }}
+                  </span>
+                </td>
+                <td>{{ p.quantity }}</td>
+                <td>{{ p.requests }}</td>
+              </tr>
+            </tbody>
+          </table>
+          <p v-else class="empty">Không có dữ liệu</p>
         </div>
 
         <!-- Ngày trong tuần -->
@@ -389,6 +413,7 @@ export default {
       overview: null, growth: null, revenue: null, ordersByPeriod: null,
       topCustomers: null, cancelCustomers: null,
       topProducts: null, cancelledProducts: null,
+      returnWarrantyProducts: null, // thêm
       ordersByHour: null, ordersByDay: null,
       paymentStats: null, staleOrders: null, orderAverages: null,
       profit: null,
@@ -409,7 +434,7 @@ export default {
         const [
           overview, growth, revenue, ordersByPeriod,
           topCustomers, cancelCustomers,
-          topProducts, cancelledProducts,
+          topProducts, cancelledProducts, returnWarrantyProducts,
           ordersByHour, ordersByDay,
           paymentStats, staleOrders, orderAverages,
           profit,
@@ -422,6 +447,7 @@ export default {
           statisticService.getTopCancelCustomers({ from, to }),
           statisticService.getTopProducts({ from, to }),
           statisticService.getMostCancelledProducts({ from, to }),
+          statisticService.getTopReturnWarrantyProducts({ from, to }), // thêm
           statisticService.getOrdersByHour({ from, to }),
           statisticService.getOrdersByDayOfWeek({ from, to }),
           statisticService.getPaymentMethodStats({ from, to }),
@@ -432,7 +458,7 @@ export default {
         Object.assign(this, {
           overview, growth, revenue, ordersByPeriod,
           topCustomers, cancelCustomers,
-          topProducts, cancelledProducts,
+          topProducts, cancelledProducts, returnWarrantyProducts,
           ordersByHour, ordersByDay,
           paymentStats, staleOrders, orderAverages,
           profit,
