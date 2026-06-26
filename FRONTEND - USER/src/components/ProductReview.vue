@@ -37,7 +37,6 @@
     <div class="form-box">
       <h3 class="form-title">Viết đánh giá của bạn</h3>
 
-      <!-- Chọn sao -->
       <div class="star-pick">
         <span
           v-for="s in 5"
@@ -78,7 +77,7 @@
     <!-- ================= DANH SÁCH REVIEW ================= -->
     <div class="review-list">
       <p v-if="reviews.length === 0" class="empty">
-        Chưa có đánh giá nào. Hãy là người đầu tiên! 🌟
+        Chưa có đánh giá nào. Hãy là người đầu tiên!
       </p>
 
       <div
@@ -110,12 +109,16 @@
 
         <!-- Actions -->
         <div class="review-actions">
+          <!-- Nút tym -->
           <button
-            class="btn-helpful"
+            class="btn-heart"
             :class="{ voted: review.votedByMe }"
+            :disabled="!currentUserId"
             @click="toggleHelpful(review)"
           >
-            👍 Hữu ích ({{ review.helpfulVotes?.length || 0 }})
+            <span class="heart-icon">{{ review.votedByMe ? '❤️' : '🤍' }}</span>
+            <span class="heart-count">{{ review.helpfulCount || 0 }}</span>
+            <span class="heart-label">Hữu ích</span>
           </button>
 
           <button
@@ -154,12 +157,12 @@ const props = defineProps({
   currentUserId: { type: String, default: "" },
 });
 
-const reviews = ref([]);
-const summary = ref({ 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, avg: 0, total: 0 });
+const reviews    = ref([]);
+const summary    = ref({ 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, avg: 0, total: 0 });
 const pagination = ref({ page: 1, totalPages: 1 });
-const hoverStar = ref(0);
+const hoverStar  = ref(0);
 const submitting = ref(false);
-const formError = ref("");
+const formError  = ref("");
 const formSuccess = ref("");
 const form = ref({ rating: 0, title: "", comment: "" });
 
@@ -169,11 +172,17 @@ onMounted(async () => {
 
 async function loadReviews(page = 1) {
   try {
-    const res = await ReviewService.getByProduct(props.productId, {
-      page,
-      limit: 5,
-    });
-    reviews.value = res.reviews;
+    const res = await ReviewService.getByProduct(props.productId, { page, limit: 5 });
+
+    // Gắn helpfulCount và votedByMe vào từng review
+    reviews.value = res.reviews.map((r) => ({
+      ...r,
+      helpfulCount: Array.isArray(r.helpfulVotes) ? r.helpfulVotes.length : 0,
+      votedByMe: Array.isArray(r.helpfulVotes)
+        ? r.helpfulVotes.some((v) => v?.toString() === props.currentUserId)
+        : false,
+    }));
+
     pagination.value = res.pagination;
   } catch {
     reviews.value = [];
@@ -190,7 +199,7 @@ async function loadSummary() {
 }
 
 async function submitReview() {
-  formError.value = "";
+  formError.value   = "";
   formSuccess.value = "";
 
   if (!form.value.rating) {
@@ -212,7 +221,7 @@ async function submitReview() {
       userId: props.currentUserId,
       ...form.value,
     });
-    formSuccess.value = "Đánh giá của bạn đã được ghi nhận! 🎉";
+    formSuccess.value = "Đánh giá của bạn đã được ghi nhận!";
     form.value = { rating: 0, title: "", comment: "" };
     await Promise.all([loadReviews(1), loadSummary()]);
   } catch (err) {
@@ -230,8 +239,9 @@ async function toggleHelpful(review) {
       review._id,
       props.currentUserId
     );
-    review.helpfulVotes = { length: res.data.helpful };
-    review.votedByMe = res.data.voted;
+    // Fix: cập nhật đúng, không dùng { length } nữa
+    review.helpfulCount = res.data.helpful;
+    review.votedByMe    = res.data.voted;
   } catch {
     //
   }
@@ -249,9 +259,7 @@ async function deleteReview(review) {
 
 function formatDate(dateStr) {
   return new Date(dateStr).toLocaleDateString("vi-VN", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
+    day: "2-digit", month: "2-digit", year: "numeric",
   });
 }
 </script>
@@ -325,7 +333,7 @@ function formatDate(dateStr) {
 .inp:focus { border-color: #2563eb; }
 .textarea { resize: none; }
 .msg-err { color: #ef4444; font-size: 13px; margin-bottom: 10px; }
-.msg-ok { color: #16a34a; font-size: 13px; margin-bottom: 10px; }
+.msg-ok  { color: #16a34a; font-size: 13px; margin-bottom: 10px; }
 .btn-submit {
   padding: 12px 32px;
   background: linear-gradient(135deg, #2563eb, #7c3aed);
@@ -365,23 +373,60 @@ function formatDate(dateStr) {
 .review-stars { display: flex; gap: 2px; }
 .review-title { font-weight: 600; margin-bottom: 6px; }
 .review-comment { color: #374151; font-size: 14px; line-height: 1.6; margin-bottom: 12px; }
-.review-actions { display: flex; gap: 10px; }
-.btn-helpful {
-  font-size: 13px;
+
+/* Actions */
+.review-actions { display: flex; align-items: center; gap: 10px; }
+
+/* Nút tym ❤️ */
+.btn-heart {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   padding: 6px 14px;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 20px;
   background: white;
   cursor: pointer;
+  font-size: 13px;
+  color: #6b7280;
   transition: all 0.2s;
+  user-select: none;
 }
-.btn-helpful:hover { border-color: #2563eb; color: #2563eb; background: #eff6ff; }
-.btn-helpful.voted { border-color: #2563eb; color: #2563eb; background: #eff6ff; }
+.btn-heart:hover:not(:disabled) {
+  border-color: #f43f5e;
+  color: #f43f5e;
+  background: #fff1f2;
+}
+.btn-heart.voted {
+  border-color: #f43f5e;
+  color: #f43f5e;
+  background: #fff1f2;
+}
+.btn-heart:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.heart-icon {
+  font-size: 15px;
+  transition: transform 0.2s;
+  line-height: 1;
+}
+.btn-heart:not(:disabled):hover .heart-icon,
+.btn-heart.voted .heart-icon {
+  transform: scale(1.3);
+}
+.heart-count {
+  font-weight: 700;
+  min-width: 14px;
+  text-align: center;
+}
+.heart-label { color: inherit; }
+
 .btn-delete {
   font-size: 13px;
   padding: 6px 14px;
   border: 1px solid #fecaca;
-  border-radius: 8px;
+  border-radius: 20px;
   background: white;
   color: #ef4444;
   cursor: pointer;

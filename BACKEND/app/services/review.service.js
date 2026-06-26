@@ -29,10 +29,10 @@ class ReviewService {
     if (existed) throw new Error("Bạn đã đánh giá sản phẩm này rồi");
 
     const hasPurchased = await this.Order.findOne({
-      userId: userId.toString(),
-      status: "delivered",
-      "items.productId": { $in: [new ObjectId(productId), productId.toString()] },
-    });
+  userId: userId.toString(),
+  status: "completed",
+  "items.productId": productId.toString(),
+});
 
     if (!hasPurchased) {
       throw new Error("Bạn cần mua và nhận sản phẩm này trước khi đánh giá");
