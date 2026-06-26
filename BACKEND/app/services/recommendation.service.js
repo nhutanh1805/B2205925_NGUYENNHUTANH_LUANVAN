@@ -55,6 +55,19 @@ function formatSpecs(specs = {}) {
     .slice(0, 200);
 }
 
+// Chuẩn hoá list compatibility về chữ thường để so khớp
+function normalizeCompat(list = []) {
+  return (list || []).map(c => String(c).toLowerCase().trim());
+}
+
+// Kiểm tra 2 sản phẩm có cùng "hệ" thiết bị không (dựa trên field compatibility)
+// - Nếu 1 trong 2 không có data compatibility -> coi như "không xác định", không loại
+// - Nếu cả 2 có data nhưng không giao nhau -> không tương thích
+function isCompatible(currentCompat, productCompat) {
+  if (!currentCompat.length || !productCompat.length) return true; // thiếu data -> không chặn
+  return productCompat.some(c => currentCompat.includes(c));
+}
+
 function inferUserIntent(product) {
   const name     = (product.name        || "").toLowerCase();
   const category = (product.category    || "").toLowerCase();
@@ -214,6 +227,7 @@ class RecommendationService {
     const catalogInfo = catalog.map((p, i) => {
       const histCount = purchaseHistory[p._id.toString()] || 0;
       const specs     = formatSpecs(p.specs);
+      const compat    = (p.compatibility || []).join(", ");
       const priceInfo = p.salePrice
         ? `${p.salePrice.toLocaleString("vi-VN")}₫ (giảm từ ${p.price.toLocaleString("vi-VN")}₫)`
         : `${(p.price || 0).toLocaleString("vi-VN")}₫`;
@@ -221,6 +235,7 @@ class RecommendationService {
       return [
         `[${i}] ${p.name}`,
         `    Brand: ${p.brand || "N/A"} | Danh mục: ${p.category || "N/A"}`,
+        compat        ? `    Tương thích: ${compat}`                : null,
         specs         ? `    Specs: ${specs}`                       : null,
         p.description ? `    Mô tả: ${p.description.slice(0, 80)}` : null,
         `    Giá: ${priceInfo}`,
@@ -244,8 +259,10 @@ ${catalogInfo}
 
 ## YÊU CẦU:
 Chọn đúng ${limit} sản phẩm PHÙ HỢP NHẤT để gợi ý kèm.
-Ưu tiên SP tương thích đúng thiết bị trong danh sách "Tương thích" ở trên.
-KHÔNG chọn SP dành cho thiết bị khác hệ.
+BẮT BUỘC: nếu SP đang xem có "Tương thích" ghi rõ hệ thiết bị (iPhone/iOS hoặc Android),
+chỉ chọn SP trong danh sách có "Tương thích" khớp đúng hệ đó.
+Nếu SP trong danh sách không ghi "Tương thích", chỉ chọn khi specs/mô tả không mâu thuẫn với hệ thiết bị đang xem.
+TUYỆT ĐỐI KHÔNG chọn SP dành riêng cho hệ điều hành/thiết bị khác (vd: đang xem SP cho iPhone thì không chọn SP chỉ dùng cho Android).
 KHÔNG chọn SP cùng loại với SP đang xem.
 Nếu không đủ SP phù hợp, trả về ít hơn ${limit} phần tử.
 
@@ -333,17 +350,24 @@ Trả về JSON hợp lệ:
 
     const poolAIds = new Set(poolA.map(p => p._id.toString()));
 
-    // Pool B: cùng danh mục, chưa có trong poolA
-    const poolB = catalog.filter(p =>
+    const currentCompat = normalizeCompat(currentProduct.compatibility);
+
+    // Pool B: cùng danh mục, chưa có trong poolA, ưu tiên đúng hệ thiết bị
+    const poolBAll = catalog.filter(p =>
       !poolAIds.has(p._id.toString()) &&
       p.category === currentProduct.category
     );
+    const poolBMatched = poolBAll.filter(p => isCompatible(currentCompat, normalizeCompat(p.compatibility)));
+    // Nếu lọc theo tương thích bị hết sạch (vd thiếu data), fallback dùng poolBAll để không mất gợi ý
+    const poolB = poolBMatched.length ? poolBMatched : poolBAll;
 
-    // Pool C: khác danh mục, chưa có trong poolA — dùng cho "Hoàn thiện bộ"
-    const poolC = catalog.filter(p =>
+    // Pool C: khác danh mục, chưa có trong poolA — dùng cho "Hoàn thiện bộ", ưu tiên đúng hệ thiết bị
+    const poolCAll = catalog.filter(p =>
       !poolAIds.has(p._id.toString()) &&
       p.category !== currentProduct.category
     );
+    const poolCMatched = poolCAll.filter(p => isCompatible(currentCompat, normalizeCompat(p.compatibility)));
+    const poolC = poolCMatched.length ? poolCMatched : poolCAll;
 
     console.log(`[Rec] Pool A: ${poolA.length} SP | Pool B: ${poolB.length} SP | Pool C: ${poolC.length} SP`);
 

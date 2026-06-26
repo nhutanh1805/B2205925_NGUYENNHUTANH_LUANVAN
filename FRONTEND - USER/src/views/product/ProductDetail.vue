@@ -54,6 +54,16 @@
           <span class="sold-count">Đã bán <b>{{ product.sold }}</b></span>
         </div>
 
+<!-- COMPATIBILITY -->
+<div v-if="product.compatibility?.length" class="compat-row">
+  <span class="compat-label">Tương thích:</span>
+  <span
+    v-for="(c, i) in product.compatibility"
+    :key="i"
+    class="compat-chip"
+  >{{ c }}</span>
+</div>
+
         <!-- PRICE -->
         <div class="price-card">
           <div class="price-inner">
@@ -425,6 +435,18 @@ onMounted(async () => {
 .divider-dot { color: #cbd5e1; }
 .sold-count { color: #6b7280; }
 .sold-count b { color: #374151; }
+
+.compat-row {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 6px;
+}
+.compat-label {
+  font-size: .82rem; color: #6b7280; font-weight: 600; margin-right: 2px;
+}
+.compat-chip {
+  background: #eff6ff; border: 1px solid #dbeafe;
+  color: #2563eb; font-weight: 700;
+  padding: 3px 10px; border-radius: 999px; font-size: .78rem;
+}
 
 /* PRICE */
 .price-card {
