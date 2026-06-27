@@ -117,6 +117,13 @@
           {{ message }}
         </div>
 
+        <button class="favorite-link-btn" @click="router.push('/favorites')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="favorite-icon">
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+          </svg>
+          Sản phẩm yêu thích
+        </button>
+
         <button class="logout-btn" @click="logout">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="logout-icon">
             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
@@ -388,9 +395,20 @@ onMounted(() => {
 .message.success { background: #d1fae5; color: #065f46; }
 .message.error { background: #fee2e2; color: #991b1b; }
 
+/* ══ FAVORITE LINK ══ */
+.favorite-link-btn {
+  width: 100%; margin-top: 24px; padding: 13px;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  border-radius: 13px; border: 1.5px solid #e0e7ff; cursor: pointer;
+  background: #f5f3ff; color: #4f46e5; font-weight: 700; font-size: .9rem;
+  transition: all .2s;
+}
+.favorite-link-btn:hover { background: #ede9fe; border-color: #c4b5fd; }
+.favorite-icon { width: 16px; height: 16px; }
+
 /* ══ LOGOUT ══ */
 .logout-btn {
-  width: 100%; margin-top: 24px; padding: 13px;
+  width: 100%; margin-top: 12px; padding: 13px;
   display: flex; align-items: center; justify-content: center; gap: 8px;
   border-radius: 13px; border: 1.5px solid #fecdd3; cursor: pointer;
   background: #fff1f2; color: #e11d48; font-weight: 700; font-size: .9rem;

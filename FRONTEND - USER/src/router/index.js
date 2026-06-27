@@ -4,6 +4,7 @@ import cartRoutes from "./cart.router";
 import orderRoutes from "./order.router";
 import pointRoutes from "./point.router";
 import supportRoutes from "./support.router";
+import favoriteRoutes from "./favorite.router";
 
 const routes = [
   {
@@ -51,7 +52,8 @@ const routes = [
 
 // ===== SUPPORT =====
   ...supportRoutes,
-
+  // ===== FAVORITE =====
+  ...favoriteRoutes,
   // ===== NOT FOUND =====
   {
     path: "/:pathMatch(.*)*",

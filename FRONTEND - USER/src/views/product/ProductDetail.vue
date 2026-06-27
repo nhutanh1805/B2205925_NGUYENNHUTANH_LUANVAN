@@ -15,7 +15,6 @@
       </nav>
     </div>
 
-    <!-- ═══════════ PRODUCT LAYOUT ═══════════ -->
     <div class="product-shell">
 
       <!-- GALLERY -->
@@ -132,6 +131,7 @@
         <button
           class="btn-fav"
           :class="{ favorited: isFavorited }"
+          :disabled="favLoading"
           @click="toggleFavorite"
         >
           {{ isFavorited ? '❤️ Đã yêu thích' : '🤍 Thêm vào yêu thích' }}
@@ -227,6 +227,7 @@ import { ref, onMounted, computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import ProductService from "@/services/product.service";
 import CartService from "@/services/cart.service";
+import FavoriteService from "@/services/favorite.service";
 import ProductReview from "@/components/ProductReview.vue";
 import ProductRecommendation from "@/components/ProductRecommendation.vue"; 
 
@@ -239,6 +240,7 @@ const quantity        = ref(1);
 const showToast       = ref(false);
 const toastProductName = ref(""); // 
 const isFavorited     = ref(false);
+const favLoading      = ref(false);
 
 const tabs = ["Mô tả", "Thông số", "Đánh giá"];
 const tab  = ref("Mô tả");
@@ -287,24 +289,42 @@ function onRecommendationAddToCart(recommendedProduct) {
   showToastMsg(recommendedProduct.name);
 }
 
-function toggleFavorite() {
-  let fav = JSON.parse(localStorage.getItem("favorite") || "[]");
-  if (fav.includes(product.value._id)) {
-    fav = fav.filter((id) => id !== product.value._id);
-    isFavorited.value = false;
-  } else {
-    fav.push(product.value._id);
-    isFavorited.value = true;
+async function toggleFavorite() {
+  if (!currentUserId.value) {
+    router.push("/login");
+    return;
   }
-  localStorage.setItem("favorite", JSON.stringify(fav));
+  if (favLoading.value) return;
+
+  favLoading.value = true;
+  try {
+    if (isFavorited.value) {
+      await FavoriteService.remove(currentUserId.value, product.value._id);
+      isFavorited.value = false;
+    } else {
+      await FavoriteService.add(currentUserId.value, product.value._id);
+      isFavorited.value = true;
+    }
+  } catch (err) {
+    console.error("Lỗi khi cập nhật yêu thích:", err);
+  } finally {
+    favLoading.value = false;
+  }
 }
 
 onMounted(async () => {
   const res = await ProductService.get(route.params.id);
   product.value   = res;
   currentImage.value = res.images?.[0] || "https://via.placeholder.com/600";
-  const fav = JSON.parse(localStorage.getItem("favorite") || "[]");
-  isFavorited.value = fav.includes(res._id);
+
+  if (currentUserId.value) {
+    try {
+      const result = await FavoriteService.check(currentUserId.value, res._id);
+      isFavorited.value = result.isFavorited;
+    } catch (err) {
+      console.error("Lỗi khi kiểm tra trạng thái yêu thích:", err);
+    }
+  }
 });
 </script>
 
@@ -558,6 +578,7 @@ onMounted(async () => {
 }
 .btn-fav:hover { border-color: #fca5a5; color: #e11d48; background: #fff5f5; }
 .btn-fav.favorited { border-color: #fca5a5; color: #e11d48; background: #fff5f5; }
+.btn-fav:disabled { opacity: .6; cursor: not-allowed; }
 
 /* TRUST */
 .trust-strip {
