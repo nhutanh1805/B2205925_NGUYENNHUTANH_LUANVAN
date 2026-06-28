@@ -1,11 +1,13 @@
-const { ObjectId } = require("mongodb");
-const bcrypt = require("bcryptjs");
+const { ObjectId }    = require("mongodb");
+const bcrypt          = require("bcryptjs");
+const DeliveryService = require("./delivery.service");
 
 class ShipperService {
   constructor(client) {
-    this.client  = client;
-    this.Shipper = client.db().collection("shippers");
-    this.Order   = client.db().collection("orders");
+    this.client          = client;
+    this.Shipper         = client.db().collection("shippers");
+    this.Order           = client.db().collection("orders");
+    this.deliveryService = new DeliveryService(client);
   }
 
   async createShipper({ name, phone, email, password, vehicle = "" }) {
@@ -19,7 +21,7 @@ class ShipperService {
       email,
       password: hashed,
       vehicle,
-      status:    "active",   
+      status:    "active",
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -57,29 +59,27 @@ class ShipperService {
     );
   }
 
-  // gán đơn hàng cho shipper
+  // ── Gán đơn hàng cho shipper + tạo delivery record ──
   async assignOrder(shipperId, orderId) {
     if (!/^[0-9a-fA-F]{24}$/.test(shipperId) || !/^[0-9a-fA-F]{24}$/.test(orderId))
       throw new Error("ID không hợp lệ");
 
     const shipper = await this.Shipper.findOne({ _id: new ObjectId(shipperId) });
-    if (!shipper)              throw new Error("Shipper không tồn tại");
+    if (!shipper)                    throw new Error("Shipper không tồn tại");
     if (shipper.status !== "active") throw new Error("Shipper không hoạt động");
 
     const order = await this.Order.findOne({ _id: new ObjectId(orderId) });
     if (!order) throw new Error("Đơn hàng không tồn tại");
 
-// Gán được khi đơn đang "Chuẩn bị hàng" hoặc đang "Giao thất bại" (gán lại shipper khác)
     if (!["preparing", "failed"].includes(order.status))
       throw new Error(`Chỉ có thể gán đơn khi đang ở trạng thái "Chuẩn bị hàng" hoặc "Giao thất bại", hiện tại: "${order.status}"`);
 
- const updateFields = {
+    const updateFields = {
       shipperId:    shipperId,
       shipperName:  shipper.name,
       shipperPhone: shipper.phone,
       updatedAt:    new Date(),
     };
-    // Nếu đơn đang ở trạng thái giao thất bại, chuyển về "preparing" để giao lại từ đầu
     if (order.status === "failed") {
       updateFields.status = "preparing";
     }
@@ -88,6 +88,14 @@ class ShipperService {
       { _id: new ObjectId(orderId) },
       { $set: updateFields }
     );
+
+    // ── Tạo delivery record mới (mỗi lần gán = 1 bản ghi, lưu lịch sử) ──
+    await this.deliveryService.createDelivery({
+      orderId:      orderId,
+      shipperId:    shipperId,
+      shipperName:  shipper.name,
+      shipperPhone: shipper.phone,
+    });
 
     return this.Order.findOne({ _id: new ObjectId(orderId) });
   }
@@ -102,7 +110,8 @@ class ShipperService {
       .toArray();
   }
 
-async updateOrderStatus(shipperId, orderId, newStatus, reason = "") {
+  // ── Shipper cập nhật trạng thái đơn + đồng bộ delivery record ──
+  async updateOrderStatus(shipperId, orderId, newStatus, reason = "") {
     if (!/^[0-9a-fA-F]{24}$/.test(orderId)) throw new Error("orderId không hợp lệ");
 
     const order = await this.Order.findOne({ _id: new ObjectId(orderId) });
@@ -133,6 +142,9 @@ async updateOrderStatus(shipperId, orderId, newStatus, reason = "") {
       { $set: updateFields }
     );
 
+    // ── Đồng bộ delivery record ──
+    await this.deliveryService.updateDeliveryStatus(orderId, newStatus, reason);
+
     return await this.Order.findOne({ _id: new ObjectId(orderId) });
   }
 
@@ -147,7 +159,7 @@ async updateOrderStatus(shipperId, orderId, newStatus, reason = "") {
 
   async updateShipperStatus(shipperId, status) {
     if (!["active", "inactive"].includes(status)) throw new Error("Status không hợp lệ");
-    if (!/^[0-9a-fA-F]{24}$/.test(shipperId)) throw new Error("ID không hợp lệ");
+    if (!/^[0-9a-fA-F]{24}$/.test(shipperId))    throw new Error("ID không hợp lệ");
 
     await this.Shipper.updateOne(
       { _id: new ObjectId(shipperId) },
