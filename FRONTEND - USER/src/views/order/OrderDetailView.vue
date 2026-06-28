@@ -159,6 +159,12 @@
               </div>
             </div>
 
+            <!-- Failed special state -->
+            <div v-if="order.status === 'failed'" class="failed-notice">
+              <span>⚠️</span>
+              <span>Giao hàng thất bại — shop đang sắp xếp giao lại</span>
+            </div>
+
             <!-- Cancelled special state -->
             <div v-if="order.status === 'cancelled'" class="cancelled-notice">
               <span>❌</span>
@@ -291,6 +297,7 @@ const getStatusLabel = (s) => ({
   paid:      "Đã thanh toán",
   preparing: "Chuẩn bị hàng",
   shipping:  "Đang giao",
+  failed:    "Giao thất bại",
   delivered: "Đã giao",
   completed: "Hoàn thành",
   cancelled: "Đã hủy",
@@ -391,6 +398,7 @@ onMounted(loadOrder)
 .pill-cancelled { background: #fee2e2; color: #dc2626; }
 .pill-preparing { background: #fff7ed; color: #ea580c; }
 .pill-completed { background: #f0fdf4; color: #16a34a; }
+.pill-failed    { background: #fef2f2; color: #b91c1c; }
 
 /* ══ MAIN ══ */
 .main-panel {
@@ -552,6 +560,13 @@ onMounted(loadOrder)
   padding: 12px 16px; border-radius: 12px;
   background: #fee2e2; border: 1.5px solid #fecaca;
   color: #dc2626; font-weight: 700; font-size: .85rem;
+}
+.failed-notice {
+  margin: 0 24px 20px;
+  display: flex; align-items: center; gap: 8px;
+  padding: 12px 16px; border-radius: 12px;
+  background: #fef2f2; border: 1.5px solid #fecaca;
+  color: #b91c1c; font-weight: 700; font-size: .85rem;
 }
 
 /* ══ PRODUCTS CARD ══ */

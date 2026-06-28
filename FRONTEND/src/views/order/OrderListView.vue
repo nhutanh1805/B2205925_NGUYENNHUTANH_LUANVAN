@@ -147,19 +147,20 @@
               :class="`select-${order.status}`"
               :disabled="isStatusLocked(order.status)"
             >
-              <option value="pending"   :disabled="!canTransitionTo(order.status, 'pending')">Chờ</option>
-<option value="confirmed" :disabled="!canTransitionTo(order.status, 'confirmed')">Đã xác nhận</option>
-<option value="paid"      :disabled="!canTransitionTo(order.status, 'paid') || order.paymentMethod === 'COD'">Đã thanh toán</option>
-<option value="preparing" :disabled="!canTransitionTo(order.status, 'preparing')">Chuẩn bị hàng</option>
-<option value="shipping"  :disabled="!canTransitionTo(order.status, 'shipping')">Đang giao</option>
-<option value="delivered" :disabled="!canTransitionTo(order.status, 'delivered')">Đã giao</option>
-<option value="completed" :disabled="!canTransitionTo(order.status, 'completed')">Hoàn thành</option>
+              <option value="pending"   :disabled="!canTransitionTo(order, 'pending')">Chờ</option>
+<option value="confirmed" :disabled="!canTransitionTo(order, 'confirmed')">Đã xác nhận</option>
+<option value="paid"      :disabled="!canTransitionTo(order, 'paid') || order.paymentMethod === 'COD'">Đã thanh toán</option>
+<option value="preparing" :disabled="!canTransitionTo(order, 'preparing')">Chuẩn bị hàng</option>
+<option value="shipping"  :disabled="!canTransitionTo(order, 'shipping')">Đang giao</option>
+<option value="failed"    :disabled="!canTransitionTo(order, 'failed')">Giao thất bại</option>
+<option value="delivered" :disabled="!canTransitionTo(order, 'delivered')">Đã giao</option>
+<option value="completed" :disabled="!canTransitionTo(order, 'completed')">Hoàn thành</option>
 <option value="cancelled" :disabled="isStatusLocked(order.status)">Đã hủy</option>
             </select>
 
             <!-- Nút gán shipper — chỉ hiện khi confirmed và paid-->
             <button
-              v-if="order.status === 'preparing'"
+              v-if="['preparing','failed'].includes(order.status)"
               @click="openAssignModal(order)"
               class="btn-assign"
             >
@@ -167,7 +168,7 @@
             </button>
 
             <button
-              v-if="order.paymentMethod === 'COD' ? ['pending','confirmed','preparing'].includes(order.status) : order.status === 'pending'"
+              v-if="order.paymentMethod === 'COD' ? ['pending','confirmed','preparing','failed'].includes(order.status) : ['pending','failed'].includes(order.status)"
               @click="cancelOrder(order._id)"
               class="btn-cancel"
             >
@@ -340,11 +341,13 @@ const doAssign = async (shipperId) => {
 
 // ── Helpers ───────────────────────────────────────────
 const statusText = (s) => ({
+
   pending:   "Chờ",
   confirmed: "Đã xác nhận",
   paid:      "Đã thanh toán",
   preparing: "Chuẩn bị hàng",
   shipping:  "Đang giao",
+  failed:    "Giao thất bại",
   delivered: "Đã giao",
   completed: "Hoàn thành",
   cancelled: "Đã hủy",
@@ -357,14 +360,26 @@ const formatDate  = (d) =>
     hour: "2-digit", minute: "2-digit",
   })
 
-const STATUS_ORDER = ['pending','confirmed','paid','preparing','shipping','delivered','completed']
+const TRANSITIONS_COD = {
+  pending:   ["confirmed", "preparing", "cancelled"],
+  confirmed: ["preparing", "cancelled"],
+  preparing: ["shipping",  "cancelled"],
+  shipping:  ["delivered", "failed"],
+  failed:    ["preparing", "cancelled"],
+  delivered: ["completed"],
+}
+const TRANSITIONS_VNPAY = {
+  pending:   ["paid", "cancelled"],
+  paid:      ["preparing"],
+  preparing: ["shipping"],
+  shipping:  ["delivered", "failed"],
+  failed:    ["preparing", "cancelled"],
+  delivered: ["completed"],
+}
 const isStatusLocked = (s) => s === 'cancelled' || s === 'completed'
-const canTransitionTo = (currentStatus, newStatus) => {
-  if (newStatus === 'cancelled') return true
-  const currentIdx = STATUS_ORDER.indexOf(currentStatus)
-  const newIdx = STATUS_ORDER.indexOf(newStatus)
-  if (currentIdx === -1 || newIdx === -1) return false
-  return newIdx > currentIdx
+const canTransitionTo = (order, newStatus) => {
+  const map = order.paymentMethod === "VNPAY" ? TRANSITIONS_VNPAY : TRANSITIONS_COD
+  return map[order.status]?.includes(newStatus) ?? false
 }
 
 // ── Data ──────────────────────────────────────────────
@@ -384,7 +399,7 @@ const changePage = (page) => loadOrders(page)
 
 const updateStatus = async (id, newStatus) => {
   const order = orders.value.find(o => o._id === id)
-  if (!order || !canTransitionTo(order.status, newStatus)) {
+  if (!order || !canTransitionTo(order, newStatus)) {
     await loadOrders(pagination.value.page)
     return
   }
@@ -551,6 +566,7 @@ onMounted(() => loadOrders(1))
 .accent-cancelled { background: linear-gradient(180deg, #fca5a5, #ef4444); }
 .accent-preparing { background: linear-gradient(180deg, #fb923c, #ea580c); }
 .accent-completed { background: linear-gradient(180deg, #4ade80, #16a34a); }
+.accent-failed    { background: linear-gradient(180deg, #f87171, #dc2626); }
 
 .ocard-body { flex: 1; padding: 18px 22px; min-width: 0; }
 .ocard-top { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
@@ -578,6 +594,7 @@ onMounted(() => loadOrders(1))
 .badge-cancelled { background: #fee2e2; color: #dc2626; border: 1px solid #fecaca; }
 .badge-preparing { background: #fff7ed; color: #ea580c; border: 1px solid #fed7aa; }
 .badge-completed { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+.badge-failed    { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
 
 .payment-badge {
   display: inline-flex; align-items: center; gap: 4px;
@@ -622,6 +639,7 @@ onMounted(() => loadOrders(1))
 .select-cancelled { color: #dc2626; border-color: #fecaca; background: #fff1f2; }
 .select-preparing { color: #ea580c; border-color: #fed7aa; background: #fff7ed; }
 .select-completed { color: #16a34a; border-color: #bbf7d0; background: #f0fdf4; }
+.select-failed    { color: #b91c1c; border-color: #fecaca; background: #fef2f2; }
 
 .btn-assign {
   padding: 7px 14px; border-radius: 10px;

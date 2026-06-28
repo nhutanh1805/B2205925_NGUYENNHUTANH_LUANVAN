@@ -131,19 +131,21 @@ class OrderService {
     }
 
     const isCOD = order.paymentMethod === "COD";
-    const allowedTransitions = isCOD
+const allowedTransitions = isCOD
       ? {
           pending:   ["confirmed", "preparing", "cancelled"],
           confirmed: ["preparing", "cancelled"],
           preparing: ["shipping",  "cancelled"],
-          shipping:  ["delivered"],
+          shipping:  ["delivered", "failed"],
+          failed:    ["preparing", "cancelled"],
           delivered: ["completed"],
         }
       : {
           pending:   ["paid", "cancelled"],
           paid:      ["preparing"],
           preparing: ["shipping"],
-          shipping:  ["delivered"],
+          shipping:  ["delivered", "failed"],
+          failed:    ["preparing", "cancelled"],
           delivered: ["completed"],
         };
 

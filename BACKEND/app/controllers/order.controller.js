@@ -112,7 +112,7 @@ exports.updateOrderStatus = async (req, res, next) => {
   const { orderId } = req.params;
   const { status }  = req.body;
 
-  const validStatuses = ["pending", "confirmed", "paid", "preparing", "shipping", "delivered", "completed", "cancelled"];
+const validStatuses = ["pending", "confirmed", "paid", "preparing", "shipping", "failed", "delivered", "completed", "cancelled"];
   if (!validStatuses.includes(status)) {
     return next(new ApiError(400, "Trạng thái không hợp lệ"));
   }

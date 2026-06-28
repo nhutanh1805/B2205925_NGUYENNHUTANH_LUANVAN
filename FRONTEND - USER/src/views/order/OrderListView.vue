@@ -165,6 +165,7 @@ const statusText = (s) => ({
   paid:      "Đã thanh toán",
   preparing: "Chuẩn bị hàng",
   shipping:  "Đang giao",
+  failed:    "Giao thất bại",
   delivered: "Đã giao",
   completed: "Hoàn thành",
   cancelled: "Đã hủy",
@@ -471,6 +472,7 @@ onMounted(loadOrders)
 .accent-cancelled { background: linear-gradient(180deg, #fca5a5, #ef4444); }
 .accent-preparing { background: linear-gradient(180deg, #fb923c, #ea580c); }
 .accent-completed { background: linear-gradient(180deg, #4ade80, #16a34a); }
+.accent-failed    { background: linear-gradient(180deg, #f87171, #dc2626); }
 
 .ocard-body { flex: 1; padding: 20px 22px; min-width: 0; }
 
@@ -509,6 +511,7 @@ onMounted(loadOrders)
 .badge-cancelled { background: #fee2e2; color: #dc2626; border: 1px solid #fecaca; }
 .badge-preparing { background: #fff7ed; color: #ea580c; border: 1px solid #fed7aa; }
 .badge-completed { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+.badge-failed    { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
 
 .payment-badge {
   display: inline-flex;

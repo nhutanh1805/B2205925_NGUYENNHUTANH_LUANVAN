@@ -142,6 +142,7 @@
                   <option value="paid">💳 Đã thanh toán</option>
                   <option value="preparing">📦 Chuẩn bị hàng</option>
                   <option value="shipping">🚚 Đang giao</option>
+                  <option value="failed">⚠️ Giao thất bại</option>
                   <option value="delivered">📬 Đã giao</option>
                   <option value="completed">🎉 Hoàn thành</option>
                   <option value="cancelled">❌ Đã hủy</option>
@@ -151,8 +152,8 @@
                 </p>
               </div>
 
-              <!-- Gán shipper — chỉ hiện khi confirmed và paid-->
-              <div v-if="order.status === 'preparing'" class="admin-field">
+             <!-- Gán shipper — hiện khi preparing hoặc giao thất bại -->
+              <div v-if="['preparing','failed'].includes(order.status)" class="admin-field">
   <label class="admin-lbl">Shipper giao hàng</label>
 
                 <!-- Đã có shipper -->
@@ -184,8 +185,8 @@
                 </div>
               </div>
 
-              <button
-                v-if="order.paymentMethod === 'COD' ? ['pending','confirmed','preparing'].includes(order.status) : order.status === 'pending'"
+             <button
+                v-if="order.paymentMethod === 'COD' ? ['pending','confirmed','preparing','failed'].includes(order.status) : ['pending','failed'].includes(order.status)"
                 @click="confirmCancel(order._id)"
                 class="btn-cancel-order"
               >
@@ -224,6 +225,11 @@
                   <span class="step-name">{{ step.label }}</span>
                 </div>
               </div>
+            </div>
+
+            <div v-if="order.status === 'failed'" class="failed-notice">
+              <span>⚠️</span>
+              <span>Giao hàng thất bại — đang chờ giao lại</span>
             </div>
 
             <div v-if="order.status === 'cancelled'" class="cancelled-notice">
@@ -454,6 +460,7 @@ const getStatusLabel = (s) => ({
   paid:      "Đã thanh toán",
   preparing: "Chuẩn bị hàng",
   shipping:  "Đang giao",
+  failed:    "Giao thất bại",
   delivered: "Đã giao",
   completed: "Hoàn thành",
   cancelled: "Đã hủy",
@@ -565,6 +572,7 @@ onMounted(loadOrder)
 .pill-cancelled { background: #fee2e2; color: #dc2626; }
 .pill-preparing { background: #fff7ed; color: #ea580c; }
 .pill-completed { background: #f0fdf4; color: #16a34a; }
+.pill-failed    { background: #fef2f2; color: #b91c1c; }
 
 /* ══ MAIN ══ */
 .main-panel {
@@ -656,6 +664,7 @@ onMounted(loadOrder)
 .select-cancelled { color: #dc2626; border-color: #fecaca; background: #fff1f2; }
 .select-preparing { color: #ea580c; border-color: #fed7aa; background: #fff7ed; }
 .select-completed { color: #16a34a; border-color: #bbf7d0; background: #f0fdf4; }
+.select-failed    { color: #b91c1c; border-color: #fecaca; background: #fef2f2; }
 
 .locked-note { font-size: .75rem; color: #94a3b8; font-weight: 500; background: #f8faff; border: 1px solid #e0e7ff; padding: 8px 12px; border-radius: 8px; }
 
@@ -725,6 +734,11 @@ onMounted(loadOrder)
   margin: 0 24px 20px; display: flex; align-items: center; gap: 8px;
   padding: 12px 16px; border-radius: 12px;
   background: #fee2e2; border: 1.5px solid #fecaca; color: #dc2626; font-weight: 700; font-size: .85rem;
+}
+.failed-notice {
+  margin: 0 24px 20px; display: flex; align-items: center; gap: 8px;
+  padding: 12px 16px; border-radius: 12px;
+  background: #fef2f2; border: 1.5px solid #fecaca; color: #b91c1c; font-weight: 700; font-size: .85rem;
 }
 
 /* ══ PRODUCTS CARD ══ */
