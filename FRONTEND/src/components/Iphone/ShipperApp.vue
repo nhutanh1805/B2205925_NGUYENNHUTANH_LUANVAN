@@ -129,7 +129,7 @@
         </template>
 
         <div v-else-if="filteredOrders.length === 0" class="empty-box">
-          <div class="empty-emoji">📭</div>
+          <div class="empty-emoji"></div>
           <p class="empty-txt">Không có đơn nào</p>
         </div>
 
@@ -161,9 +161,13 @@
                 <span class="info-icon">💰</span>
                 <span class="info-txt price-txt">{{ formatPrice(order.totalPrice) }}₫</span>
               </div>
-              <div v-if="order.note" class="info-row">
+             <div v-if="order.note" class="info-row">
                 <span class="info-icon">📝</span>
                 <span class="info-txt note-txt">{{ order.note }}</span>
+              </div>
+              <div v-if="order.failReason" class="info-row">
+                <span class="info-icon"></span>
+                <span class="info-txt fail-reason-txt">{{ order.failReason }}</span>
               </div>
             </div>
 
@@ -186,19 +190,25 @@
                   <span v-if="updating === order._id" class="spinner"></span>
                   <span v-else>Giao thành công</span>
                 </button>
+                <button class="action-btn btn-fail" :disabled="updating === order._id" @click="openFailModal(order)">
+                  Thất bại
+                </button>
+              </template>
+              <template v-else-if="order.status === 'failed'">
+                <div class="fail-label">Đã báo thất bại — chờ admin xử lý</div>
               </template>
               <template v-else-if="order.status === 'delivered'">
-                <div class="done-label">📬 Chờ admin xác nhận</div>
+                <div class="done-label">Chờ admin xác nhận</div>
               </template>
               <template v-else-if="order.status === 'completed'">
-                <div class="done-label">✅ Đã hoàn thành</div>
+                <div class="done-label">Đã hoàn thành</div>
               </template>
             </div>
           </div>
         </template>
       </div>
 
-      <!-- BOTTOM NAV -->
+<!-- BOTTOM NAV -->
       <div class="bottom-nav">
         <button class="nav-btn active">
           <span class="nav-icon">📦</span>
@@ -212,6 +222,32 @@
           <span class="nav-icon">⎋</span>
           <span class="nav-lbl">Đăng xuất</span>
         </button>
+      </div>
+
+      <!-- ══ MODAL LÝ DO THẤT BẠI ══ -->
+      <div v-if="showFailModal" class="fail-modal-overlay" @click.self="closeFailModal">
+        <div class="fail-modal-box">
+          <h3 class="fail-modal-title">Lý do giao thất bại</h3>
+          <p class="fail-modal-sub" v-if="failTargetOrder">
+            Đơn #{{ failTargetOrder._id.slice(-6).toUpperCase() }}
+          </p>
+
+          <div class="fail-reason-list">
+            <button
+              v-for="r in failReasons" :key="r"
+              class="fail-reason-btn" :class="{ active: failReason === r }"
+              @click="failReason = r"
+            >{{ r }}</button>
+          </div>
+
+          <div class="fail-modal-actions">
+            <button class="btn-fail-cancel" @click="closeFailModal">Hủy</button>
+            <button class="btn-fail-confirm" :disabled="!failReason || updating" @click="confirmFail">
+              <span v-if="updating" class="spinner"></span>
+              <span v-else>Xác nhận</span>
+            </button>
+          </div>
+        </div>
       </div>
 
     </template>
@@ -305,6 +341,7 @@ const tabs = [
   { label: "Tất cả",     value: "all"       },
   { label: "Chờ lấy",    value: "preparing" },
   { label: "Đang giao",  value: "shipping"  },
+  { label: "Thất bại",   value: "failed"    },
   { label: "Đã giao",    value: "delivered" },
   { label: "Hoàn thành", value: "completed" },
 ]
@@ -314,6 +351,7 @@ const statusLabel = (s) => ({
   paid:      "Chờ lấy",
   preparing: "Chờ lấy",
   shipping:  "Đang giao",
+  failed:    "Thất bại",
   delivered: "Đã giao",
   completed: "Hoàn thành",
 }[s] || s)
@@ -367,6 +405,45 @@ const changeStatus = async (orderId, newStatus) => {
     const order = allOrders.value.find(o => o._id === orderId)
     if (order) order.status = newStatus
     await loadStats()
+  } catch (e) {
+    alert(e.response?.data?.message || e.message || "Cập nhật thất bại")
+  } finally {
+    updating.value = null
+  }
+}
+
+// ── Báo giao thất bại ──────────────────────────────────
+const showFailModal   = ref(false)
+const failTargetOrder = ref(null)
+const failReason      = ref("")
+const failReasons = [
+  "Khách không nhận hàng",
+  "Không liên lạc được khách",
+  "Sai địa chỉ giao hàng",
+  "Khách hủy khi nhận hàng",
+  "Khác",
+]
+
+const openFailModal = (order) => {
+  failTargetOrder.value = order
+  failReason.value = ""
+  showFailModal.value = true
+}
+const closeFailModal = () => {
+  showFailModal.value = false
+  failTargetOrder.value = null
+  failReason.value = ""
+}
+const confirmFail = async () => {
+  if (!failReason.value || !failTargetOrder.value) return
+  const orderId = failTargetOrder.value._id
+  updating.value = orderId
+  try {
+    await ShipperService.updateOrderStatus(currentShipper.value._id, orderId, "failed", failReason.value)
+    const order = allOrders.value.find(o => o._id === orderId)
+    if (order) { order.status = "failed"; order.failReason = failReason.value }
+    await loadStats()
+    closeFailModal()
   } catch (e) {
     alert(e.response?.data?.message || e.message || "Cập nhật thất bại")
   } finally {
@@ -579,6 +656,7 @@ onMounted(async () => {
 .card-shipping  { border-left-color: #8b5cf6; }
 .card-delivered { border-left-color: #10b981; }
 .card-completed { border-left-color: #16a34a; }
+.card-failed    { border-left-color: #dc2626; }
 
 .card-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 7px; }
 .card-id { font-size: .62rem; font-weight: 900; color: #1e293b; letter-spacing: .02em; }
@@ -589,6 +667,7 @@ onMounted(async () => {
 .chip-delivered { background: #d1fae5; color: #059669; border: 1px solid #6ee7b7; }
 .chip-preparing { background: #fef3c7; color: #d97706; border: 1px solid #fde68a; }
 .chip-completed { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+.chip-failed    { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
 
 .card-info { display: flex; flex-direction: column; gap: 4px; margin-bottom: 7px; }
 .info-row { display: flex; align-items: flex-start; gap: 5px; }
@@ -598,6 +677,7 @@ onMounted(async () => {
 .phone-link { font-weight: 700; color: #2563eb; text-decoration: none; }
 .price-txt { font-weight: 800; color: #e11d48; font-size: .64rem; }
 .note-txt { font-style: italic; color: #64748b; }
+.fail-reason-txt { font-weight: 700; color: #b91c1c; }
 
 .items-row { display: flex; flex-wrap: wrap; gap: 3px; margin-bottom: 7px; }
 .item-chip {
@@ -611,7 +691,7 @@ onMounted(async () => {
   border: 1px solid #bfdbfe; border-radius: 5px; padding: 2px 6px; font-weight: 700;
 }
 
-.card-action { display: flex; }
+.card-action { display: flex; gap: 6px; }
 .action-btn {
   flex: 1; padding: 7px; border-radius: 9px; border: none;
   font-size: .62rem; font-weight: 800; cursor: pointer;
@@ -627,11 +707,19 @@ onMounted(async () => {
   color: #fff; box-shadow: 0 3px 8px rgba(16,185,129,.35);
 }
 .btn-done:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(16,185,129,.45); }
-.action-btn:disabled { opacity: .6; cursor: not-allowed; transform: none; }
-.done-label {
-  flex: 1; text-align: center; font-size: .58rem; font-weight: 700;
-  color: #059669; background: #d1fae5; border-radius: 9px; padding: 6px; border: 1px solid #6ee7b7;
+.btn-fail {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: #fff; box-shadow: 0 3px 8px rgba(239,68,68,.35);
+  flex: 0 0 auto; padding: 7px 12px;
 }
+.btn-fail:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(239,68,68,.45); }
+.action-btn:disabled { opacity: .6; cursor: not-allowed; transform: none; }
+.done-label, .fail-label {
+  flex: 1; text-align: center; font-size: .58rem; font-weight: 700;
+  border-radius: 9px; padding: 6px;
+}
+.done-label { color: #059669; background: #d1fae5; border: 1px solid #6ee7b7; }
+.fail-label { color: #b91c1c; background: #fef2f2; border: 1px solid #fecaca; }
 
 .spinner {
   width: 10px; height: 10px;
@@ -654,4 +742,38 @@ onMounted(async () => {
 .nav-lbl { font-size: .48rem; font-weight: 700; color: #94a3b8; letter-spacing: .02em; }
 .nav-btn.active .nav-lbl { color: #4f46e5; }
 .nav-btn.active .nav-icon { filter: drop-shadow(0 1px 3px rgba(79,70,229,.4)); }
+
+/* ══ FAIL REASON MODAL ══════════════════════════════ */
+.fail-modal-overlay {
+  position: absolute; inset: 0; z-index: 100;
+  background: rgba(15,18,37,.6); backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center; padding: 16px;
+}
+.fail-modal-box {
+  background: #fff; border-radius: 14px; width: 100%;
+  padding: 14px; box-shadow: 0 14px 30px rgba(0,0,0,.35);
+}
+.fail-modal-title { font-size: .82rem; font-weight: 900; color: #0f172a; margin: 0 0 3px; }
+.fail-modal-sub { font-size: .62rem; color: #94a3b8; margin: 0 0 10px; }
+.fail-reason-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+.fail-reason-btn {
+  text-align: left; padding: 8px 10px; border-radius: 9px;
+  border: 1.3px solid #e0e7ff; background: #f8faff;
+  font-size: .66rem; font-weight: 600; color: #334155; cursor: pointer; transition: all .15s;
+}
+.fail-reason-btn.active {
+  border-color: #ef4444; background: #fef2f2; color: #b91c1c; font-weight: 800;
+}
+.fail-modal-actions { display: flex; gap: 8px; }
+.btn-fail-cancel {
+  flex: 1; padding: 8px; border-radius: 9px; font-size: .66rem; font-weight: 700;
+  background: #f1f5f9; border: 1px solid #e2e8f0; color: #64748b; cursor: pointer;
+}
+.btn-fail-confirm {
+  flex: 1; padding: 8px; border-radius: 9px; font-size: .66rem; font-weight: 800;
+  background: linear-gradient(135deg, #ef4444, #dc2626); color: #fff; border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 5px;
+  box-shadow: 0 3px 8px rgba(239,68,68,.3);
+}
+.btn-fail-confirm:disabled { opacity: .6; cursor: not-allowed; }
 </style>

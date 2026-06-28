@@ -42,10 +42,10 @@ class ShipperService {
     ).data;
   }
 
-  // Cập nhật trạng thái đơn (shipper thực hiện)
-  async updateOrderStatus(shipperId, orderId, status) {
+ // Cập nhật trạng thái đơn (shipper thực hiện)
+  async updateOrderStatus(shipperId, orderId, status, reason = "") {
     return (
-      await this.api.patch(`/${shipperId}/orders/${orderId}/status`, { status })
+      await this.api.patch(`/${shipperId}/orders/${orderId}/status`, { status, reason })
     ).data;
   }
 

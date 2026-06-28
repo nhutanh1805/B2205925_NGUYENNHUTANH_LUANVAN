@@ -87,13 +87,13 @@ exports.getMyOrders = async (req, res, next) => {
 
 exports.updateOrderStatus = async (req, res, next) => {
   const { shipperId, orderId } = req.params;
-  const { status }             = req.body;
+  const { status, reason }     = req.body;
 
   if (!status) return next(new ApiError(400, "Thiếu status"));
 
   try {
     const shipperService = new ShipperService(MongoDB.client);
-    const order = await shipperService.updateOrderStatus(shipperId, orderId, status);
+    const order = await shipperService.updateOrderStatus(shipperId, orderId, status, reason);
 
     if (status === "delivered") {
       const pointService = new PointService(MongoDB.client);

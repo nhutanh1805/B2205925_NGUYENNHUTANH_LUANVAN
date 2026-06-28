@@ -69,20 +69,24 @@ class ShipperService {
     const order = await this.Order.findOne({ _id: new ObjectId(orderId) });
     if (!order) throw new Error("Đơn hàng không tồn tại");
 
-    // Chỉ gán được khi đơn ở trạng thái "confirmed" và "paid" 
-    if (order.status !== "preparing")
-  throw new Error(`Chỉ có thể gán đơn khi đang ở trạng thái "Chuẩn bị hàng", hiện tại: "${order.status}"`);
+// Gán được khi đơn đang "Chuẩn bị hàng" hoặc đang "Giao thất bại" (gán lại shipper khác)
+    if (!["preparing", "failed"].includes(order.status))
+      throw new Error(`Chỉ có thể gán đơn khi đang ở trạng thái "Chuẩn bị hàng" hoặc "Giao thất bại", hiện tại: "${order.status}"`);
+
+ const updateFields = {
+      shipperId:    shipperId,
+      shipperName:  shipper.name,
+      shipperPhone: shipper.phone,
+      updatedAt:    new Date(),
+    };
+    // Nếu đơn đang ở trạng thái giao thất bại, chuyển về "preparing" để giao lại từ đầu
+    if (order.status === "failed") {
+      updateFields.status = "preparing";
+    }
 
     await this.Order.updateOne(
       { _id: new ObjectId(orderId) },
-      {
-        $set: {
-          shipperId:   shipperId,
-          shipperName: shipper.name,
-          shipperPhone: shipper.phone,
-          updatedAt:   new Date(),
-        },
-      }
+      { $set: updateFields }
     );
 
     return this.Order.findOne({ _id: new ObjectId(orderId) });
@@ -98,26 +102,35 @@ class ShipperService {
       .toArray();
   }
 
-  async updateOrderStatus(shipperId, orderId, newStatus) {
+async updateOrderStatus(shipperId, orderId, newStatus, reason = "") {
     if (!/^[0-9a-fA-F]{24}$/.test(orderId)) throw new Error("orderId không hợp lệ");
 
     const order = await this.Order.findOne({ _id: new ObjectId(orderId) });
     if (!order)                        throw new Error("Đơn hàng không tồn tại");
     if (order.shipperId !== shipperId) throw new Error("Đơn này không thuộc về bạn");
 
-   const allowed = {
-  confirmed: ["shipping"],
-  paid:      ["shipping"],
-  preparing: ["shipping"],
-  shipping:  ["delivered"],
-};
+    const allowed = {
+      confirmed: ["shipping"],
+      paid:      ["shipping"],
+      preparing: ["shipping"],
+      shipping:  ["delivered", "failed"],
+    };
 
     if (!allowed[order.status]?.includes(newStatus))
       throw new Error(`Không thể chuyển từ "${order.status}" sang "${newStatus}"`);
 
+    if (newStatus === "failed" && !reason.trim())
+      throw new Error("Vui lòng chọn lý do giao hàng thất bại");
+
+    const updateFields = { status: newStatus, updatedAt: new Date() };
+    if (newStatus === "failed") {
+      updateFields.failReason = reason.trim();
+      updateFields.failedAt   = new Date();
+    }
+
     await this.Order.updateOne(
       { _id: new ObjectId(orderId) },
-      { $set: { status: newStatus, updatedAt: new Date() } }
+      { $set: updateFields }
     );
 
     return await this.Order.findOne({ _id: new ObjectId(orderId) });
