@@ -10,7 +10,7 @@
       <p><b>Tên:</b> {{ user.name }}</p>
       <p><b>Email:</b> {{ user.email }}</p>
 
-      <button @click="goDashboard">Dashboard</button>
+      <button @click="goDashboard">Tổng quan</button>
       <button class="logout" @click="logout">Đăng xuất</button>
     </div>
   </div>

@@ -147,14 +147,14 @@
               :class="`select-${order.status}`"
               :disabled="isStatusLocked(order.status)"
             >
-              <option value="pending">Chờ</option>
-              <option value="confirmed">Đã xác nhận</option>
-              <option value="paid">Đã thanh toán</option>
-              <option value="preparing">Chuẩn bị hàng</option>
-              <option value="shipping">Đang giao</option>
-              <option value="delivered">Đã giao</option>
-              <option value="completed">Hoàn thành</option>
-              <option value="cancelled">Đã hủy</option>
+              <option value="pending"   :disabled="!canTransitionTo(order.status, 'pending')">Chờ</option>
+<option value="confirmed" :disabled="!canTransitionTo(order.status, 'confirmed')">Đã xác nhận</option>
+<option value="paid"      :disabled="!canTransitionTo(order.status, 'paid') || order.paymentMethod === 'COD'">Đã thanh toán</option>
+<option value="preparing" :disabled="!canTransitionTo(order.status, 'preparing')">Chuẩn bị hàng</option>
+<option value="shipping"  :disabled="!canTransitionTo(order.status, 'shipping')">Đang giao</option>
+<option value="delivered" :disabled="!canTransitionTo(order.status, 'delivered')">Đã giao</option>
+<option value="completed" :disabled="!canTransitionTo(order.status, 'completed')">Hoàn thành</option>
+<option value="cancelled" :disabled="isStatusLocked(order.status)">Đã hủy</option>
             </select>
 
             <!-- Nút gán shipper — chỉ hiện khi confirmed và paid-->
@@ -357,7 +357,15 @@ const formatDate  = (d) =>
     hour: "2-digit", minute: "2-digit",
   })
 
-const isStatusLocked = (s) => s === "cancelled" || s === "completed"
+const STATUS_ORDER = ['pending','confirmed','paid','preparing','shipping','delivered','completed']
+const isStatusLocked = (s) => s === 'cancelled' || s === 'completed'
+const canTransitionTo = (currentStatus, newStatus) => {
+  if (newStatus === 'cancelled') return true
+  const currentIdx = STATUS_ORDER.indexOf(currentStatus)
+  const newIdx = STATUS_ORDER.indexOf(newStatus)
+  if (currentIdx === -1 || newIdx === -1) return false
+  return newIdx > currentIdx
+}
 
 // ── Data ──────────────────────────────────────────────
 const loadOrders = async (page = 1) => {
@@ -374,9 +382,14 @@ const loadOrders = async (page = 1) => {
 const goToDetail = (id) => router.push(`/orders/${id}`)
 const changePage = (page) => loadOrders(page)
 
-const updateStatus = async (id, status) => {
+const updateStatus = async (id, newStatus) => {
+  const order = orders.value.find(o => o._id === id)
+  if (!order || !canTransitionTo(order.status, newStatus)) {
+    await loadOrders(pagination.value.page)
+    return
+  }
   try {
-    await OrderService.updateOrderStatus(id, status)
+    await OrderService.updateOrderStatus(id, newStatus)
     await loadOrders(pagination.value.page)
   } catch (err) { alert(err.message) }
 }
