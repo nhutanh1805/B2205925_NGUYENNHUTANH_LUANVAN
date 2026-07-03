@@ -218,20 +218,27 @@
 
           <div v-if="statsLoading" class="stats-loading">Đang tải...</div>
           <div v-else-if="statsError" class="stats-error">{{ statsError }}</div>
-          <div v-else class="stats-grid">
-            <div class="stat-box stat-preparing">
-              <span class="stat-box-num">{{ statsData.preparing ?? 0 }}</span>
-              <span class="stat-box-lbl">Chuẩn bị hàng</span>
+          <template v-else>
+            <div class="stats-grid">
+              <div class="stat-box stat-assigned">
+                <span class="stat-box-num">{{ statsData.assigned ?? 0 }}</span>
+                <span class="stat-box-lbl">Đã nhận đơn</span>
+              </div>
+              <div class="stat-box stat-shipping">
+                <span class="stat-box-num">{{ statsData.shipping ?? 0 }}</span>
+                <span class="stat-box-lbl">Đang giao</span>
+              </div>
+              <div class="stat-box stat-delivered">
+                <span class="stat-box-num">{{ statsData.delivered ?? 0 }}</span>
+                <span class="stat-box-lbl">Đã giao</span>
+              </div>
+              <div class="stat-box stat-failed">
+                <span class="stat-box-num">{{ statsData.failed ?? 0 }}</span>
+                <span class="stat-box-lbl">Giao thất bại</span>
+              </div>
             </div>
-            <div class="stat-box stat-shipping">
-              <span class="stat-box-num">{{ statsData.shipping ?? 0 }}</span>
-              <span class="stat-box-lbl">Đang giao</span>
-            </div>
-            <div class="stat-box stat-delivered">
-              <span class="stat-box-num">{{ statsData.delivered ?? 0 }}</span>
-              <span class="stat-box-lbl">Đã giao</span>
-            </div>
-          </div>
+            <p class="stats-total">Tổng cộng: <strong>{{ statsData.total ?? 0 }}</strong> lượt giao</p>
+          </template>
 
           <div class="g-modal-actions">
             <button class="g-btn-cancel" @click="closeStats">Đóng</button>
@@ -611,21 +618,25 @@ onMounted(() => loadShippers())
 .stats-loading, .stats-error { padding: 20px; color: #94a3b8; font-size: .9rem; }
 .stats-error { color: #dc2626; }
 .stats-grid {
-  display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
-  margin-bottom: 28px;
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;
+  margin-bottom: 16px;
 }
 .stat-box {
   border-radius: 16px; padding: 18px 10px; display: flex; flex-direction: column; gap: 4px;
 }
 .stat-box-num { font-family: 'Times New Roman', Times, serif; font-size: 1.8rem; font-weight: 900; }
 .stat-box-lbl { font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
-.stat-preparing { background: #fef3c7; }
-.stat-preparing .stat-box-num { color: #d97706; }
-.stat-preparing .stat-box-lbl { color: #d97706; }
+.stat-assigned { background: #fef3c7; }
+.stat-assigned .stat-box-num { color: #d97706; }
+.stat-assigned .stat-box-lbl { color: #d97706; }
 .stat-shipping { background: #dbeafe; }
 .stat-shipping .stat-box-num { color: #2563eb; }
 .stat-shipping .stat-box-lbl { color: #2563eb; }
 .stat-delivered { background: #dcfce7; }
 .stat-delivered .stat-box-num { color: #16a34a; }
 .stat-delivered .stat-box-lbl { color: #16a34a; }
+.stat-failed { background: #fee2e2; }
+.stat-failed .stat-box-num { color: #dc2626; }
+.stat-failed .stat-box-lbl { color: #dc2626; }
+.stats-total { font-size: .85rem; color: #64748b; margin: 0 0 24px; font-weight: 600; }
 </style>

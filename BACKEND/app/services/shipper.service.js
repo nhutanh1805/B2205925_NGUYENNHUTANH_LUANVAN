@@ -148,13 +148,11 @@ class ShipperService {
     return await this.Order.findOne({ _id: new ObjectId(orderId) });
   }
 
+  // ── Thống kê giao hàng của shipper: lấy từ collection deliveries ──
+  // (chuẩn hơn đếm trên orders, vì orders.shipperId bị ghi đè mỗi lần gán lại
+  //  cho shipper khác nên sẽ mất lịch sử của shipper cũ)
   async getStats(shipperId) {
-    const [preparing, shipping, delivered] = await Promise.all([
-      this.Order.countDocuments({ shipperId, status: "preparing" }),
-      this.Order.countDocuments({ shipperId, status: "shipping"  }),
-      this.Order.countDocuments({ shipperId, status: "delivered" }),
-    ]);
-    return { preparing, shipping, delivered };
+    return this.deliveryService.getStatsByShipper(shipperId);
   }
 
   async updateShipperStatus(shipperId, status) {
