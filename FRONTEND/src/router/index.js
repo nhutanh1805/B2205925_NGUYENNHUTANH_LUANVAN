@@ -5,7 +5,7 @@ import userRoutes from "./userAuth.router";
 import statisticRoutes from "./statistic.router";
 import stockReceiptRoutes from "./stockReceipt.router";
 import adminSupportRoutes from "./support.router";
-
+import adminShipperRoutes from "./adminShipper.router";
 const routes = [
   {
     path: "/",
@@ -51,6 +51,9 @@ const routes = [
   ...userRoutes,
 
 ...adminSupportRoutes,
+
+  // ===== ADMIN SHIPPER =====
+  ...adminShipperRoutes,
 
   // ===== NOT FOUND =====
   {

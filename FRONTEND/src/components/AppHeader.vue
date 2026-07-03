@@ -23,13 +23,39 @@
           Đơn hàng
         </router-link>
 
-        <router-link
-          to="/admin/users"
-          class="nav-link users-link"
-          active-class="users-active"
-        >
-          Người dùng
-        </router-link>
+        <div class="manage-wrapper" ref="manageWrapper">
+          <button
+            class="nav-link manage-btn"
+            :class="{ 'nav-active': isManageActive }"
+            @click="toggleManage"
+          >
+            Quản lý
+            <i class="fas fa-chevron-down manage-caret" :class="{ open: manageOpen }"></i>
+          </button>
+
+          <transition name="panel">
+            <div v-if="manageOpen" class="manage-panel">
+              <router-link
+                to="/admin/users"
+                class="manage-item"
+                active-class="manage-item-active"
+                @click="manageOpen = false"
+              >
+                
+               Quản Lý Người dùng
+              </router-link>
+              <router-link
+                to="/admin/shippers"
+                class="manage-item"
+                active-class="manage-item-active"
+                @click="manageOpen = false"
+              >
+               
+               Quản Lý Shipper
+              </router-link>
+            </div>
+          </transition>
+        </div>
 
         <router-link
           to="/statistics"
@@ -104,13 +130,14 @@
 </template>
 
 <script setup>
-import { reactive, ref, watch, onMounted, onUnmounted } from "vue";
-import { useRouter } from "vue-router";
+import { reactive, ref, watch, onMounted, onUnmounted, computed } from "vue";
+import { useRouter, useRoute } from "vue-router";
 import AdminMenu from "./adminmenu/AdminMenu.vue";
 import DarkModeToggle from "@/components/darkmodetoggle/DarkModeToggle.vue";
 import LanguageSwitcher from "@/components/languageswitcher/LanguageSwitcher.vue";
 
 const router = useRouter();
+const route = useRoute();
 
 const props = defineProps({
   ui: { type: Object, required: true },
@@ -119,6 +146,12 @@ const emit = defineEmits(["update-ui"]);
 
 const settingsOpen = ref(false);
 const settingsWrapper = ref(null);
+
+const manageOpen = ref(false);
+const manageWrapper = ref(null);
+const isManageActive = computed(() =>
+  route.path.startsWith("/admin/users") || route.path.startsWith("/admin/shippers")
+);
 
 const localUI = reactive({
   time: props.ui.time ?? true,
@@ -137,11 +170,20 @@ const loadAdmin = () => {
 
 const toggleSettings = () => {
   settingsOpen.value = !settingsOpen.value;
+  manageOpen.value = false;
+};
+
+const toggleManage = () => {
+  manageOpen.value = !manageOpen.value;
+  settingsOpen.value = false;
 };
 
 const handleClickOutside = (event) => {
   if (settingsWrapper.value && !settingsWrapper.value.contains(event.target)) {
     settingsOpen.value = false;
+  }
+  if (manageWrapper.value && !manageWrapper.value.contains(event.target)) {
+    manageOpen.value = false;
   }
 };
 
@@ -264,6 +306,83 @@ watch(localUI, (val) => emit("update-ui", { ...val }), { deep: true });
 
 .login-btn:hover {
   background: rgba(255, 255, 255, 0.35);
+}
+
+.manage-wrapper {
+  position: relative;
+}
+
+.manage-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: inherit;
+  font-family: inherit;
+}
+
+.manage-caret {
+  font-size: 11px;
+  transition: transform 0.25s ease;
+}
+.manage-caret.open {
+  transform: rotate(180deg);
+}
+
+.manage-panel {
+  position: absolute;
+  top: 52px;
+  left: 0;
+  width: 200px;
+  background: rgba(255, 255, 255, 0.97);
+  backdrop-filter: blur(20px);
+  border-radius: 14px;
+  padding: 8px;
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.35);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dark .manage-panel {
+  background: rgba(30, 40, 60, 0.97);
+}
+
+.manage-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 14px;
+  color: #334155;
+  transition: background 0.2s ease;
+}
+
+.manage-item:hover {
+  background: #eff6ff;
+}
+
+.manage-item-icon {
+  width: 16px;
+  text-align: center;
+  color: #6366f1;
+}
+
+.manage-item-active {
+  background: #e0e7ff;
+  color: #4338ca;
+}
+
+.dark .manage-item {
+  color: #e2e8f0;
+}
+.dark .manage-item:hover {
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .settings-wrapper {
