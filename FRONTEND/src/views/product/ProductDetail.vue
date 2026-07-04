@@ -21,7 +21,6 @@
           <span class="current">{{ product.name }}</span>
         </nav>
 
-        <!-- ADMIN TOOLBAR inside hero -->
         <div class="admin-toolbar">
           <button class="btn-back" @click="router.push('/products')">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -54,7 +53,7 @@
       </div>
     </div>
 
-    <!-- ═══════════ CONFIRM MODAL ═══════════ -->
+    <!-- CONFIRM MODAL (xóa sản phẩm) -->
     <Transition name="modal">
       <div v-if="showConfirm" class="modal-overlay" @click.self="showConfirm = false">
         <div class="modal-box">
@@ -75,7 +74,6 @@
     <!-- ═══════════ PRODUCT LAYOUT ═══════════ -->
     <div class="product-shell">
 
-      <!-- GALLERY -->
       <div class="gallery-col">
         <div class="main-image-wrap">
           <span v-if="product.salePrice" class="badge-sale">-{{ discountPercent }}%</span>
@@ -100,7 +98,6 @@
         </div>
       </div>
 
-      <!-- BUYBOX -->
       <div class="buybox">
 
         <div class="product-meta">
@@ -111,7 +108,6 @@
 
         <h1 class="title">{{ product.name }}</h1>
 
-        <!-- PRICE -->
         <div class="price-card">
           <div class="price-inner">
             <span class="price-sale">{{ formatPrice(product.salePrice || product.price) }}₫</span>
@@ -122,7 +118,6 @@
           </div>
         </div>
 
-        <!-- INLINE PRICE EDITOR -->
         <div class="price-editor" v-if="!isEditingPrice">
           <button class="btn-edit-price" @click="openPriceEditor">
             Chỉnh sửa giá
@@ -155,7 +150,6 @@
           </div>
         </div>
 
-        <!-- STOCK -->
         <div class="stock-row">
           <span class="stock-dot" :class="{ out: product.stock === 0 }"></span>
           <span class="stock-txt" :class="{ out: product.stock === 0 }">
@@ -163,7 +157,6 @@
           </span>
         </div>
 
-        <!-- MINI SPECS -->
         <div class="specs-mini">
           <div class="spec-item">
             <span class="spec-label">Thương hiệu</span>
@@ -183,7 +176,6 @@
           </div>
         </div>
 
-        <!-- BUY ACTIONS (preview only for admin) -->
         <div class="buy-actions">
           <button class="btn-cart" :disabled="product.stock === 0">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" class="btn-icon">
@@ -198,7 +190,6 @@
           </button>
         </div>
 
-        <!-- ADMIN NOTE -->
         <div class="admin-note">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="note-icon">
             <circle cx="12" cy="12" r="10"/>
@@ -229,6 +220,9 @@
       </div>
     </div>
 
+    <!-- ═══════════ REVIEW MANAGEMENT (đã tách component) ═══════════ -->
+    <AdminReviewManager :product-id="product._id" />
+
   </div>
 </template>
 
@@ -236,6 +230,7 @@
 import { ref, onMounted, computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import ProductService from "@/services/product.service";
+import AdminReviewManager from "@/components/AdminReviewManager.vue";
 
 const route = useRoute();
 const router = useRouter();
@@ -279,7 +274,6 @@ async function deleteProduct() {
   }
 }
 
-// sửa giá
 function openPriceEditor() {
   editPrice.value = product.value.price;
   editSalePrice.value = product.value.salePrice || 0;
@@ -312,14 +306,12 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-/* ═══ BASE ═══ */
 .page {
   min-height: 100vh;
   background: #f0f4ff;
   font-family: 'Segoe UI', system-ui, sans-serif;
 }
 
-/* ═══ HERO BANNER ═══ */
 .hero-banner {
   position: relative; overflow: hidden;
   background: #0a0f1e;
@@ -350,7 +342,6 @@ onMounted(async () => {
 .breadcrumb .sep { color: rgba(255,255,255,.2); }
 .breadcrumb .current { color: rgba(255,255,255,.8); font-weight: 600; }
 
-/* ═══ ADMIN TOOLBAR ═══ */
 .admin-toolbar {
   display: flex; align-items: center;
   justify-content: space-between; flex-wrap: wrap; gap: 12px;
@@ -407,7 +398,6 @@ onMounted(async () => {
 }
 .btn-delete:disabled { opacity: .5; cursor: not-allowed; }
 
-/* ═══ MODAL ═══ */
 .modal-overlay {
   position: fixed; inset: 0; z-index: 100;
   background: rgba(10,15,30,.7);
@@ -439,11 +429,11 @@ onMounted(async () => {
   box-shadow: 0 4px 14px rgba(220,38,38,.35);
   transition: all .2s;
 }
-.modal-confirm:hover { transform: translateY(-1px); box-shadow: 0 8px 22px rgba(220,38,38,.45); }
+.modal-confirm:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 8px 22px rgba(220,38,38,.45); }
+.modal-confirm:disabled { opacity: .6; cursor: not-allowed; }
 .modal-enter-active, .modal-leave-active { transition: opacity .25s; }
 .modal-enter-from, .modal-leave-to { opacity: 0; }
 
-/* ═══ PRODUCT SHELL ═══ */
 .product-shell {
   display: grid;
   grid-template-columns: 1.1fr 1fr;
@@ -453,7 +443,6 @@ onMounted(async () => {
   position: relative; z-index: 10;
 }
 
-/* ═══ GALLERY ═══ */
 .gallery-col { display: flex; flex-direction: column; gap: 14px; }
 
 .main-image-wrap {
@@ -496,7 +485,6 @@ onMounted(async () => {
 .fade-enter-active, .fade-leave-active { transition: opacity .2s; }
 .fade-enter-from, .fade-leave-to { opacity: 0; }
 
-/* ═══ BUYBOX ═══ */
 .buybox {
   background: white; border-radius: 24px; padding: 28px;
   border: 1.5px solid #e8edf8;
@@ -513,7 +501,6 @@ onMounted(async () => {
 
 .title { font-size: 1.6rem; font-weight: 800; color: #0f172a; line-height: 1.25; margin: 0; }
 
-/* PRICE */
 .price-card {
   background: linear-gradient(135deg, #0a0f1e 0%, #1e1b4b 100%);
   border-radius: 18px; padding: 20px 22px;
@@ -529,7 +516,6 @@ onMounted(async () => {
   padding: 3px 10px; border-radius: 999px;
 }
 
-/* INLINE PRICE EDITOR */
 .price-editor { margin-top: -4px; }
 
 .btn-edit-price {
@@ -581,7 +567,6 @@ onMounted(async () => {
 .btn-price-save:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(37,99,235,.4); }
 .btn-price-save:disabled { opacity: .6; cursor: not-allowed; }
 
-/* STOCK */
 .stock-row { display: flex; align-items: center; gap: 8px; }
 .stock-dot {
   width: 9px; height: 9px; border-radius: 50%;
@@ -596,7 +581,6 @@ onMounted(async () => {
   50%      { opacity:.4; transform:scale(1.5); }
 }
 
-/* MINI SPECS */
 .specs-mini {
   border: 1.5px solid #e8edf8; border-radius: 16px; overflow: hidden;
 }
@@ -612,7 +596,6 @@ onMounted(async () => {
 .spec-label { font-size: .82rem; color: #64748b; }
 .spec-val   { font-size: .86rem; font-weight: 700; color: #0f172a; }
 
-/* BUY ACTIONS */
 .buy-actions { display: flex; gap: 10px; }
 
 .btn-cart {
@@ -646,7 +629,6 @@ onMounted(async () => {
 .btn-buy:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(16,185,129,.45); }
 .btn-buy:disabled { background: #e2e8f0; color: #94a3b8; box-shadow: none; cursor: not-allowed; }
 
-/* ADMIN NOTE */
 .admin-note {
   display: flex; align-items: center; gap: 10px;
   background: linear-gradient(135deg, #fffbeb, #fef3c7);
@@ -656,9 +638,8 @@ onMounted(async () => {
 }
 .note-icon { width: 16px; height: 16px; flex-shrink: 0; color: #d97706; }
 
-/* ═══ SPEC BLOCK ═══ */
 .spec-block {
-  max-width: 1200px; margin: 24px auto 48px;
+  max-width: 1200px; margin: 24px auto 0;
   padding: 0 24px;
 }
 .section-header { display: flex; align-items: center; gap: 16px; margin-bottom: 18px; }
@@ -681,7 +662,6 @@ onMounted(async () => {
 .spec-key { color: #94a3b8; font-weight: 500; }
 .spec-val { color: #0f172a; font-weight: 700; text-align: right; max-width: 55%; }
 
-/* ═══ LOADING ═══ */
 .loading-screen {
   display: flex; flex-direction: column;
   align-items: center; justify-content: center;
@@ -705,7 +685,6 @@ onMounted(async () => {
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* ═══ RESPONSIVE ═══ */
 @media (max-width: 900px) {
   .product-shell { grid-template-columns: 1fr; }
   .main-image { height: 300px; }

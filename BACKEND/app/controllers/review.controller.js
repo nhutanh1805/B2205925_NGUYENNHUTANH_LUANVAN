@@ -113,3 +113,63 @@ exports.toggleHelpful = async (req, res, next) => {
     return next(new ApiError(500, "Lỗi khi cập nhật vote hữu ích"));
   }
 };
+
+// ===== ADMIN =====
+
+exports.adminFindAll = async (req, res, next) => {
+  try {
+    const reviewService = new ReviewService(MongoDB.client);
+    const result = await reviewService.adminFindAll(req.query);
+    return res.json({ message: "Lấy danh sách thành công", ...result });
+  } catch (error) {
+    return next(new ApiError(500, "Lỗi khi lấy danh sách đánh giá"));
+  }
+};
+
+exports.adminGetStats = async (req, res, next) => {
+  try {
+    const reviewService = new ReviewService(MongoDB.client);
+    const stats = await reviewService.adminGetStats(req.query.productId);
+    return res.json({ message: "Lấy thống kê thành công", data: stats });
+  } catch (error) {
+    return next(new ApiError(500, "Lỗi khi lấy thống kê"));
+  }
+};
+
+exports.toggleVisibility = async (req, res, next) => {
+  try {
+    const reviewService = new ReviewService(MongoDB.client);
+    const result = await reviewService.toggleVisibility(req.params.reviewId);
+    return res.json({ message: "Cập nhật trạng thái thành công", data: result });
+  } catch (error) {
+    return next(new ApiError(400, error.message || "Lỗi khi cập nhật trạng thái"));
+  }
+};
+
+exports.replyToReview = async (req, res, next) => {
+  if (!req.body?.content?.trim()) {
+    return next(new ApiError(400, "Nội dung phản hồi không được để trống"));
+  }
+
+  try {
+    const reviewService = new ReviewService(MongoDB.client);
+    const document = await reviewService.replyToReview(
+      req.params.reviewId,
+      req.body.content,
+      req.body.adminId
+    );
+    return res.json({ message: "Phản hồi đánh giá thành công", data: document });
+  } catch (error) {
+    return next(new ApiError(400, error.message || "Lỗi khi phản hồi đánh giá"));
+  }
+};
+
+exports.deleteReply = async (req, res, next) => {
+  try {
+    const reviewService = new ReviewService(MongoDB.client);
+    const document = await reviewService.deleteReply(req.params.reviewId);
+    return res.json({ message: "Xóa phản hồi thành công", data: document });
+  } catch (error) {
+    return next(new ApiError(400, error.message || "Lỗi khi xóa phản hồi"));
+  }
+};

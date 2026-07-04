@@ -107,6 +107,12 @@
         <p v-if="review.title" class="review-title">{{ review.title }}</p>
         <p class="review-comment">{{ review.comment }}</p>
 
+        <!-- Phản hồi từ shop -->
+        <div v-if="review.adminReply" class="shop-reply-box">
+          <span class="shop-reply-label">Phản hồi từ Shop</span>
+          <p class="shop-reply-text">{{ review.adminReply.content }}</p>
+        </div>
+
         <!-- Actions -->
         <div class="review-actions">
           <!-- Nút tym -->
@@ -373,6 +379,28 @@ function formatDate(dateStr) {
 .review-stars { display: flex; gap: 2px; }
 .review-title { font-weight: 600; margin-bottom: 6px; }
 .review-comment { color: #374151; font-size: 14px; line-height: 1.6; margin-bottom: 12px; }
+
+/* Phản hồi từ shop */
+.shop-reply-box {
+  margin: 0 0 14px;
+  padding: 12px 14px;
+  background: #eff6ff;
+  border-left: 3px solid #2563eb;
+  border-radius: 8px;
+}
+.shop-reply-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  color: #2563eb;
+  margin-bottom: 4px;
+}
+.shop-reply-text {
+  margin: 0;
+  font-size: 13.5px;
+  color: #1e3a8a;
+  line-height: 1.6;
+}
 
 /* Actions */
 .review-actions { display: flex; align-items: center; gap: 10px; }
