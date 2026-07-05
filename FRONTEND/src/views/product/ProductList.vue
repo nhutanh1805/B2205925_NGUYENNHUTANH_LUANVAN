@@ -50,6 +50,23 @@
               Làm mới
             </button>
 
+            <!-- NÚT XÓA CACHE GỢI Ý (chỉ admin thấy trên trang này) -->
+            <button
+              class="btn-cache"
+              @click="clearRecommendationCache"
+              :disabled="isClearingCache"
+              title="Xóa cache gợi ý sản phẩm (AI sẽ tính lại ở lần xem tiếp theo)"
+            >
+              <span v-if="isClearingCache" class="spinner-sm"></span>
+              <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="add-icon">
+                <polyline points="3 6 5 6 21 6"/>
+                <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
+                <path d="M10 11v6M14 11v6"/>
+                <path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/>
+              </svg>
+              {{ isClearingCache ? 'Đang xóa...' : 'Xóa cache gợi ý' }}
+            </button>
+
             <!-- NÚT GIẢM GIÁ HÀNG LOẠT -->
             <button class="btn-sale" @click="showSaleModal = true">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="add-icon">
@@ -238,7 +255,7 @@
       </div>
 
       <div v-else class="empty-state">
-        <div class="empty-icon">🔍</div>
+        <div class="empty-icon"></div>
         <p>Không tìm thấy sản phẩm nào phù hợp</p>
       </div>
 
@@ -267,6 +284,9 @@ const showSaleModal   = ref(false);
 const salePercent     = ref(10);
 const isApplyingSale  = ref(false);
 const isClearingSale  = ref(false);
+
+// ─── Cache gợi ý ──────────────────────────────────────
+const isClearingCache = ref(false);
 
 const categories = [
   { value: "",               label: "Tất cả" },
@@ -314,6 +334,23 @@ const goEdit   = (id) => router.push(`/products/edit/${id}`);
 
 const formatPrice = v => new Intl.NumberFormat("vi-VN").format(v);
 const discountOf  = p => Math.round(100 - (p.salePrice / p.price) * 100);
+
+// ─── Xóa cache gợi ý sản phẩm (chỉ admin, trang này) ──
+async function clearRecommendationCache() {
+  if (!confirm("Xóa TOÀN BỘ cache gợi ý sản phẩm?\nTất cả sản phẩm sẽ được AI tính lại gợi ý ở lần xem tiếp theo (tốn API Groq).")) return;
+
+  isClearingCache.value = true;
+  try {
+    const res = await fetch("/api/recommendations/invalidate", { method: "DELETE" });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || "Lỗi không xác định");
+    alert("" + (data.message || "Đã xóa toàn bộ cache gợi ý"));
+  } catch (err) {
+    alert("Lỗi xóa cache: " + err.message);
+  } finally {
+    isClearingCache.value = false;
+  }
+}
 
 // ─── Áp dụng giảm giá hàng loạt ─────────────────────
 async function applyBulkSale() {
@@ -471,6 +508,19 @@ async function clearBulkSale() {
 .refresh-icon { width: 15px; height: 15px; transition: transform .5s; }
 .btn-refresh.spinning .refresh-icon { animation: spin .6s linear; }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* NÚT XÓA CACHE GỢI Ý */
+.btn-cache {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 11px 20px; border-radius: 13px;
+  font-size: .85rem; font-weight: 700; color: #a5b4fc;
+  background: rgba(99,102,241,.12);
+  border: 1.5px solid rgba(99,102,241,.35);
+  cursor: pointer; transition: all .2s;
+}
+.btn-cache:hover:not(:disabled) { background: rgba(99,102,241,.2); color: white; border-color: rgba(99,102,241,.6); }
+.btn-cache:disabled { opacity: .6; cursor: not-allowed; }
+.btn-cache svg { width: 16px; height: 16px; }
 
 /* NÚT GIẢM GIÁ HÀNG LOẠT */
 .btn-sale {
@@ -768,7 +818,7 @@ async function clearBulkSale() {
   .hero-content  { padding: 20px 14px 0; }
   .content-shell { padding: 0 14px; margin-top: -24px; }
   .toolbar-actions { width: 100%; }
-  .btn-add, .btn-stock, .btn-refresh, .btn-sale { flex: 1; justify-content: center; }
+  .btn-add, .btn-stock, .btn-refresh, .btn-sale, .btn-cache { flex: 1; justify-content: center; }
   .hero-title { font-size: 1.3rem; }
   .product-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
   .filter-bar { flex-direction: column; align-items: stretch; }

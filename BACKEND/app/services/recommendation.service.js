@@ -123,7 +123,6 @@ class RecommendationService {
       return {
         collaborative: doc.collaborative,
         sameCategory:  doc.sameCategory,
-        bundle:        doc.bundle || [],
       };
     } catch (err) {
       console.error("[Rec] Lỗi đọc DB:", err.message);
@@ -133,20 +132,19 @@ class RecommendationService {
 
   async saveToDb(productId, result) {
     try {
-      await this.Recommendations.updateOne(
+            await this.Recommendations.updateOne(
         { productId },
         {
           $set: {
             productId,
             collaborative: result.collaborative,
             sameCategory:  result.sameCategory,
-            bundle:        result.bundle,
             updatedAt:     new Date(),
           },
         },
         { upsert: true }
       );
-      console.log(`[Rec] DB SAVED — productId=${productId} | collaborative=${result.collaborative.length} | sameCategory=${result.sameCategory.length} | bundle=${result.bundle.length}`);
+      console.log(`[Rec] DB SAVED — productId=${productId} | collaborative=${result.collaborative.length} | sameCategory=${result.sameCategory.length}`);
     } catch (err) {
       console.error("[Rec] Lỗi lưu DB:", err.message);
     }
@@ -320,7 +318,7 @@ Trả về JSON hợp lệ:
 
   async getSmartRecommendations(productId, limit = 4) {
     if (!productId || !/^[0-9a-fA-F]{24}$/.test(productId)) {
-      return { collaborative: [], sameCategory: [], bundle: [] };
+      return { collaborative: [], sameCategory: [] };
     }
 
     const stored = await this.getStored(productId);
@@ -336,7 +334,7 @@ Trả về JSON hợp lệ:
 
     if (!currentProduct) {
       console.warn(`[Rec] Không tìm thấy sản phẩm productId=${productId}`);
-      return { collaborative: [], sameCategory: [], bundle: [] };
+      return { collaborative: [], sameCategory: [] };
     }
 
     const userIntent = inferUserIntent(currentProduct);
@@ -361,35 +359,22 @@ Trả về JSON hợp lệ:
     // Nếu lọc theo tương thích bị hết sạch (vd thiếu data), fallback dùng poolBAll để không mất gợi ý
     const poolB = poolBMatched.length ? poolBMatched : poolBAll;
 
-    // Pool C: khác danh mục, chưa có trong poolA — dùng cho "Hoàn thiện bộ", ưu tiên đúng hệ thiết bị
-    const poolCAll = catalog.filter(p =>
-      !poolAIds.has(p._id.toString()) &&
-      p.category !== currentProduct.category
-    );
-    const poolCMatched = poolCAll.filter(p => isCompatible(currentCompat, normalizeCompat(p.compatibility)));
-    const poolC = poolCMatched.length ? poolCMatched : poolCAll;
+ console.log(`[Rec] Pool A: ${poolA.length} SP | Pool B: ${poolB.length} SP`);
 
-    console.log(`[Rec] Pool A: ${poolA.length} SP | Pool B: ${poolB.length} SP | Pool C: ${poolC.length} SP`);
-
-    const [collaborative, sameCategoryRaw, bundleRaw] = await Promise.all([
+    const [collaborative, sameCategoryRaw] = await Promise.all([
       poolA.length > 0
         ? this.getLLMRecommendations(currentProduct, purchaseHistory, poolA, Math.min(limit, poolA.length))
         : Promise.resolve([]),
       poolB.length >= 1
         ? this.getLLMRecommendations(currentProduct, {}, poolB, Math.min(limit, poolB.length))
         : Promise.resolve([]),
-      poolC.length >= 1
-        ? this.getLLMRecommendations(currentProduct, {}, poolC, Math.min(limit, poolC.length))
-        : Promise.resolve([]),
     ]);
 
-    const collabIds   = new Set(collaborative.map(p => p._id.toString()));
-    const sameCatIds  = new Set(sameCategoryRaw.map(p => p._id.toString()));
+    const collabIds = new Set(collaborative.map(p => p._id.toString()));
 
     const result = {
       collaborative,
       sameCategory: sameCategoryRaw.filter(p => !collabIds.has(p._id.toString())),
-      bundle:       bundleRaw.filter(p => !collabIds.has(p._id.toString()) && !sameCatIds.has(p._id.toString())),
     };
 
     await this.saveToDb(productId, result);

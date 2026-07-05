@@ -7,9 +7,10 @@ const recommendationConfig = {
         process.env.GROQ_API_KEY_2 || "",
       ].filter(Boolean),
       models: [
-        "llama-3.1-8b-instant",
-        "gemma2-9b-it",
-      ],
+  "llama-3.3-70b-versatile",   // ưu tiên model lớn, suy luận tốt hơn
+  "llama-3.1-8b-instant",      // fallback khi model lớn rate-limit
+  "gemma2-9b-it",
+],
     },
   ],
 
@@ -52,7 +53,7 @@ KHI VIẾT LÝ DO (aiReason) — ĐÂY LÀ PHẦN QUAN TRỌNG NHẤT:
   SAI: "Phù hợp sử dụng kèm sản phẩm này"
   SAI: Copy reason của SP khác sang SP này
 
-Tối đa 15 từ tiếng Việt, không dùng dấu chấm cuối câu.`,
+Tối đa 100 từ tiếng Việt, không dùng dấu chấm cuối câu.`,
 };
 
 module.exports = recommendationConfig;

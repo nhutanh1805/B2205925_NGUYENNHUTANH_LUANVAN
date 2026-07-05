@@ -86,47 +86,6 @@
       </div>
     </div>
 
-    <!-- HOÀN THIỆN BỘ -->
-    <div v-if="bundle.length" class="rec-section">
-      <div class="rec-header">
-        <span class="rec-label">Hoàn thiện bộ</span>
-        <h3 class="rec-title">Gợi ý cho bạn <span class="ai-badge">✦ AI</span></h3>
-      </div>
-      <div class="rec-grid">
-        <div
-          v-for="(product, idx) in bundle"
-          :key="product._id"
-          class="rcard"
-          :style="`--delay:${idx * 0.06}s`"
-          @click="goDetail(product._id)"
-        >
-          <span v-if="product.salePrice" class="rbadge">-{{ calcDiscount(product) }}%</span>
-          <span v-else-if="product.stock === 0" class="rbadge rbadge-out">Hết</span>
-          <div class="rcard-img-wrap">
-            <img :src="product.images?.[0] || placeholder" :alt="product.name" class="rcard-img" loading="lazy" />
-          </div>
-          <div class="rcard-body">
-            <p class="rcard-brand">{{ product.brand }}</p>
-            <h4 class="rcard-name">{{ product.name }}</h4>
-            <p v-if="product.aiReason" class="rcard-reason">
-              <span class="reason-icon">✦</span> {{ product.aiReason }}
-            </p>
-            <div class="rcard-price-row">
-              <span class="rcard-price">{{ formatPrice(product.salePrice || product.price) }}₫</span>
-              <span v-if="product.salePrice" class="rcard-origin">{{ formatPrice(product.price) }}₫</span>
-            </div>
-            <button class="rcard-btn" :class="{ disabled: product.stock === 0 }" :disabled="product.stock === 0" @click.stop="addToCart(product)">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" class="cart-icon">
-                <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
-                <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
-              </svg>
-              {{ product.stock === 0 ? 'Hết hàng' : 'Thêm vào giỏ' }}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-
   </div>
 </template>
 
@@ -146,7 +105,6 @@ const emit = defineEmits(["add-to-cart"]);
 const router        = useRouter();
 const collaborative = ref([]);
 const sameCategory  = ref([]);
-const bundle        = ref([]);
 const placeholder   = "https://via.placeholder.com/200x260?text=No+Image";
 
 const loadRecommendations = async () => {
@@ -155,11 +113,9 @@ const loadRecommendations = async () => {
     const res = await RecommendationService.getRecommendations(props.productId, props.limit);
     collaborative.value = res.collaborative || [];
     sameCategory.value  = res.sameCategory  || [];
-    bundle.value        = res.bundle        || [];
   } catch {
     collaborative.value = [];
     sameCategory.value  = [];
-    bundle.value        = [];
   }
 };
 
