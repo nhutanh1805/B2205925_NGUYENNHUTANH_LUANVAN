@@ -4,43 +4,46 @@ const config = require("../config/recommendation.config");
 
 const provider = config.providers[0];
 
-let _keyIndex = 0;
-function getNextApiKey() {
-  if (!provider.apiKeys.length) throw new Error("Chưa cấu hình GROQ_API_KEY");
-  const key = provider.apiKeys[_keyIndex % provider.apiKeys.length];
-  _keyIndex++;
-  return key;
-}
+if (!provider.apiKeys.length) throw new Error("Chưa cấu hình GROQ_API_KEY");
 
-async function callGroq(messages) {
-  for (let attempt = 0; attempt < provider.models.length; attempt++) {
-    const model = provider.models[attempt];
-    try {
-      const res = await axios.post(
-        provider.url,
-        {
-          model,
-          messages: [
-            { role: "system", content: config.systemPrompt },
-            ...messages,
-          ],
-          max_tokens:  config.maxTokens,
-          temperature: config.temperature,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${getNextApiKey()}`,
-            "Content-Type": "application/json",
+async function callGroq(messages, poolLabel = "?") {
+  for (const model of provider.models) {
+    for (let keyIdx = 0; keyIdx < provider.apiKeys.length; keyIdx++) {
+      const apiKey = provider.apiKeys[keyIdx];
+      try {
+        const res = await axios.post(
+          provider.url,
+          {
+            model,
+            messages: [
+              { role: "system", content: config.systemPrompt },
+              ...messages,
+            ],
+            max_tokens:  config.maxTokens,
+            temperature: config.temperature,
           },
-          timeout: config.timeout,
-        }
-      );
-      return res.data.choices[0].message.content;
-    } catch (err) {
-      console.warn(`[Groq] model=${model} attempt=${attempt + 1} status=${err.response?.status}`);
-      if (attempt === provider.models.length - 1) throw err;
+          {
+            headers: {
+              Authorization: `Bearer ${apiKey}`,
+              "Content-Type": "application/json",
+            },
+            timeout: config.timeout,
+          }
+        );
+
+        console.log(
+          `[Groq] [${poolLabel}] ${model} | key#${keyIdx + 1} còn lại: ${res.headers["x-ratelimit-remaining-requests"]}/${res.headers["x-ratelimit-limit-requests"]} req` +
+          ` | ${res.headers["x-ratelimit-remaining-tokens"]}/${res.headers["x-ratelimit-limit-tokens"]} tokens` +
+          ` | reset: ${res.headers["x-ratelimit-reset-requests"]}`
+        );
+
+        return res.data.choices[0].message.content;
+      } catch (err) {
+        console.warn(`[Groq] [${poolLabel}] model=${model} key#${keyIdx + 1} lỗi: status=${err.response?.status}`);
+      }
     }
   }
+  throw new Error("Không có model/key nào phản hồi được");
 }
 
 function formatSpecs(specs = {}) {
@@ -132,7 +135,7 @@ class RecommendationService {
 
   async saveToDb(productId, result) {
     try {
-            await this.Recommendations.updateOne(
+      await this.Recommendations.updateOne(
         { productId },
         {
           $set: {
@@ -216,7 +219,7 @@ class RecommendationService {
       .toArray();
   }
 
-  async getLLMRecommendations(currentProduct, purchaseHistory, catalog, limit = 4) {
+  async getLLMRecommendations(currentProduct, purchaseHistory, catalog, limit = 4, excludeSameCategory = true, poolLabel = "?") {
     if (!catalog.length) return [];
 
     const userIntent   = inferUserIntent(currentProduct);
@@ -261,7 +264,7 @@ BẮT BUỘC: nếu SP đang xem có "Tương thích" ghi rõ hệ thiết bị 
 chỉ chọn SP trong danh sách có "Tương thích" khớp đúng hệ đó.
 Nếu SP trong danh sách không ghi "Tương thích", chỉ chọn khi specs/mô tả không mâu thuẫn với hệ thiết bị đang xem.
 TUYỆT ĐỐI KHÔNG chọn SP dành riêng cho hệ điều hành/thiết bị khác (vd: đang xem SP cho iPhone thì không chọn SP chỉ dùng cho Android).
-KHÔNG chọn SP cùng loại với SP đang xem.
+${excludeSameCategory ? "Ưu tiên SP khác loại với SP đang xem nếu có lựa chọn phù hợp. Nếu TẤT CẢ SP trong danh sách đều cùng loại với SP đang xem, vẫn PHẢI chọn đủ trong số đó, không được bỏ trống." : ""}
 Nếu không đủ SP phù hợp, trả về ít hơn ${limit} phần tử.
 
 Khi viết aiReason:
@@ -275,8 +278,8 @@ Trả về JSON hợp lệ:
 ]`;
 
     try {
-      console.log(`[LLM] Gọi Groq | intent="${userIntent}" | catalog=${catalog.length} SP`);
-      const raw = await callGroq([{ role: "user", content: prompt }]);
+      console.log(`[LLM] [${poolLabel}] Gọi Groq | intent="${userIntent}" | catalog=${catalog.length} SP`);
+      const raw = await callGroq([{ role: "user", content: prompt }], poolLabel);
 
       const jsonMatch = raw.match(/\[[\s\S]*\]/);
       if (!jsonMatch) throw new Error("Không tìm thấy JSON trong response");
@@ -307,11 +310,11 @@ Trả về JSON hợp lệ:
         }
       }
 
-      console.log(`[LLM] Kết quả: ${result.map(p => `"${p.name}" → "${p.aiReason}"`).join(" | ")}`);
+      console.log(`[LLM] [${poolLabel}] Kết quả: ${result.map(p => `"${p.name}" → "${p.aiReason}"`).join(" | ")}`);
       return result;
 
     } catch (err) {
-      console.error("[LLM] Lỗi:", err.message);
+      console.error(`[LLM] [${poolLabel}] Lỗi:`, err.message);
       return catalog.slice(0, limit).map(p => ({ ...p, aiReason: null }));
     }
   }
@@ -359,14 +362,14 @@ Trả về JSON hợp lệ:
     // Nếu lọc theo tương thích bị hết sạch (vd thiếu data), fallback dùng poolBAll để không mất gợi ý
     const poolB = poolBMatched.length ? poolBMatched : poolBAll;
 
- console.log(`[Rec] Pool A: ${poolA.length} SP | Pool B: ${poolB.length} SP`);
+    console.log(`[Rec] Pool A: ${poolA.length} SP | Pool B: ${poolB.length} SP`);
 
     const [collaborative, sameCategoryRaw] = await Promise.all([
       poolA.length > 0
-        ? this.getLLMRecommendations(currentProduct, purchaseHistory, poolA, Math.min(limit, poolA.length))
+        ? this.getLLMRecommendations(currentProduct, purchaseHistory, poolA, Math.min(limit, poolA.length), true, "PoolA-CollabHistory")
         : Promise.resolve([]),
       poolB.length >= 1
-        ? this.getLLMRecommendations(currentProduct, {}, poolB, Math.min(limit, poolB.length))
+        ? this.getLLMRecommendations(currentProduct, {}, poolB, Math.min(limit, poolB.length), false, "PoolB-SameCategory")
         : Promise.resolve([]),
     ]);
 

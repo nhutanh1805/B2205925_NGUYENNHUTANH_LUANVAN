@@ -105,6 +105,13 @@ class ChatbotTuvanService {
                             body: JSON.stringify({ model, messages }),
                         });
 
+                        console.log(
+                            `[Groq] ${model} | ...${apiKey.slice(-6)} còn lại: ` +
+                            `${response.headers.get("x-ratelimit-remaining-requests")}/${response.headers.get("x-ratelimit-limit-requests")} req` +
+                            ` | ${response.headers.get("x-ratelimit-remaining-tokens")}/${response.headers.get("x-ratelimit-limit-tokens")} tokens` +
+                            ` | reset: ${response.headers.get("x-ratelimit-reset-requests")}`
+                        );
+
                         const data = await response.json();
 
                         // ── Debug: xem raw response ──

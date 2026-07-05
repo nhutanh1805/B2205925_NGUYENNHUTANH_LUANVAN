@@ -5,6 +5,7 @@ const recommendationConfig = {
       apiKeys: [
         process.env.GROQ_API_KEY   || "",
         process.env.GROQ_API_KEY_2 || "",
+        process.env.GROQ_API_KEY_3 || "",
       ].filter(Boolean),
       models: [
   "llama-3.3-70b-versatile",   // ưu tiên model lớn, suy luận tốt hơn
