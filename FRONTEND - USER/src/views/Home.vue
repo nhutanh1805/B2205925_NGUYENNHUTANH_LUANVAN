@@ -501,7 +501,7 @@ onUnmounted(() => { if (countdownInterval) clearInterval(countdownInterval); });
    VIDEO FAB
 ════════════════════════════════════════ */
 .ts-video-fab {
-  position: fixed; bottom: 32px; left: 32px; z-index: 9999;
+  position: fixed; bottom: 100px; left: 16px; z-index: 9999;
 }
 .ts-fab-btn {
   display: flex; align-items: center; gap: 10px;

@@ -226,7 +226,7 @@ function toBase64(file) {
 <template>
   <div class="search-container">
     <div class="search-wrapper">
-      <i class="icon-search">🔍</i>
+      <i class="icon-search"></i>
 
       <input
         type="text"

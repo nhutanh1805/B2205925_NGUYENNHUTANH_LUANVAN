@@ -38,7 +38,7 @@
         <h1 class="ts-hero-title">
           <span class="ts-title-line ts-title-line--dim">NhutAnhStore</span>
           <span class="ts-title-line ts-title-line--main">Admin</span>
-          <span class="ts-title-line ts-title-line--accent">Dashboard</span>
+          <span class="ts-title-line ts-title-line--accent">Tổng Quan</span>
         </h1>
 
         <p class="ts-hero-sub">

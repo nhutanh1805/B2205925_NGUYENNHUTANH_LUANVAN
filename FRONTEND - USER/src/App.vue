@@ -49,7 +49,7 @@ export default {
     IdleToast,
     ModelViewer,
     CommunitySidebar,
-    ChatbotPopup,
+    // ChatbotPopup,
     ChatbotTuvan,
   },
 
