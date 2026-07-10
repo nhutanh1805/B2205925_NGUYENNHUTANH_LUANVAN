@@ -1,5 +1,6 @@
 <script setup>
-import { ref } from "vue";
+import { ref, computed } from "vue";
+import Fuse from "fuse.js";
 
 const props = defineProps({
   modelValue: { type: String, default: "" },
@@ -16,6 +17,123 @@ const debounceTimer = ref(null);
 const fileInput = ref(null);
 const aiMessage = ref("");
 
+// ─── Fuzzy search (chịu lỗi chính tả + không dấu) ──────
+function removeDiacritics(str) {
+  return str
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d")
+    .replace(/Đ/g, "D")
+    .toLowerCase();
+}
+
+const searchableProducts = computed(() =>
+  props.products.map(p => ({
+    ...p,
+    _searchName: removeDiacritics(p.name) // chuỗi đầy đủ, không dấu, viết thường
+  }))
+);
+
+// 3 mức Fuse theo độ dài từ: từ càng ngắn càng cần khoan dung hơn
+// (vì threshold của Fuse tính theo tỉ lệ độ dài, từ ngắn dễ bị "quá khắt khe")
+const fuseStrict = computed(() => new Fuse(searchableProducts.value, {
+  keys: ["_searchName"],
+  threshold: 0.4,        // từ dài (5+ ký tự): chặt, tránh match linh tinh
+  ignoreLocation: true,  // fuzzy match ở bất kỳ vị trí nào trong chuỗi
+  minMatchCharLength: 2,
+  includeScore: true,
+  distance: 100
+}));
+
+const fuseMedium = computed(() => new Fuse(searchableProducts.value, {
+  keys: ["_searchName"],
+  threshold: 0.5,        // từ vừa (3-4 ký tự): khoan dung hơn
+  ignoreLocation: true,
+  minMatchCharLength: 2,
+  includeScore: true,
+  distance: 100
+}));
+
+const fuseLenient = computed(() => new Fuse(searchableProducts.value, {
+  keys: ["_searchName"],
+  threshold: 0.7,        // từ ngắn (1-2 ký tự): rất khoan dung, tránh tắt gợi ý khi mới gõ/xóa dở
+  ignoreLocation: true,
+  minMatchCharLength: 1,
+  includeScore: true,
+  distance: 100
+}));
+
+function getFuseForWord(word) {
+  if (word.length <= 2) return fuseLenient.value;
+  if (word.length <= 4) return fuseMedium.value;
+  return fuseStrict.value;
+}
+
+const suggestions = ref([]);
+const showSuggestions = ref(false);
+
+function updateSuggestions(value) {
+  const trimmed = (value || "").trim();
+  if (trimmed.length < 2) {
+    suggestions.value = [];
+    showSuggestions.value = false;
+    return;
+  }
+
+  // Tách query thành từng từ, mỗi từ fuzzy-search riêng trên TOÀN BỘ tên sản phẩm.
+  // Dùng OR có tính điểm ưu tiên: sản phẩm khớp CÀNG NHIỀU từ càng lên đầu,
+  // nhưng chỉ cần khớp ÍT NHẤT 1 từ cũng vẫn hiện ra — nên gõ nhiều từ có dấu cách
+  // vẫn tìm được, dù không phải từ nào cũng khớp hoàn hảo (khác AND cũ: bắt buộc
+  // khớp HẾT tất cả các từ mới hiện, dễ bị 0 kết quả khi 1 từ bị lệch).
+  const queryWords = removeDiacritics(trimmed).split(/\s+/).filter(Boolean);
+
+  // Map<item, { matchedCount, totalScore }>
+  const scoreMap = new Map();
+
+  for (const word of queryWords) {
+    const activeFuse = getFuseForWord(word);
+    const results = activeFuse.search(word);
+
+    for (const r of results) {
+      const existing = scoreMap.get(r.item);
+      if (existing) {
+        existing.matchedCount++;
+        existing.totalScore += r.score;
+      } else {
+        scoreMap.set(r.item, { matchedCount: 1, totalScore: r.score });
+      }
+    }
+  }
+
+  const scored = Array.from(scoreMap.entries())
+    .map(([item, { matchedCount, totalScore }]) => ({
+      item,
+      matchedCount,
+      avgScore: totalScore / matchedCount
+    }))
+    .sort((a, b) => {
+      // ưu tiên khớp được NHIỀU từ hơn trước (khớp cả 2/3 từ > chỉ khớp 1 từ)
+      if (b.matchedCount !== a.matchedCount) return b.matchedCount - a.matchedCount;
+      // nếu số từ khớp bằng nhau, ưu tiên điểm càng thấp (càng chính xác) càng trước
+      return a.avgScore - b.avgScore;
+    });
+
+  suggestions.value = scored.slice(0, 5).map(s => s.item);
+  showSuggestions.value = suggestions.value.length > 0;
+}
+
+function pickSuggestion(product) {
+  emit("update:modelValue", product.name);
+  showSuggestions.value = false;
+  suggestions.value = [];
+  emit("submit");
+}
+
+function hideSuggestionsDelayed() {
+  // delay để kịp xử lý click vào item trước khi blur ẩn dropdown
+  setTimeout(() => { showSuggestions.value = false; }, 150);
+}
+
 // ─── API keys fallback ─────────────────────────────────
 const API_KEYS = [
   import.meta.env.VITE_GROQ_API_KEY,
@@ -25,8 +143,10 @@ const currentKeyIndex = ref(0);
 
 // ─── Text search ───────────────────────────────────────
 function onInput(e) {
-  emit("update:modelValue", e.target.value);
+  const value = e.target.value;
+  emit("update:modelValue", value);
   aiMessage.value = "";
+  updateSuggestions(value);
   clearTimeout(debounceTimer.value);
   debounceTimer.value = setTimeout(() => {
     emit("submit");
@@ -34,6 +154,7 @@ function onInput(e) {
 }
 
 function submit() {
+  showSuggestions.value = false;
   emit("submit");
 }
 
@@ -80,7 +201,8 @@ function startRecognition() {
         interim += e.results[i][0].transcript;
       }
     }
-    emit("update:modelValue", final || interim);
+    const value = final || interim;
+    emit("update:modelValue", value);
     emit("submit");
     if (final) {
       hasResult = true;
@@ -235,6 +357,8 @@ function toBase64(file) {
         :value="modelValue"
         @input="onInput"
         @keyup.enter="submit"
+        @focus="updateSuggestions(modelValue)"
+        @blur="hideSuggestionsDelayed"
       />
 
       <input
@@ -248,7 +372,7 @@ function toBase64(file) {
       <button
         v-if="modelValue"
         class="clear-btn"
-        @click="emit('update:modelValue', ''); emit('submit'); aiMessage = ''"
+        @click="emit('update:modelValue', ''); emit('submit'); aiMessage = ''; suggestions = []; showSuggestions = false"
       >
         ✕
       </button>
@@ -275,6 +399,19 @@ function toBase64(file) {
           <line x1="9" y1="22" x2="15" y2="22" />
         </svg>
       </button>
+
+      <!-- Fuzzy suggestions dropdown -->
+      <transition name="fade">
+        <ul v-if="showSuggestions" class="suggestions-dropdown">
+          <li
+            v-for="item in suggestions"
+            :key="item._id || item.name"
+            @mousedown.prevent="pickSuggestion(item)"
+          >
+            {{ item.name }}
+          </li>
+        </ul>
+      </transition>
     </div>
 
     <!-- AI message -->
@@ -393,6 +530,35 @@ function toBase64(file) {
   font-size: .875rem;
   color: #3730a3;
   line-height: 1.5;
+}
+
+.suggestions-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0,0,0,.12);
+  list-style: none;
+  padding: 6px;
+  margin: 0;
+  z-index: 20;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.suggestions-dropdown li {
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: .875rem;
+  cursor: pointer;
+  transition: .15s;
+}
+
+.suggestions-dropdown li:hover {
+  background: #eff6ff;
+  color: #3b82f6;
 }
 
 .spin {
