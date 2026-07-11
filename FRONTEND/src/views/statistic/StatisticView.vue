@@ -54,32 +54,45 @@
     <!-- ══ MAIN PANEL ══ -->
     <div class="main-panel">
 
-      <!-- Filter bar -->
+      <!-- Tab nav -->
+      <div class="tab-nav">
+        <button
+          v-for="t in tabs"
+          :key="t.key"
+          class="tab-btn"
+          :class="{ active: activeTab === t.key }"
+          @click="switchTab(t.key)"
+        >
+          {{ t.label }}
+        </button>
+      </div>
+
+      <!-- Filter bar riêng cho tab đang mở -->
       <div class="top-bar">
         <div class="result-info">
           Thống kê từ
-          <span class="result-num">{{ filter.from }}</span>
+          <span class="result-num">{{ filters[activeTab].from }}</span>
           đến
-          <span class="result-num">{{ filter.to }}</span>
+          <span class="result-num">{{ filters[activeTab].to }}</span>
         </div>
         <div class="filter-bar">
-          <input type="date" v-model="filter.from" />
+          <input type="date" v-model="filters[activeTab].from" />
           <span class="filter-sep">→</span>
-          <input type="date" v-model="filter.to" />
-          <select v-model="filter.period">
+          <input type="date" v-model="filters[activeTab].to" />
+          <select v-model="filters[activeTab].period" v-if="hasPeriod(activeTab)">
             <option value="day">Theo ngày</option>
             <option value="week">Theo tuần</option>
             <option value="month">Theo tháng</option>
             <option value="year">Theo năm</option>
           </select>
-          <button class="btn-apply" @click="loadAll" :disabled="loading">
-            {{ loading ? "Đang tải..." : "Áp dụng" }}
+          <button class="btn-apply" @click="loadTab(activeTab, true)" :disabled="loading[activeTab]">
+            {{ loading[activeTab] ? "Đang tải..." : "Áp dụng" }}
           </button>
         </div>
       </div>
 
       <!-- SKELETON -->
-      <div v-if="loading" class="skeleton-grid">
+      <div v-if="loading[activeTab] && !loaded[activeTab]" class="skeleton-grid">
         <div v-for="i in 5" :key="i" class="skeleton-card">
           <div class="sk sk-title"></div>
           <div class="sk sk-value"></div>
@@ -87,9 +100,8 @@
         </div>
       </div>
 
-      <template v-else>
-
-        <!-- KPI Cards -->
+      <!-- ══════════════ TAB: TỔNG QUAN ══════════════ -->
+      <template v-else-if="activeTab === 'overview'">
         <div class="kpi-grid" v-if="overview">
           <div class="kpi-card" :style="`--delay:0s`">
             <span class="kpi-label">Doanh thu</span>
@@ -122,208 +134,6 @@
           </div>
         </div>
 
-        <!-- ══ LỢI NHUẬN ══ -->
-        <div class="card profit-card" v-if="profit">
-          <h2>Doanh thu &amp; Lợi nhuận</h2>
-
-          <!-- Summary KPIs -->
-          <div class="profit-summary">
-            <div class="profit-kpi">
-              <span class="profit-kpi-label">Doanh thu</span>
-              <span class="profit-kpi-value revenue">{{ formatCurrency(profit.data.summary.revenue) }}</span>
-            </div>
-            <div class="profit-arrow">→</div>
-            <div class="profit-kpi">
-              <span class="profit-kpi-label">Giá vốn</span>
-              <span class="profit-kpi-value cost">{{ formatCurrency(profit.data.summary.cost) }}</span>
-            </div>
-            <div class="profit-arrow">=</div>
-            <div class="profit-kpi highlight">
-              <span class="profit-kpi-label">Lợi nhuận</span>
-              <span class="profit-kpi-value profit-color">{{ formatCurrency(profit.data.summary.profit) }}</span>
-            </div>
-            <div class="profit-kpi">
-              <span class="profit-kpi-label">Biên lợi nhuận</span>
-              <span class="profit-kpi-value margin-color">{{ profit.data.summary.margin }}%</span>
-            </div>
-          </div>
-
-          <!-- Detail table -->
-          <table v-if="profit.data.data?.length">
-            <thead>
-              <tr>
-                <th>Kỳ</th>
-                <th>Doanh thu</th>
-                <th>Giá vốn</th>
-                <th>Lợi nhuận</th>
-                <th>Biên LN</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="(row, i) in profit.data.data" :key="i">
-                <td>{{ formatPeriodLabel(row._id) }}</td>
-                <td class="price">{{ formatCurrency(row.revenue) }}</td>
-                <td class="cost">{{ formatCurrency(row.cost) }}</td>
-                <td :class="row.profit >= 0 ? 'profit-pos' : 'profit-neg'">
-                  {{ formatCurrency(row.profit) }}
-                </td>
-                <td>
-                  <span class="margin-badge" :class="row.margin >= 30 ? 'margin-good' : row.margin >= 10 ? 'margin-ok' : 'margin-low'">
-                    {{ row.margin }}%
-                  </span>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-          <p v-else class="empty">Không có dữ liệu</p>
-        </div>
-
-        <!-- Doanh thu & Đơn hàng theo thời gian -->
-        <div class="section-row">
-          <div class="card">
-            <h2>Doanh thu theo thời gian</h2>
-            <table v-if="revenue?.data?.length">
-              <thead>
-                <tr><th>Kỳ</th><th>Doanh thu</th><th>Số đơn</th><th>COD</th><th>VNPAY</th></tr>
-              </thead>
-              <tbody>
-                <tr v-for="(row, i) in revenue.data" :key="i">
-                  <td>{{ formatPeriodLabel(row._id) }}</td>
-                  <td class="price">{{ formatCurrency(row.revenue) }}</td>
-                  <td>{{ row.orders }}</td>
-                  <td>{{ formatCurrency(row.cod) }}</td>
-                  <td>{{ formatCurrency(row.vnpay) }}</td>
-                </tr>
-              </tbody>
-            </table>
-            <p v-else class="empty">Không có dữ liệu</p>
-          </div>
-          <div class="card">
-            <h2>Đơn hàng theo thời gian</h2>
-            <table v-if="ordersByPeriod?.data?.length">
-              <thead>
-                <tr><th>Kỳ</th><th>Tổng</th><th>Chờ</th><th>Đang giao</th><th>Hoàn thành</th><th>Huỷ</th></tr>
-              </thead>
-              <tbody>
-                <tr v-for="(row, i) in ordersByPeriod.data" :key="i">
-                  <td>{{ formatPeriodLabel(row._id) }}</td>
-                  <td><strong>{{ row.total }}</strong></td>
-                  <td>{{ row.pending }}</td>
-                  <td>{{ row.shipping }}</td>
-                  <td>{{ row.completed }}</td>
-                  <td class="cancel">{{ row.cancelled }}</td>
-                </tr>
-              </tbody>
-            </table>
-            <p v-else class="empty">Không có dữ liệu</p>
-          </div>
-        </div>
-
-        <!-- Top khách & Khách hay huỷ -->
-        <div class="section-row">
-          <div class="card">
-            <h2>Top khách hàng</h2>
-            <table v-if="topCustomers?.data?.length">
-              <thead><tr><th>#</th><th>Tên</th><th>Tổng chi</th><th>Số đơn</th></tr></thead>
-              <tbody>
-                <tr v-for="(c, i) in topCustomers.data" :key="c._id">
-                  <td><span class="rank">{{ i + 1 }}</span></td>
-                  <td>{{ c.userName || c._id }}</td>
-                  <td class="price">{{ formatCurrency(c.totalSpent) }}</td>
-                  <td>{{ c.totalOrders }}</td>
-                </tr>
-              </tbody>
-            </table>
-            <p v-else class="empty">Không có dữ liệu</p>
-          </div>
-          <div class="card">
-            <h2>Khách hay huỷ đơn</h2>
-            <table v-if="cancelCustomers?.data?.length">
-              <thead><tr><th>#</th><th>Tên</th><th>Số lần huỷ</th></tr></thead>
-              <tbody>
-                <tr v-for="(c, i) in cancelCustomers.data" :key="c._id">
-                  <td><span class="rank">{{ i + 1 }}</span></td>
-                  <td>{{ c.userName || c._id }}</td>
-                  <td><span class="badge badge-cancel">{{ c.cancelCount }}</span></td>
-                </tr>
-              </tbody>
-            </table>
-            <p v-else class="empty">Không có dữ liệu</p>
-          </div>
-        </div>
-
-        <!-- Top sản phẩm & Sản phẩm hay bị huỷ -->
-        <div class="section-row">
-          <div class="card">
-            <h2>Sản phẩm bán chạy</h2>
-            <table v-if="topProducts?.data?.length">
-              <thead><tr><th>#</th><th>Sản phẩm</th><th>SL bán</th><th>Doanh thu</th></tr></thead>
-              <tbody>
-                <tr v-for="(p, i) in topProducts.data" :key="p._id">
-                  <td><span class="rank">{{ i + 1 }}</span></td>
-                  <td>{{ p.name }}</td>
-                  <td>{{ p.quantity }}</td>
-                  <td class="price">{{ formatCurrency(p.revenue) }}</td>
-                </tr>
-              </tbody>
-            </table>
-            <p v-else class="empty">Không có dữ liệu</p>
-          </div>
-          <div class="card">
-            <h2>Sản phẩm hay bị huỷ</h2>
-            <table v-if="cancelledProducts?.data?.length">
-              <thead><tr><th>#</th><th>Sản phẩm</th><th>Số lần huỷ</th></tr></thead>
-              <tbody>
-                <tr v-for="(p, i) in cancelledProducts.data" :key="p._id">
-                  <td><span class="rank">{{ i + 1 }}</span></td>
-                  <td>{{ p.name }}</td>
-                  <td><span class="badge badge-cancel">{{ p.cancelCount }}</span></td>
-                </tr>
-              </tbody>
-            </table>
-            <p v-else class="empty">Không có dữ liệu</p>
-          </div>
-        </div>
-
-        <!-- ══ SẢN PHẨM HAY BỊ ĐỔI TRẢ / BẢO HÀNH ══ -->
-        <div class="card">
-          <h2>Sản phẩm hay bị đổi trả / bảo hành</h2>
-          <table v-if="returnWarrantyProducts?.data?.length">
-            <thead>
-              <tr><th>#</th><th>Sản phẩm</th><th>Loại</th><th>SL</th><th>Số yêu cầu</th></tr>
-            </thead>
-            <tbody>
-              <tr v-for="(p, i) in returnWarrantyProducts.data" :key="p._id.productId + p._id.type">
-                <td><span class="rank">{{ i + 1 }}</span></td>
-                <td>{{ p.name }}</td>
-                <td>
-                  <span class="badge" :class="p._id.type === 'return' ? 'badge-cancel' : 'badge-warn'">
-                    {{ p._id.type === "return" ? "Đổi trả" : "Bảo hành" }}
-                  </span>
-                </td>
-                <td>{{ p.quantity }}</td>
-                <td>{{ p.requests }}</td>
-              </tr>
-            </tbody>
-          </table>
-          <p v-else class="empty">Không có dữ liệu</p>
-        </div>
-
-        <!-- Ngày trong tuần -->
-        <div class="card">
-          <h2>Đơn theo ngày trong tuần</h2>
-          <div class="bar-chart" v-if="ordersByDay?.data?.length">
-            <div class="bar-item" v-for="item in ordersByDay.data" :key="item.day">
-              <div class="bar-track">
-                <div class="bar-fill bar-fill-purple" :style="{ height: barHeight(item.count, ordersByDay.data) + '%' }" :title="`${item.day}: ${item.count} đơn`"></div>
-              </div>
-              <span class="bar-label">{{ item.day }}</span>
-            </div>
-          </div>
-          <p v-else class="empty">Không có dữ liệu</p>
-        </div>
-
-        <!-- Thanh toán & Trung bình đơn -->
         <div class="section-row">
           <div class="card">
             <h2>Phương thức thanh toán</h2>
@@ -366,8 +176,114 @@
             <p v-else class="empty">Không có dữ liệu</p>
           </div>
         </div>
+      </template>
 
-        <!-- Đơn chờ quá lâu -->
+      <!-- ══════════════ TAB: DOANH THU & LỢI NHUẬN ══════════════ -->
+      <template v-else-if="activeTab === 'profit'">
+        <div class="card profit-card" v-if="profit">
+          <h2>Doanh thu &amp; Lợi nhuận</h2>
+
+          <div class="profit-summary">
+            <div class="profit-kpi">
+              <span class="profit-kpi-label">Doanh thu</span>
+              <span class="profit-kpi-value revenue">{{ formatCurrency(profit.data.summary.revenue) }}</span>
+            </div>
+            <div class="profit-arrow">→</div>
+            <div class="profit-kpi">
+              <span class="profit-kpi-label">Giá vốn</span>
+              <span class="profit-kpi-value cost">{{ formatCurrency(profit.data.summary.cost) }}</span>
+            </div>
+            <div class="profit-arrow">=</div>
+            <div class="profit-kpi highlight">
+              <span class="profit-kpi-label">Lợi nhuận</span>
+              <span class="profit-kpi-value profit-color">{{ formatCurrency(profit.data.summary.profit) }}</span>
+            </div>
+            <div class="profit-kpi">
+              <span class="profit-kpi-label">Biên lợi nhuận</span>
+              <span class="profit-kpi-value margin-color">{{ profit.data.summary.margin }}%</span>
+            </div>
+          </div>
+
+          <table v-if="profit.data.data?.length">
+            <thead>
+              <tr>
+                <th>Kỳ</th><th>Doanh thu</th><th>Giá vốn</th><th>Lợi nhuận</th><th>Biên LN</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="(row, i) in profit.data.data" :key="i">
+                <td>{{ formatPeriodLabel(row._id) }}</td>
+                <td class="price">{{ formatCurrency(row.revenue) }}</td>
+                <td class="cost">{{ formatCurrency(row.cost) }}</td>
+                <td :class="row.profit >= 0 ? 'profit-pos' : 'profit-neg'">
+                  {{ formatCurrency(row.profit) }}
+                </td>
+                <td>
+                  <span class="margin-badge" :class="row.margin >= 30 ? 'margin-good' : row.margin >= 10 ? 'margin-ok' : 'margin-low'">
+                    {{ row.margin }}%
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <p v-else class="empty">Không có dữ liệu</p>
+        </div>
+
+        <div class="card">
+          <h2>Doanh thu theo thời gian</h2>
+          <table v-if="revenue?.data?.length">
+            <thead>
+              <tr><th>Kỳ</th><th>Doanh thu</th><th>Số đơn</th><th>COD</th><th>VNPAY</th></tr>
+            </thead>
+            <tbody>
+              <tr v-for="(row, i) in revenue.data" :key="i">
+                <td>{{ formatPeriodLabel(row._id) }}</td>
+                <td class="price">{{ formatCurrency(row.revenue) }}</td>
+                <td>{{ row.orders }}</td>
+                <td>{{ formatCurrency(row.cod) }}</td>
+                <td>{{ formatCurrency(row.vnpay) }}</td>
+              </tr>
+            </tbody>
+          </table>
+          <p v-else class="empty">Không có dữ liệu</p>
+        </div>
+      </template>
+
+      <!-- ══════════════ TAB: ĐƠN HÀNG ══════════════ -->
+      <template v-else-if="activeTab === 'orders'">
+        <div class="card">
+          <h2>Đơn hàng theo thời gian</h2>
+          <table v-if="ordersByPeriod?.data?.length">
+            <thead>
+              <tr><th>Kỳ</th><th>Tổng</th><th>Chờ</th><th>Đang giao</th><th>Hoàn thành</th><th>Huỷ</th></tr>
+            </thead>
+            <tbody>
+              <tr v-for="(row, i) in ordersByPeriod.data" :key="i">
+                <td>{{ formatPeriodLabel(row._id) }}</td>
+                <td><strong>{{ row.total }}</strong></td>
+                <td>{{ row.pending }}</td>
+                <td>{{ row.shipping }}</td>
+                <td>{{ row.completed }}</td>
+                <td class="cancel">{{ row.cancelled }}</td>
+              </tr>
+            </tbody>
+          </table>
+          <p v-else class="empty">Không có dữ liệu</p>
+        </div>
+
+        <div class="card">
+          <h2>Đơn theo ngày trong tuần</h2>
+          <div class="bar-chart" v-if="ordersByDay?.data?.length">
+            <div class="bar-item" v-for="item in ordersByDay.data" :key="item.day">
+              <div class="bar-track">
+                <div class="bar-fill bar-fill-purple" :style="{ height: barHeight(item.count, ordersByDay.data) + '%' }" :title="`${item.day}: ${item.count} đơn`"></div>
+              </div>
+              <span class="bar-label">{{ item.day }}</span>
+            </div>
+          </div>
+          <p v-else class="empty">Không có dữ liệu</p>
+        </div>
+
         <div class="card">
           <h2>
             Đơn chờ xử lý quá lâu
@@ -391,8 +307,101 @@
           </table>
           <p v-else class="empty">Không có đơn nào chờ quá lâu ✓</p>
         </div>
-
       </template>
+
+      <!-- ══════════════ TAB: KHÁCH HÀNG ══════════════ -->
+      <template v-else-if="activeTab === 'customers'">
+        <div class="section-row">
+          <div class="card">
+            <h2>Top khách hàng</h2>
+            <table v-if="topCustomers?.data?.length">
+              <thead><tr><th>#</th><th>Tên</th><th>Tổng chi</th><th>Số đơn</th></tr></thead>
+              <tbody>
+                <tr v-for="(c, i) in topCustomers.data" :key="c._id">
+                  <td><span class="rank">{{ i + 1 }}</span></td>
+                  <td>{{ c.userName || c._id }}</td>
+                  <td class="price">{{ formatCurrency(c.totalSpent) }}</td>
+                  <td>{{ c.totalOrders }}</td>
+                </tr>
+              </tbody>
+            </table>
+            <p v-else class="empty">Không có dữ liệu</p>
+          </div>
+          <div class="card">
+            <h2>Khách hay huỷ đơn</h2>
+            <table v-if="cancelCustomers?.data?.length">
+              <thead><tr><th>#</th><th>Tên</th><th>Số lần huỷ</th></tr></thead>
+              <tbody>
+                <tr v-for="(c, i) in cancelCustomers.data" :key="c._id">
+                  <td><span class="rank">{{ i + 1 }}</span></td>
+                  <td>{{ c.userName || c._id }}</td>
+                  <td><span class="badge badge-cancel">{{ c.cancelCount }}</span></td>
+                </tr>
+              </tbody>
+            </table>
+            <p v-else class="empty">Không có dữ liệu</p>
+          </div>
+        </div>
+      </template>
+
+      <!-- ══════════════ TAB: SẢN PHẨM ══════════════ -->
+      <template v-else-if="activeTab === 'products'">
+        <div class="section-row">
+          <div class="card">
+            <h2>Sản phẩm bán chạy</h2>
+            <table v-if="topProducts?.data?.length">
+              <thead><tr><th>#</th><th>Sản phẩm</th><th>SL bán</th><th>Doanh thu</th></tr></thead>
+              <tbody>
+                <tr v-for="(p, i) in topProducts.data" :key="p._id">
+                  <td><span class="rank">{{ i + 1 }}</span></td>
+                  <td>{{ p.name }}</td>
+                  <td>{{ p.quantity }}</td>
+                  <td class="price">{{ formatCurrency(p.revenue) }}</td>
+                </tr>
+              </tbody>
+            </table>
+            <p v-else class="empty">Không có dữ liệu</p>
+          </div>
+          <div class="card">
+            <h2>Sản phẩm hay bị huỷ</h2>
+            <table v-if="cancelledProducts?.data?.length">
+              <thead><tr><th>#</th><th>Sản phẩm</th><th>Số lần huỷ</th></tr></thead>
+              <tbody>
+                <tr v-for="(p, i) in cancelledProducts.data" :key="p._id">
+                  <td><span class="rank">{{ i + 1 }}</span></td>
+                  <td>{{ p.name }}</td>
+                  <td><span class="badge badge-cancel">{{ p.cancelCount }}</span></td>
+                </tr>
+              </tbody>
+            </table>
+            <p v-else class="empty">Không có dữ liệu</p>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Sản phẩm hay bị đổi trả / bảo hành</h2>
+          <table v-if="returnWarrantyProducts?.data?.length">
+            <thead>
+              <tr><th>#</th><th>Sản phẩm</th><th>Loại</th><th>SL</th><th>Số yêu cầu</th></tr>
+            </thead>
+            <tbody>
+              <tr v-for="(p, i) in returnWarrantyProducts.data" :key="p._id.productId + p._id.type">
+                <td><span class="rank">{{ i + 1 }}</span></td>
+                <td>{{ p.name }}</td>
+                <td>
+                  <span class="badge" :class="p._id.type === 'return' ? 'badge-cancel' : 'badge-warn'">
+                    {{ p._id.type === "return" ? "Đổi trả" : "Bảo hành" }}
+                  </span>
+                </td>
+                <td>{{ p.quantity }}</td>
+                <td>{{ p.requests }}</td>
+              </tr>
+            </tbody>
+          </table>
+          <p v-else class="empty">Không có dữ liệu</p>
+        </div>
+      </template>
+
     </div>
   </div>
 </template>
@@ -403,23 +412,38 @@ import statisticService from "@/services/statistic.service";
 export default {
   name: "StatisticView",
   data() {
+    const initFilter = () => ({ from: this.defaultFrom(), to: this.defaultTo(), period: "day" });
     return {
-      loading: false,
-      filter: {
-        from: this.defaultFrom(),
-        to: this.defaultTo(),
-        period: "day",
+      tabs: [
+        { key: "overview", label: "Tổng quan" },
+        { key: "profit", label: "Doanh thu - LN" },
+        { key: "orders", label: "Đơn hàng" },
+        { key: "customers", label: "Khách hàng" },
+        { key: "products", label: "Sản phẩm" },
+      ],
+      activeTab: "overview",
+
+      filters: {
+        overview: { from: this.defaultFrom(), to: this.defaultTo(), period: "day" },
+        profit: { from: this.defaultFrom(), to: this.defaultTo(), period: "day" },
+        orders: { from: this.defaultFrom(), to: this.defaultTo(), period: "day" },
+        customers: { from: this.defaultFrom(), to: this.defaultTo(), period: "day" },
+        products: { from: this.defaultFrom(), to: this.defaultTo(), period: "day" },
       },
-      overview: null, growth: null, revenue: null, ordersByPeriod: null,
+      loading: { overview: false, profit: false, orders: false, customers: false, products: false },
+      loaded:  { overview: false, profit: false, orders: false, customers: false, products: false },
+
+      // dữ liệu từng mảng
+      overview: null, growth: null, orderAverages: null, paymentStats: null,
+      profit: null, revenue: null,
+      ordersByPeriod: null, ordersByDay: null, staleOrders: null,
       topCustomers: null, cancelCustomers: null,
-      topProducts: null, cancelledProducts: null,
-      returnWarrantyProducts: null, // thêm
-      ordersByHour: null, ordersByDay: null,
-      paymentStats: null, staleOrders: null, orderAverages: null,
-      profit: null,
+      topProducts: null, cancelledProducts: null, returnWarrantyProducts: null,
     };
   },
-  mounted() { this.loadAll(); },
+  mounted() {
+    this.loadTab("overview");
+  },
   methods: {
     defaultFrom() {
       const d = new Date(); d.setDate(d.getDate() - 30);
@@ -427,46 +451,68 @@ export default {
     },
     defaultTo() { return new Date().toISOString().split("T")[0]; },
 
-    async loadAll() {
-      this.loading = true;
-      const { from, to, period } = this.filter;
+    hasPeriod(tab) {
+      return tab === "profit" || tab === "orders";
+    },
+
+    switchTab(key) {
+      this.activeTab = key;
+      if (!this.loaded[key]) this.loadTab(key);
+    },
+
+    async loadTab(key) {
+      this.loading[key] = true;
+      const { from, to, period } = this.filters[key];
       try {
-        const [
-          overview, growth, revenue, ordersByPeriod,
-          topCustomers, cancelCustomers,
-          topProducts, cancelledProducts, returnWarrantyProducts,
-          ordersByHour, ordersByDay,
-          paymentStats, staleOrders, orderAverages,
-          profit,
-        ] = await Promise.all([
-          statisticService.getOverview({ from, to }),
-          statisticService.getGrowthComparison({ from, to }),
-          statisticService.getRevenueByPeriod({ from, to, period }),
-          statisticService.getOrdersByPeriod({ from, to, period }),
-          statisticService.getTopCustomers({ from, to }),
-          statisticService.getTopCancelCustomers({ from, to }),
-          statisticService.getTopProducts({ from, to }),
-          statisticService.getMostCancelledProducts({ from, to }),
-          statisticService.getTopReturnWarrantyProducts({ from, to }), // thêm
-          statisticService.getOrdersByHour({ from, to }),
-          statisticService.getOrdersByDayOfWeek({ from, to }),
-          statisticService.getPaymentMethodStats({ from, to }),
-          statisticService.getStaleOrders(),
-          statisticService.getOrderAverages({ from, to }),
-          statisticService.getProfit({ from, to, period }),
-        ]);
-        Object.assign(this, {
-          overview, growth, revenue, ordersByPeriod,
-          topCustomers, cancelCustomers,
-          topProducts, cancelledProducts, returnWarrantyProducts,
-          ordersByHour, ordersByDay,
-          paymentStats, staleOrders, orderAverages,
-          profit,
-        });
+        if (key === "overview") {
+          const [overview, growth, orderAverages, paymentStats] = await Promise.all([
+            statisticService.getOverview({ from, to }),
+            statisticService.getGrowthComparison({ from, to }),
+            statisticService.getOrderAverages({ from, to }),
+            statisticService.getPaymentMethodStats({ from, to }),
+          ]);
+          Object.assign(this, { overview, growth, orderAverages, paymentStats });
+        }
+
+        if (key === "profit") {
+          const [profit, revenue] = await Promise.all([
+            statisticService.getProfit({ from, to, period }),
+            statisticService.getRevenueByPeriod({ from, to, period }),
+          ]);
+          Object.assign(this, { profit, revenue });
+        }
+
+        if (key === "orders") {
+          const [ordersByPeriod, ordersByDay, staleOrders] = await Promise.all([
+            statisticService.getOrdersByPeriod({ from, to, period }),
+            statisticService.getOrdersByDayOfWeek({ from, to }),
+            statisticService.getStaleOrders(),
+          ]);
+          Object.assign(this, { ordersByPeriod, ordersByDay, staleOrders });
+        }
+
+        if (key === "customers") {
+          const [topCustomers, cancelCustomers] = await Promise.all([
+            statisticService.getTopCustomers({ from, to }),
+            statisticService.getTopCancelCustomers({ from, to }),
+          ]);
+          Object.assign(this, { topCustomers, cancelCustomers });
+        }
+
+        if (key === "products") {
+          const [topProducts, cancelledProducts, returnWarrantyProducts] = await Promise.all([
+            statisticService.getTopProducts({ from, to }),
+            statisticService.getMostCancelledProducts({ from, to }),
+            statisticService.getTopReturnWarrantyProducts({ from, to }),
+          ]);
+          Object.assign(this, { topProducts, cancelledProducts, returnWarrantyProducts });
+        }
+
+        this.loaded[key] = true;
       } catch (err) {
-        console.error("Lỗi tải thống kê:", err);
+        console.error(`Lỗi tải thống kê [${key}]:`, err);
       } finally {
-        this.loading = false;
+        this.loading[key] = false;
       }
     },
 
@@ -580,6 +626,25 @@ export default {
 .main-panel {
   max-width: 1100px; margin: -24px auto 0;
   padding: 0 24px 60px; position: relative; z-index: 10;
+}
+
+/* TAB NAV */
+.tab-nav {
+  display: flex; gap: 6px; flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.tab-btn {
+  padding: 10px 20px; border-radius: 12px;
+  background: white; border: 1px solid rgba(37,99,235,.12);
+  color: #64748b; font-size: .85rem; font-weight: 700;
+  cursor: pointer; transition: all .2s;
+  box-shadow: 0 2px 10px rgba(10,15,30,.05);
+}
+.tab-btn:hover { border-color: #a5b4fc; color: #2563eb; }
+.tab-btn.active {
+  background: linear-gradient(135deg,#2563eb,#4f46e5);
+  color: white; border-color: transparent;
+  box-shadow: 0 4px 14px rgba(37,99,235,.3);
 }
 
 /* TOP BAR */
