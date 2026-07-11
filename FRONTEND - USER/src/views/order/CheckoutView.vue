@@ -45,8 +45,37 @@
         <div class="left">
           <h2>Thông tin giao hàng</h2>
 
-          <input v-model="form.shippingAddress" placeholder="Địa chỉ giao hàng" />
-          <input v-model="form.phone" placeholder="Số điện thoại" />
+          <!-- ĐỊA CHỈ TỪ HỒ SƠ -->
+          <div v-if="profile && (profile.address || profile.phone)" class="profile-pick">
+            <button
+              type="button"
+              class="profile-card"
+              :class="{ selected: addressMode === 'profile' }"
+              @click="useProfileAddress"
+            >
+              <span class="profile-radio"></span>
+              <span class="profile-info">
+                <span class="profile-name">{{ profile.fullName || "Địa chỉ trong hồ sơ" }}</span>
+                <span class="profile-phone">{{ profile.phone || "Chưa có số điện thoại" }}</span>
+                <span class="profile-address">{{ profile.address || "Chưa có địa chỉ" }}</span>
+              </span>
+            </button>
+
+            <button
+              type="button"
+              class="profile-manual-link"
+              :class="{ active: addressMode === 'manual' }"
+              @click="useManualAddress"
+            >
+              {{ addressMode === "manual" ? "Đang nhập địa chỉ khác" : "Nhập địa chỉ khác" }}
+            </button>
+          </div>
+
+          <template v-if="addressMode === 'manual' || !profile || (!profile.address && !profile.phone)">
+            <input v-model="form.shippingAddress" placeholder="Địa chỉ giao hàng" />
+            <input v-model="form.phone" placeholder="Số điện thoại" />
+          </template>
+
           <input v-model="form.note" placeholder="Ghi chú (tuỳ chọn)" />
 
           <button class="btn-cod" :disabled="loading" @click="placeOrder">
@@ -165,6 +194,23 @@ const checkoutQuantity = computed(() =>
 // ── Form ──
 const form = ref({ shippingAddress: "", phone: "", note: "" });
 
+// ── Địa chỉ / SĐT từ hồ sơ user ──
+const profile     = ref(null);      // { fullName, phone, address }
+const addressMode = ref("profile"); // "profile" | "manual"
+
+const useProfileAddress = () => {
+  if (!profile.value) return;
+  form.value.shippingAddress = profile.value.address || "";
+  form.value.phone           = profile.value.phone || "";
+  addressMode.value = "profile";
+};
+
+const useManualAddress = () => {
+  addressMode.value = "manual";
+  form.value.shippingAddress = "";
+  form.value.phone = "";
+};
+
 // ── Điểm ──
 const userBalance  = ref(0);
 const usePoints    = ref(false);
@@ -225,6 +271,29 @@ onMounted(async () => {
   } catch {
     // Không có điểm hoặc chưa đăng nhập → ẩn section điểm
     userBalance.value = 0;
+  }
+
+  // Load hồ sơ user đã đăng nhập (giống ProfileView.vue) từ localStorage
+  try {
+    const raw = localStorage.getItem("user");
+    const data = raw ? JSON.parse(raw) : null;
+    if (data) {
+      profile.value = {
+        fullName: data.name || "",
+        phone: data.phone || "",
+        address: data.address || "",
+      };
+      if (profile.value.address || profile.value.phone) {
+        useProfileAddress();
+      } else {
+        addressMode.value = "manual";
+      }
+    } else {
+      addressMode.value = "manual";
+    }
+  } catch {
+    profile.value = null;
+    addressMode.value = "manual";
   }
 });
 
@@ -424,6 +493,50 @@ const payVNPay = async () => {
   transform: translateY(-2px);
   box-shadow: 0 8px 20px rgba(99,102,241,0.15);
 }
+
+/* ĐỊA CHỈ TỪ HỒ SƠ */
+.profile-pick { display: flex; flex-direction: column; gap: 8px; }
+
+.profile-card {
+  display: flex; align-items: flex-start; gap: 10px;
+  text-align: left; width: 100%;
+  padding: 12px 14px; border-radius: 12px;
+  background: white; border: 1.5px solid #e2e8f0;
+  cursor: pointer; transition: .18s;
+}
+.profile-card:hover { border-color: #a5b4fc; }
+.profile-card.selected {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99,102,241,0.12);
+  background: #f5f3ff;
+}
+
+.profile-radio {
+  width: 18px; height: 18px; border-radius: 50%;
+  border: 2px solid #cbd5e1; flex-shrink: 0; margin-top: 2px;
+  transition: .18s; position: relative;
+}
+.profile-card.selected .profile-radio {
+  border-color: #6366f1;
+}
+.profile-card.selected .profile-radio::after {
+  content: ""; position: absolute; inset: 3px;
+  border-radius: 50%; background: #6366f1;
+}
+
+.profile-info { display: flex; flex-direction: column; gap: 2px; }
+.profile-name    { font-weight: 700; font-size: .88rem; color: #0f172a; }
+.profile-phone   { font-size: .82rem; color: #475569; }
+.profile-address { font-size: .82rem; color: #64748b; }
+
+.profile-manual-link {
+  align-self: flex-start;
+  background: none; border: none;
+  color: #6366f1; font-size: .82rem; font-weight: 700;
+  cursor: pointer; padding: 2px 0;
+}
+.profile-manual-link:hover { text-decoration: underline; }
+.profile-manual-link.active { color: #0f172a; }
 
 .btn-cod {
   background: #0f172a; color: white;
