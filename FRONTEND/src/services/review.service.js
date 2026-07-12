@@ -60,6 +60,18 @@ class ReviewService {
   async adminDeleteReply(reviewId) {
     return (await this.api.delete(`/admin/reviews/${reviewId}/reply`)).data;
   }
+
+  async adminGetNotifications(params = {}) {
+    return (await this.api.get(`/admin/reviews/notifications`, { params })).data;
+  }
+
+  async adminMarkNotificationRead(notificationId) {
+    return (await this.api.patch(`/admin/reviews/notifications/${notificationId}/read`)).data;
+  }
+
+  async adminMarkAllNotificationsRead() {
+    return (await this.api.patch(`/admin/reviews/notifications/read-all`)).data;
+  }
 }
 
 export default new ReviewService();

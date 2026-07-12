@@ -1,9 +1,34 @@
 const { ObjectId } = require("mongodb");
+const nodemailer = require("nodemailer");
+
+const NEGATIVE_KEYWORDS = [
+  "tệ", "kém", "dở", "tồi", "chán", "thất vọng",
+  "lừa đảo", "hàng giả", "hàng nhái", "rác",
+  "không như mô tả", "không giống hình", "không đáng tiền",
+  "phí tiền", "hỏng", "lỗi", "vỡ", "rách",
+  "giao chậm", "giao thiếu", "không nên mua", "đừng mua",
+];
+
+function isNegativeReview(rating, comment = "") {
+  if (Number(rating) > 2) return false;
+  const text = comment.toLowerCase();
+  return NEGATIVE_KEYWORDS.some((kw) => text.includes(kw));
+}
+
+const mailTransporter = nodemailer.createTransport({
+  host: process.env.SMTP_HOST,
+  port: Number(process.env.SMTP_PORT) || 587,
+  secure: false,
+  auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+});
 
 class ReviewService {
   constructor(client) {
     this.Review = client.db().collection("reviews");
     this.Order = client.db().collection("orders");
+    this.Product = client.db().collection("products");
+    this.User = client.db().collection("users");
+    this.Notification = client.db().collection("notifications");
   }
 
   extractReviewData(payload) {
@@ -49,7 +74,97 @@ class ReviewService {
     };
 
     const result = await this.Review.insertOne(review);
-    return { _id: result.insertedId, ...review };
+    const document = { _id: result.insertedId, ...review };
+
+    if (isNegativeReview(review.rating, review.comment)) {
+      // Không await để không làm chậm response trả về cho user
+      this.handleNegativeReview(document, userId, productId).catch((err) =>
+        console.error("Lỗi khi xử lý cảnh báo đánh giá tiêu cực:", err.message)
+      );
+    }
+
+    return document;
+  }
+
+  async handleNegativeReview(review, userId, productId) {
+    const [user, product] = await Promise.all([
+      this.User.findOne({ _id: new ObjectId(userId) }),
+      this.Product.findOne({ _id: new ObjectId(productId) }),
+    ]);
+
+    await this.Notification.insertOne({
+      type: "negative_review",
+      title: "Đánh giá tiêu cực mới",
+      message: `${user?.name || "Khách hàng"} đánh giá ${review.rating} sao cho sản phẩm "${product?.name || "N/A"}"`,
+      reviewId: review._id,
+      productId: new ObjectId(productId),
+      userId: new ObjectId(userId),
+      isRead: false,
+      createdAt: new Date(),
+    });
+
+    const adminEmail = process.env.ADMIN_EMAIL;
+    if (adminEmail) {
+      try {
+        await mailTransporter.sendMail({
+          from: process.env.SMTP_FROM || process.env.SMTP_USER,
+          to: adminEmail,
+          subject: `[Cảnh báo] Đánh giá tiêu cực - ${product?.name || "Sản phẩm"}`,
+          html: `
+            <h3>Có đánh giá tiêu cực cần xử lý</h3>
+            <p><b>Khách hàng:</b> ${user?.name || "N/A"} (${user?.email || "N/A"})</p>
+            <p><b>Sản phẩm:</b> ${product?.name || "N/A"}</p>
+            <p><b>Số sao:</b> ${review.rating}/5</p>
+            <p><b>Nội dung:</b> ${review.comment}</p>
+          `,
+        });
+      } catch (err) {
+        console.error("Lỗi khi gửi email cảnh báo:", err.message);
+      }
+    }
+  }
+
+  async adminGetNotifications(query = {}) {
+    const { page = 1, limit = 10, isRead } = query;
+    const filter = { type: "negative_review" };
+    if (isRead !== undefined) filter.isRead = isRead === "true";
+
+    const skip = (Number(page) - 1) * Number(limit);
+    const [notifications, total] = await Promise.all([
+      this.Notification.find(filter)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(Number(limit))
+        .toArray(),
+      this.Notification.countDocuments(filter),
+    ]);
+
+    return {
+      notifications,
+      pagination: {
+        page: Number(page),
+        limit: Number(limit),
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  async adminMarkNotificationRead(notificationId) {
+    const result = await this.Notification.findOneAndUpdate(
+      { _id: new ObjectId(notificationId) },
+      { $set: { isRead: true, readAt: new Date() } },
+      { returnDocument: "after" }
+    );
+    if (!result) throw new Error("Không tìm thấy thông báo");
+    return result;
+  }
+
+  async adminMarkAllNotificationsRead() {
+    await this.Notification.updateMany(
+      { type: "negative_review", isRead: false },
+      { $set: { isRead: true, readAt: new Date() } }
+    );
   }
 
   async findByProduct(productId, query = {}) {

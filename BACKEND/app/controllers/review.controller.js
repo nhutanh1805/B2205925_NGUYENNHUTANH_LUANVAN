@@ -173,3 +173,35 @@ exports.deleteReply = async (req, res, next) => {
     return next(new ApiError(400, error.message || "Lỗi khi xóa phản hồi"));
   }
 };
+
+// ===== NOTIFICATIONS (đánh giá tiêu cực) =====
+
+exports.adminGetNotifications = async (req, res, next) => {
+  try {
+    const reviewService = new ReviewService(MongoDB.client);
+    const result = await reviewService.adminGetNotifications(req.query);
+    return res.json({ message: "Lấy danh sách thông báo thành công", ...result });
+  } catch (error) {
+    return next(new ApiError(500, "Lỗi khi lấy danh sách thông báo"));
+  }
+};
+
+exports.adminMarkNotificationRead = async (req, res, next) => {
+  try {
+    const reviewService = new ReviewService(MongoDB.client);
+    const result = await reviewService.adminMarkNotificationRead(req.params.notificationId);
+    return res.json({ message: "Đã đánh dấu đã xử lý", data: result });
+  } catch (error) {
+    return next(new ApiError(400, error.message || "Lỗi khi cập nhật thông báo"));
+  }
+};
+
+exports.adminMarkAllNotificationsRead = async (req, res, next) => {
+  try {
+    const reviewService = new ReviewService(MongoDB.client);
+    await reviewService.adminMarkAllNotificationsRead();
+    return res.json({ message: "Đã đánh dấu tất cả đã xử lý" });
+  } catch (error) {
+    return next(new ApiError(500, "Lỗi khi cập nhật thông báo"));
+  }
+};

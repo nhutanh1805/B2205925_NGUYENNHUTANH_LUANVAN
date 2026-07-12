@@ -46,8 +46,9 @@
 
         <div class="meta-row">
           <div class="stars">
-            <span v-for="i in 5" :key="i" class="star" :class="{ lit: i <= Math.round(product.rating || 4.8) }">★</span>
-            <span class="rating-val">{{ product.rating || 4.8 }}</span>
+            <span v-for="i in 5" :key="i" class="star" :class="{ lit: i <= Math.round(ratingSummary.avg) }">★</span>
+            <span class="rating-val">{{ ratingSummary.avg || 0 }}</span>
+            <span v-if="ratingSummary.total" class="rating-count-txt">({{ ratingSummary.total }} đánh giá)</span>
           </div>
           <span class="divider-dot">·</span>
           <span class="sold-count">Đã bán <b>{{ product.sold }}</b></span>
@@ -228,8 +229,9 @@ import { useRoute, useRouter } from "vue-router";
 import ProductService from "@/services/product.service";
 import CartService from "@/services/cart.service";
 import FavoriteService from "@/services/favorite.service";
+import ReviewService from "@/services/review.service";
 import ProductReview from "@/components/ProductReview.vue";
-import ProductRecommendation from "@/components/ProductRecommendation.vue"; 
+import ProductRecommendation from "@/components/ProductRecommendation.vue";
 
 const route = useRoute();
 const router = useRouter();
@@ -241,6 +243,7 @@ const showToast       = ref(false);
 const toastProductName = ref(""); // 
 const isFavorited     = ref(false);
 const favLoading      = ref(false);
+const ratingSummary   = ref({ avg: 0, total: 0 });
 
 const tabs = ["Mô tả", "Thông số", "Đánh giá"];
 const tab  = ref("Mô tả");
@@ -316,6 +319,13 @@ onMounted(async () => {
   const res = await ProductService.get(route.params.id);
   product.value   = res;
   currentImage.value = res.images?.[0] || "https://via.placeholder.com/600";
+
+  try {
+    const ratingRes = await ReviewService.getRatingSummary(res._id);
+    ratingSummary.value = ratingRes.data;
+  } catch (err) {
+    console.error("Lỗi khi lấy thống kê đánh giá:", err);
+  }
 
   if (currentUserId.value) {
     try {
@@ -455,6 +465,7 @@ onMounted(async () => {
 .divider-dot { color: #cbd5e1; }
 .sold-count { color: #6b7280; }
 .sold-count b { color: #374151; }
+.rating-count-txt { color: #94a3b8; font-size: .8rem; margin-left: 2px; }
 
 .compat-row {
   display: flex; align-items: center; flex-wrap: wrap; gap: 6px;

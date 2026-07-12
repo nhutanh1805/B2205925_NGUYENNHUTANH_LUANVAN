@@ -5,6 +5,23 @@
       <div class="section-line"></div>
     </div>
 
+    <!-- CẢNH BÁO ĐÁNH GIÁ TIÊU CỰC -->
+    <div v-if="negativeNotifications.length" class="negative-alert-box">
+      <div class="negative-alert-header">
+        <span> {{ negativeNotifications.length }} đánh giá tiêu cực cần xử lý</span>
+        <button class="btn-mark-all" @click="markAllNotificationsRead">Đánh dấu đã xử lý hết</button>
+      </div>
+      <div
+        v-for="n in negativeNotifications"
+        :key="n._id"
+        class="negative-alert-item"
+        @click="goToReview(n)"
+      >
+        <span>{{ n.message }}</span>
+        <button class="btn-mark-one" @click.stop="markNotificationRead(n)">Đã xử lý</button>
+      </div>
+    </div>
+
     <div class="review-stats-row">
       <div class="rstat-card">
         <span class="rstat-label">Tổng đánh giá</span>
@@ -61,7 +78,12 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="r in reviews" :key="r._id">
+          <tr
+            v-for="r in reviews"
+            :key="r._id"
+            :id="`review-row-${r._id}`"
+            :class="{ 'row-highlight': highlightedReviewId === r._id }"
+          >
             <td>
               <div class="user-cell">
                 <b>{{ r.userInfo?.name || "Ẩn danh" }}</b>
@@ -163,7 +185,7 @@
     <Transition name="modal">
       <div v-if="deleteReviewTarget" class="modal-overlay" @click.self="deleteReviewTarget = null">
         <div class="modal-box">
-          <div class="modal-icon-wrap">🗑️</div>
+          <div class="modal-icon-wrap"></div>
           <h3 class="modal-title">Xóa đánh giá?</h3>
           <p class="modal-desc">
             Đánh giá của <strong>{{ deleteReviewTarget.userInfo?.name || "người dùng này" }}</strong> sẽ bị xóa vĩnh viễn.
@@ -181,7 +203,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from "vue";
+import { ref, reactive, onMounted, nextTick } from "vue";
 import ReviewService from "@/services/review.service";
 
 const props = defineProps({
@@ -198,6 +220,9 @@ const togglingId = ref(null);
 const replyingId = ref(null);
 const replyContent = ref("");
 const isReplying = ref(false);
+
+const negativeNotifications = ref([]);
+const highlightedReviewId = ref(null);
 
 const reviewFilters = reactive({
   status: "",
@@ -246,6 +271,60 @@ async function fetchReviewStats() {
     reviewStats.value = res.data;
   } catch (err) {
     console.error("Lỗi khi tải thống kê đánh giá:", err);
+  }
+}
+
+async function fetchNegativeNotifications() {
+  try {
+    const res = await ReviewService.adminGetNotifications({
+      productId: props.productId,
+      isRead: "false",
+      limit: 20,
+    });
+    negativeNotifications.value = res.notifications || [];
+  } catch (err) {
+    console.error("Lỗi khi tải cảnh báo đánh giá tiêu cực:", err);
+  }
+}
+
+async function goToReview(n) {
+  reviewFilters.status = "";
+  reviewFilters.rating = "";
+
+  const originalLimit = reviewPagination.limit;
+  reviewPagination.limit = 50;
+  await fetchReviews(1);
+  reviewPagination.limit = originalLimit;
+
+  await nextTick();
+  const el = document.getElementById(`review-row-${n.reviewId}`);
+
+  if (el) {
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    highlightedReviewId.value = n.reviewId;
+    setTimeout(() => {
+      highlightedReviewId.value = null;
+    }, 2500);
+  } else {
+    alert("Không tìm thấy đánh giá này trong 50 đánh giá gần nhất, có thể nó đã bị xóa hoặc ở trang xa hơn.");
+  }
+}
+
+async function markNotificationRead(n) {
+  try {
+    await ReviewService.adminMarkNotificationRead(n._id);
+    negativeNotifications.value = negativeNotifications.value.filter((x) => x._id !== n._id);
+  } catch (err) {
+    alert(err.response?.data?.message || err.message || "Cập nhật thất bại");
+  }
+}
+
+async function markAllNotificationsRead() {
+  try {
+    await ReviewService.adminMarkAllNotificationsRead();
+    negativeNotifications.value = [];
+  } catch (err) {
+    alert(err.response?.data?.message || err.message || "Cập nhật thất bại");
   }
 }
 
@@ -317,6 +396,7 @@ async function removeReply(review) {
 onMounted(() => {
   fetchReviews(1);
   fetchReviewStats();
+  fetchNegativeNotifications();
 });
 </script>
 
@@ -328,6 +408,37 @@ onMounted(() => {
 .section-header { display: flex; align-items: center; gap: 16px; margin-bottom: 18px; }
 .section-title { font-size: 1.15rem; font-weight: 800; color: #0f172a; white-space: nowrap; }
 .section-line { flex: 1; height: 2px; background: linear-gradient(90deg, #e0e7ff, transparent); }
+
+.negative-alert-box {
+  background: #fef2f2; border: 1.5px solid #fecaca; border-radius: 16px;
+  padding: 14px 18px; margin-bottom: 18px;
+}
+.negative-alert-header {
+  display: flex; justify-content: space-between; align-items: center;
+  font-weight: 700; color: #b91c1c; margin-bottom: 8px;
+}
+.btn-mark-all, .btn-mark-one {
+  background: white; border: 1px solid #fecaca; color: #b91c1c;
+  border-radius: 8px; padding: 4px 10px; font-size: .76rem; font-weight: 600; cursor: pointer;
+}
+.negative-alert-item {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 6px 0; font-size: .84rem; color: #7f1d1d;
+  border-top: 1px dashed #fecaca;
+  cursor: pointer;
+}
+.negative-alert-item:hover {
+  background: #fee2e2;
+}
+
+.row-highlight {
+  animation: rowFlash 2.5s ease;
+}
+@keyframes rowFlash {
+  0%   { background: #fef9c3; }
+  70%  { background: #fef9c3; }
+  100% { background: transparent; }
+}
 
 .review-stats-row {
   display: grid; grid-template-columns: repeat(3, 1fr) 1.6fr;
@@ -477,7 +588,6 @@ onMounted(() => {
 .pagination button:disabled { opacity: .4; cursor: not-allowed; }
 .page-info { font-size: .82rem; color: #64748b; font-weight: 600; }
 
-/* Modal xóa đánh giá */
 .modal-overlay {
   position: fixed; inset: 0; z-index: 100;
   background: rgba(10,15,30,.7);
