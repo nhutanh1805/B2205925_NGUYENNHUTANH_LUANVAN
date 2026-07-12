@@ -1,4 +1,8 @@
-const config = require("../config/chatbottuvan.config");
+const { ObjectId } = require("mongodb");
+const config       = require("../config/chatbottuvan.config");
+const OrderService  = require("./order.service");
+const PointService  = require("./point.service");
+const CartService   = require("./cart.service");
 
 function extractContent(data) {
     const choice = data.choices?.[0];
@@ -48,7 +52,207 @@ async function retrieveContext(db, userMessage) {
 
 // ─── Main Service ─────────────────────────────────────────────────────────────
 class ChatbotTuvanService {
-    async chatWithAI(db, userMessage, conversationHistory = []) {
+
+    // ─── Thực thi tool model yêu cầu gọi ───────────────────────────────────
+    // ctx.userId LUÔN lấy từ session đăng nhập thật, KHÔNG bao giờ tin theo
+    // giá trị model tự sinh ra trong args (tránh model bị dắt mũi thao túng đơn của người khác).
+    async _executeTool(toolName, args, ctx) {
+        const { client, db, userId } = ctx;
+        const orderService = new OrderService(client);
+        const pointService  = new PointService(client);
+        const cartService   = new CartService(client);
+
+        try {
+            switch (toolName) {
+                case "get_point_balance": {
+                    if (!userId) return { error: "Khách chưa đăng nhập, không thể tra điểm" };
+                    const balance = await pointService.getBalance(userId);
+                    return { balance };
+                }
+
+                case "get_my_profile": {
+                    if (!userId) return { error: "Khách chưa đăng nhập, không thể lấy hồ sơ" };
+                    const user = await db.collection("users").findOne(
+                        { _id: new ObjectId(userId) },
+                        { projection: { name: 1, phone: 1, address: 1 } }
+                    );
+                    if (!user) return { error: "Không tìm thấy hồ sơ khách hàng" };
+                    return {
+                        fullName: user.name || null,
+                        phone: user.phone || null,
+                        address: user.address || null,
+                    };
+                }
+
+                case "get_my_orders": {
+                    if (!userId) return { error: "Khách chưa đăng nhập, không thể tra đơn hàng" };
+                    const orders = await orderService.getOrdersByUser(userId);
+                    return {
+                        orders: orders.slice(0, 5).map((o) => ({
+                            orderId: o._id.toString(),
+                            status: o.status,
+                            totalPrice: o.totalPrice,
+                            createdAt: o.createdAt,
+                        })),
+                    };
+                }
+
+                case "get_order_status": {
+                    const order = await orderService.findById(args.orderId);
+                    if (!order) return { error: "Không tìm thấy đơn hàng với mã này" };
+                    if (userId && order.userId !== userId) {
+                        return { error: "Đơn hàng này không thuộc về khách đang chat" };
+                    }
+                    return {
+                        orderId: order._id.toString(),
+                        status: order.status,
+                        totalPrice: order.totalPrice,
+                        paymentMethod: order.paymentMethod,
+                        paymentStatus: order.paymentStatus,
+                        createdAt: order.createdAt,
+                    };
+                }
+
+                case "search_product": {
+                    if (!args.query?.trim()) return { error: "Thiếu từ khóa tìm kiếm" };
+                    const regex = new RegExp(args.query.trim(), "i");
+                    const products = await db.collection("products")
+                        .find({ name: regex, isActive: true })
+                        .limit(5)
+                        .toArray();
+
+                    return {
+                        products: products.map((p) => ({
+                            productId: p._id.toString(),
+                            name: p.name,
+                            price: p.salePrice && p.salePrice < p.price ? p.salePrice : p.price,
+                            stock: p.stock,
+                        })),
+                    };
+                }
+
+                case "create_order": {
+                    if (!userId) return { error: "Khách cần đăng nhập để đặt hàng" };
+                    if (!Array.isArray(args.items) || args.items.length === 0) {
+                        return { error: "Thiếu danh sách sản phẩm" };
+                    }
+
+                    // Tự điền địa chỉ/SĐT từ hồ sơ nếu model không truyền (giống CheckoutView.vue)
+                    let shippingAddress = args.shippingAddress?.trim();
+                    let phone = args.phone?.trim();
+
+                    if (!shippingAddress || !phone) {
+                        const user = await db.collection("users").findOne(
+                            { _id: new ObjectId(userId) },
+                            { projection: { phone: 1, address: 1 } }
+                        );
+                        if (!shippingAddress) shippingAddress = user?.address || "";
+                        if (!phone) phone = user?.phone || "";
+                    }
+
+                    if (!shippingAddress) return { error: "Chưa có địa chỉ giao hàng, hãy hỏi khách cung cấp" };
+                    if (!phone) return { error: "Chưa có số điện thoại, hãy hỏi khách cung cấp" };
+
+                    let productIds;
+                    try {
+                        productIds = args.items.map((i) => new ObjectId(i.productId));
+                    } catch {
+                        return { error: "productId không hợp lệ, hãy dùng search_product để lấy đúng mã" };
+                    }
+
+                    const products = await db.collection("products")
+                        .find({ _id: { $in: productIds }, isActive: true })
+                        .toArray();
+
+                    const items = [];
+                    for (const reqItem of args.items) {
+                        const p = products.find((p) => p._id.toString() === reqItem.productId);
+                        if (!p) return { error: `Không tìm thấy sản phẩm mã ${reqItem.productId}` };
+                        if (p.stock < reqItem.quantity) {
+                            return { error: `Sản phẩm "${p.name}" chỉ còn ${p.stock} cái, không đủ số lượng yêu cầu` };
+                        }
+                        items.push({
+                            productId: p._id.toString(),
+                            name: p.name,
+                            price: p.salePrice && p.salePrice < p.price ? p.salePrice : p.price,
+                            quantity: reqItem.quantity,
+                            images: p.images,
+                        });
+                    }
+
+                    const originalPrice = items.reduce((s, i) => s + i.price * i.quantity, 0);
+                    const totalQuantity = items.reduce((s, i) => s + i.quantity, 0);
+
+                    // ── Xử lý điểm (giống hệt thứ tự trong order.controller.js thật) ──
+                    // redeemForOrder được gọi TRƯỚC khi có order._id (orderId: null),
+                    // rồi patch lại orderId vào transaction sau khi tạo đơn xong.
+                    let pointsUsed = 0;
+                    let discount   = 0;
+
+                    if (args.pointsToUse > 0) {
+                        const redeemResult = await pointService.redeemForOrder(
+                            userId,
+                            null,
+                            args.pointsToUse,
+                            originalPrice
+                        );
+                        pointsUsed = redeemResult.pointsUsed;
+                        discount   = redeemResult.discount;
+                    }
+
+                    const totalPrice = Math.max(0, originalPrice - discount);
+
+                    const order = await orderService.createOrder({
+                        userId,
+                        items,
+                        totalQuantity,
+                        originalPrice,
+                        discount,
+                        pointsUsed,
+                        totalPrice,
+                        shippingAddress,
+                        phone,
+                        note: args.note || "",
+                        paymentMethod: "COD",
+                    });
+
+                    // ── Gắn orderId vào transaction điểm vừa tạo ──
+                    if (pointsUsed > 0) {
+                        await pointService.Points.updateOne(
+                            { userId, type: "redeem", orderId: null },
+                            { $set: { orderId: order._id, note: `Dùng điểm giảm giá đơn hàng #${order._id}` } }
+                        );
+                    }
+
+                    // ── Xoá sản phẩm đã đặt khỏi giỏ (best-effort, không chặn đơn nếu lỗi) ──
+                    for (const item of items) {
+                        try {
+                            await cartService.removeItem(userId, item.productId);
+                        } catch (err) {
+                            console.warn("[ChatbotTuvan] Xoá giỏ hàng lỗi:", err.message);
+                        }
+                    }
+
+                    return {
+                        success: true,
+                        orderId: order._id.toString(),
+                        totalPrice: order.totalPrice,
+                        pointsUsed,
+                        discount,
+                    };
+                }
+
+                default:
+                    return { error: `Không hỗ trợ tool "${toolName}"` };
+            }
+        } catch (err) {
+            return { error: err.message };
+        }
+    }
+
+    async chatWithAI(client, userMessage, conversationHistory = [], userId = null) {
+        const db = client.db();
+
         // 1. RAG context
         let ragContext = "";
         try {
@@ -77,12 +281,13 @@ class ChatbotTuvanService {
         // 3. Build system prompt
         const systemContent = [
             config.systemPrompt,
+            userId ? "" : "[LƯU Ý]: Khách hiện CHƯA đăng nhập, không thể tra điểm/đơn hàng hoặc đặt hàng.",
             productContext ? `[SẢN PHẨM HIỆN CÓ]:\n${productContext}` : "",
             ragContext     ? `[NGỮ CẢNH BỔ SUNG]:\n${ragContext}`      : "",
         ].filter(Boolean).join("\n\n");
 
         // 4. Build messages
-        const messages = [
+        const baseMessages = [
             { role: "system", content: systemContent },
             ...conversationHistory.map((msg) => ({
                 role: msg.role === "bot" ? "assistant" : msg.role,
@@ -91,45 +296,86 @@ class ChatbotTuvanService {
             { role: "user", content: userMessage },
         ];
 
-        // 5. Gọi AI — xoay vòng providers → models → apiKeys
+        const ctx = { client, db, userId };
+        const maxSteps = config.maxToolSteps || 4;
+
+        // 5. Gọi AI — xoay vòng providers → models → apiKeys, mỗi model có vòng lặp tool-call riêng
         for (const provider of config.providers) {
             for (const model of provider.models) {
                 for (const apiKey of provider.apiKeys) {
                     try {
-                        const response = await fetch(provider.url, {
-                            method: "POST",
-                            headers: {
-                                Authorization: `Bearer ${apiKey}`,
-                                "Content-Type": "application/json",
-                            },
-                            body: JSON.stringify({ model, messages }),
-                        });
+                        let messages = [...baseMessages];
+                        let finalContent = null;
 
-                        console.log(
-                            `[Groq] ${model} | ...${apiKey.slice(-6)} còn lại: ` +
-                            `${response.headers.get("x-ratelimit-remaining-requests")}/${response.headers.get("x-ratelimit-limit-requests")} req` +
-                            ` | ${response.headers.get("x-ratelimit-remaining-tokens")}/${response.headers.get("x-ratelimit-limit-tokens")} tokens` +
-                            ` | reset: ${response.headers.get("x-ratelimit-reset-requests")}`
-                        );
+                        for (let step = 0; step < maxSteps; step++) {
+                            const response = await fetch(provider.url, {
+                                method: "POST",
+                                headers: {
+                                    Authorization: `Bearer ${apiKey}`,
+                                    "Content-Type": "application/json",
+                                },
+                                body: JSON.stringify({
+                                    model,
+                                    messages,
+                                    tools: config.tools,
+                                    tool_choice: "auto",
+                                }),
+                            });
 
-                        const data = await response.json();
+                            console.log(
+                                `[Groq] ${model} | ...${apiKey.slice(-6)} còn lại: ` +
+                                `${response.headers.get("x-ratelimit-remaining-requests")}/${response.headers.get("x-ratelimit-limit-requests")} req` +
+                                ` | ${response.headers.get("x-ratelimit-remaining-tokens")}/${response.headers.get("x-ratelimit-limit-tokens")} tokens` +
+                                ` | reset: ${response.headers.get("x-ratelimit-reset-requests")}`
+                            );
 
-                        // ── Debug: xem raw response ──
-                        console.log(`[Debug] ${model} raw:`, JSON.stringify(data).slice(0, 300));
+                            const data = await response.json();
 
-                        if (data.error) {
-                            console.warn(`[ChatbotTuvan] ${model} / ...${apiKey.slice(-6)} lỗi:`, data.error.message);
-                            continue;
+                            if (data.error) {
+                                console.warn(`[ChatbotTuvan] ${model} / ...${apiKey.slice(-6)} lỗi:`, data.error.message);
+                                break; // thử key/model khác
+                            }
+
+                            const choice = data.choices?.[0];
+                            const msg = choice?.message;
+                            if (!msg) break;
+
+                            // Model muốn gọi tool
+                            if (msg.tool_calls?.length) {
+                                messages.push(msg);
+
+                                for (const call of msg.tool_calls) {
+                                    let result;
+                                    try {
+                                        const args = JSON.parse(call.function.arguments || "{}");
+                                        result = await this._executeTool(call.function.name, args, ctx);
+                                    } catch (err) {
+                                        result = { error: err.message };
+                                    }
+
+                                    console.log(`[ChatbotTuvan] Tool "${call.function.name}" ->`, JSON.stringify(result).slice(0, 200));
+
+                                    messages.push({
+                                        role: "tool",
+                                        tool_call_id: call.id,
+                                        content: JSON.stringify(result),
+                                    });
+                                }
+                                continue; // gọi lại model với kết quả tool
+                            }
+
+                            // Model trả lời text bình thường
+                            const content = extractContent(data);
+                            if (content) {
+                                finalContent = content;
+                            }
+                            break;
                         }
 
-                        const content = extractContent(data);
-                        if (!content) {
-                            console.warn(`[ChatbotTuvan] ${model} trả content rỗng, thử tiếp...`);
-                            continue;
+                        if (finalContent) {
+                            console.log(`[ChatbotTuvan] Dùng model: ${model} | Key: ...${apiKey.slice(-6)}`);
+                            return finalContent;
                         }
-
-                        console.log(`[ChatbotTuvan] Dùng model: ${model} | Key: ...${apiKey.slice(-6)}`);
-                        return content;
                     } catch (err) {
                         console.warn(`[ChatbotTuvan] ${model} exception:`, err.message);
                     }

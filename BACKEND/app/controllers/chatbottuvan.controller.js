@@ -6,27 +6,26 @@ const ApiError            = require("../api-error");
 // POST /api/chatbottuvan/ask
 exports.ask = async (req, res, next) => {
     try {
-        const { message, sessionId } = req.body;
+        const { message, sessionId, userId: bodyUserId } = req.body;
 
         if (!message?.trim()) {
             return next(new ApiError(400, "Nội dung tin nhắn không được để trống"));
         }
 
-        const userId = req.user?.id || req.user?._id?.toString() || null;
+        const userId = bodyUserId || req.user?.id || req.user?._id?.toString() || null;
 
         if (!userId && !sessionId) {
             return next(new ApiError(400, "Cần cung cấp sessionId nếu chưa đăng nhập"));
         }
 
         const client             = MongoDB.client;
-        const db                 = client.db(); // dùng default db trong connection string
         const chatHistoryService = new ChatHistoryService(client);
 
         // 1. Lấy lịch sử hội thoại gần nhất (20 messages = 10 lượt)
         const history = await chatHistoryService.getRecentMessages(userId, sessionId, 20);
 
-        // 2. Gọi AI có RAG (truyền db để vector search)
-        const reply = await chatbotTuvanService.chatWithAI(db, message.trim(), history);
+        // 2. Gọi AI có RAG + tool-calling (truyền client để tạo OrderService/PointService bên trong)
+        const reply = await chatbotTuvanService.chatWithAI(client, message.trim(), history, userId);
 
         // 3. Lưu vào DB
         await chatHistoryService.appendMessages(userId, sessionId, message.trim(), reply);
@@ -38,11 +37,11 @@ exports.ask = async (req, res, next) => {
     }
 };
 
-// GET /api/chatbottuvan/history?sessionId=xxx
+// GET /api/chatbottuvan/history?sessionId=xxx&userId=xxx
 exports.getHistory = async (req, res, next) => {
     try {
-        const userId        = req.user?.id || req.user?._id?.toString() || null;
-        const { sessionId } = req.query;
+        const { sessionId, userId: queryUserId } = req.query;
+        const userId = queryUserId || req.user?.id || req.user?._id?.toString() || null;
 
         if (!userId && !sessionId) {
             return next(new ApiError(400, "Cần cung cấp sessionId hoặc đăng nhập"));
@@ -57,11 +56,11 @@ exports.getHistory = async (req, res, next) => {
     }
 };
 
-// DELETE /api/chatbottuvan/history?sessionId=xxx
+// DELETE /api/chatbottuvan/history?sessionId=xxx&userId=xxx
 exports.clearHistory = async (req, res, next) => {
     try {
-        const userId        = req.user?.id || req.user?._id?.toString() || null;
-        const { sessionId } = req.query;
+        const { sessionId, userId: queryUserId } = req.query;
+        const userId = queryUserId || req.user?.id || req.user?._id?.toString() || null;
 
         if (!userId && !sessionId) {
             return next(new ApiError(400, "Cần cung cấp sessionId hoặc đăng nhập"));

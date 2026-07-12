@@ -10,6 +10,18 @@ function getSessionId() {
     return id;
 }
 
+// Lấy userId nếu đã đăng nhập, null nếu chưa (KHÔNG throw như PointService,
+// vì chatbot vẫn phải hoạt động được cho khách chưa đăng nhập)
+function getUserId() {
+    const userData = localStorage.getItem("user");
+    if (!userData) return null;
+    try {
+        return JSON.parse(userData)._id || null;
+    } catch {
+        return null;
+    }
+}
+
 class ChatbotTuvanService {
     constructor(baseUrl = "/api/chatbottuvan") {
         this.api = createApiClient(baseUrl);
@@ -20,6 +32,7 @@ class ChatbotTuvanService {
             await this.api.post("/ask", {
                 message,
                 sessionId: getSessionId(),
+                userId: getUserId(),
             })
         ).data;
     }
@@ -27,7 +40,10 @@ class ChatbotTuvanService {
     async getHistory() {
         return (
             await this.api.get("/history", {
-                params: { sessionId: getSessionId() },
+                params: {
+                    sessionId: getSessionId(),
+                    userId: getUserId(),
+                },
             })
         ).data;
     }
@@ -35,7 +51,10 @@ class ChatbotTuvanService {
     async clearHistory() {
         return (
             await this.api.delete("/history", {
-                params: { sessionId: getSessionId() },
+                params: {
+                    sessionId: getSessionId(),
+                    userId: getUserId(),
+                },
             })
         ).data;
     }
