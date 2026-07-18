@@ -8,9 +8,10 @@ const recommendationConfig = {
         process.env.GROQ_API_KEY_3 || "",
       ].filter(Boolean),
       models: [
-  "llama-3.3-70b-versatile",   // ưu tiên model lớn, suy luận tốt hơn
-  "llama-3.1-8b-instant",      // fallback khi model lớn rate-limit
-  "gemma2-9b-it",
+  "llama-3.3-70b-versatile",   // dùng đến 16/08/2026
+  "llama-3.1-8b-instant",      // dùng đến 16/08/2026
+  "openai/gpt-oss-120b",      // fallback khi 2 model trên hết hạn
+  "qwen/qwen3.6-27b",         // fallback khi 2 model trên hết hạn
 ],
     },
   ],

@@ -234,7 +234,8 @@ async function callGroqAPI(base64, fileType, productList, signal) {
       "Authorization": `Bearer ${key}`
     },
     body: JSON.stringify({
-      model: "meta-llama/llama-4-scout-17b-16e-instruct",
+      model: "qwen/qwen3.6-27b",
+      reasoning_effort: "none",
       messages: [
         {
           role: "user",
@@ -261,7 +262,7 @@ Nếu không có sản phẩm nào liên quan: {"match": null, "confidence": 0, 
           ]
         }
       ],
-      max_tokens: 200
+      max_tokens: 500
     })
   });
 
