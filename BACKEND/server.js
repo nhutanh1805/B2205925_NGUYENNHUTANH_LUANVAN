@@ -10,7 +10,7 @@ async function startServer() {
     console.log("Connected to the database!");
 
     require("./app/jobs/expireOrders.job"); 
-
+    require("./app/jobs/expirePoints.job");
     const PORT = config.app.port;
     app.listen(PORT, () => {
       console.log(`Server is running on port ${PORT}`);

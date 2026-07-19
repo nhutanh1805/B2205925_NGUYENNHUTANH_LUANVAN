@@ -13,7 +13,7 @@
           Điểm thưởng của bạn
         </div>
         <h1 class="hero-title">Tích<br/><em>điểm</em></h1>
-        <p class="hero-sub">1.000₫ = 1 điểm · Dùng điểm đổi ưu đãi hấp dẫn</p>
+        <p class="hero-sub">1.000₫ = 1 điểm · Điểm có hiệu lực trong 15 ngày</p>
 
         <div class="balance-card" v-if="!loading">
           <div class="balance-icon"></div>
@@ -50,9 +50,9 @@
             <p>Dùng điểm giảm giá đơn hàng</p>
           </div>
           <div class="info-card">
-            <span class="info-ico">📦</span>
-            <h3>Huỷ đơn</h3>
-            <p>Điểm được hoàn tự động</p>
+            <span class="info-ico">⏰</span>
+            <h3>Hạn dùng</h3>
+            <p>Điểm hết hạn sau 15 ngày nếu chưa dùng</p>
           </div>
         </div>
       </section>
@@ -82,11 +82,9 @@
             v-for="tx in history"
             :key="tx._id"
             class="history-row"
-            :class="tx.points > 0 ? 'earn' : 'spend'"
+            :class="rowClass(tx)"
           >
-            <div class="tx-icon">
-              {{ tx.type === 'earn' ? '⬆️' : tx.type === 'refund' ? '↩️' : '🎟️' }}
-            </div>
+            <div class="tx-icon">{{ txIcon(tx) }}</div>
             <div class="tx-info">
               <span class="tx-note">{{ tx.note }}</span>
               <span class="tx-date">{{ formatDate(tx.createdAt) }}</span>
@@ -124,6 +122,20 @@ const load = async () => {
   } finally {
     loading.value = false
   }
+}
+
+const ICONS = {
+  earn: "⬆️",
+  refund: "↩️",
+  redeem: "🎟️",
+  expire: "⏰",
+}
+const txIcon = (tx) => ICONS[tx.type] || "🎟️"
+
+// expire dùng style riêng (xám) để phân biệt với spend (đỏ) dù cả hai đều là điểm âm
+const rowClass = (tx) => {
+  if (tx.type === "expire") return "expire"
+  return tx.points > 0 ? "earn" : "spend"
 }
 
 const formatDate = (d) =>
@@ -258,8 +270,10 @@ onMounted(load)
 .tx-points {
   font-weight: 900; font-size: 1rem; flex-shrink: 0;
 }
-.history-row.earn  .tx-points { color: #16a34a; }
-.history-row.spend .tx-points { color: #e11d48; }
+.history-row.earn   .tx-points { color: #16a34a; }
+.history-row.spend  .tx-points { color: #e11d48; }
+.history-row.expire .tx-points { color: #94a3b8; }
+.history-row.expire .tx-note   { color: #94a3b8; }
 
 /* MOBILE */
 @media (max-width: 640px) {
