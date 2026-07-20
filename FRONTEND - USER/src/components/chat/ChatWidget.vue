@@ -15,55 +15,109 @@
     <!-- Panel chat -->
     <Transition name="panel">
       <div v-if="isOpen" class="chat-panel">
+
         <div class="chat-header">
-          <div class="header-info">
-            <span class="header-avatar">🛍️</span>
-            <div>
-              <p class="header-title">Hỗ trợ trực tuyến</p>
-              <p class="header-sub">
-                <span class="status-dot"></span> Đang hoạt động
-              </p>
-            </div>
+          <div class="header-tabs">
+            <button
+              class="tab-btn"
+              :class="{ 'tab-active': activeTab === 'shop' }"
+              @click="switchTab('shop')"
+            >
+              Nhắn Shop
+            </button>
+            <button
+              class="tab-btn"
+              :class="{ 'tab-active': activeTab === 'forum' }"
+              @click="switchTab('forum')"
+            >
+              Diễn đàn
+            </button>
           </div>
         </div>
 
-        <div class="chat-body" ref="chatBox">
-          <div v-if="loading && messages.length === 0" class="chat-loading">
-            <div class="spinner-sm"></div>
-          </div>
-          <div v-else-if="messages.length === 0" class="chat-empty">
-            Chào bạn! Có câu hỏi gì cứ nhắn cho shop nhé.
-          </div>
-          <div
-            v-for="msg in messages"
-            :key="msg._id"
-            class="msg-row"
-            :class="msg.role === 'user' ? 'row--me' : 'row--admin'"
-          >
-            <div class="msg-bubble" :class="msg.role === 'user' ? 'bubble--me' : 'bubble--admin'">
-              <span v-if="msg.role === 'admin'" class="msg-sender">{{ msg.senderName || "Admin" }}</span>
-              <p class="msg-content">{{ msg.content }}</p>
-              <time class="msg-time">{{ formatTime(msg.createdAt) }}</time>
+        <!-- ══ TAB: CHAT VỚI SHOP ══ -->
+        <template v-if="activeTab === 'shop'">
+          <div class="chat-body" ref="shopChatBox">
+            <div v-if="loadingShop && shopMessages.length === 0" class="chat-loading">
+              <div class="spinner-sm"></div>
+            </div>
+            <div v-else-if="shopMessages.length === 0" class="chat-empty">
+              Chào bạn! Có câu hỏi gì cứ nhắn cho shop nhé.
+            </div>
+            <div
+              v-for="msg in shopMessages"
+              :key="msg._id"
+              class="msg-row"
+              :class="msg.role === 'user' ? 'row--me' : 'row--admin'"
+            >
+              <div class="msg-bubble" :class="msg.role === 'user' ? 'bubble--me' : 'bubble--admin'">
+                <span v-if="msg.role === 'admin'" class="msg-sender">{{ msg.senderName || "Admin" }}</span>
+                <p class="msg-content">{{ msg.content }}</p>
+                <time class="msg-time">{{ formatTime(msg.createdAt) }}</time>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div class="chat-input-row">
-          <input
-            v-model="newMessage"
-            type="text"
-            placeholder="Nhập tin nhắn..."
-            class="chat-input-field"
-            @keyup.enter="handleSend"
-          />
-          <button class="send-btn" :disabled="sending || !newMessage.trim()" @click="handleSend">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" class="send-icon" v-if="!sending">
-              <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
-            </svg>
-            <span v-else class="send-dots">...</span>
-          </button>
-        </div>
-        <p v-if="sendError" class="form-error">{{ sendError }}</p>
+          <div class="chat-input-row">
+            <input
+              v-model="shopMessage"
+              type="text"
+              placeholder="Nhập tin nhắn..."
+              class="chat-input-field"
+              @keyup.enter="handleSendShop"
+            />
+            <button class="send-btn" :disabled="sendingShop || !shopMessage.trim()" @click="handleSendShop">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" class="send-icon" v-if="!sendingShop">
+                <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+              </svg>
+              <span v-else class="send-dots">...</span>
+            </button>
+          </div>
+          <p v-if="shopSendError" class="form-error">{{ shopSendError }}</p>
+        </template>
+
+        <!-- ══ TAB: DIỄN ĐÀN ══ -->
+        <template v-else>
+          <div class="chat-body" ref="forumChatBox">
+            <div v-if="loadingForum && forumMessages.length === 0" class="chat-loading">
+              <div class="spinner-sm"></div>
+            </div>
+            <div v-else-if="forumMessages.length === 0" class="chat-empty">
+              Chưa có ai đăng gì cả. Hỏi gì đó đi bạn ơi
+            </div>
+            <div
+              v-for="msg in forumMessages"
+              :key="msg._id"
+              class="msg-row"
+              :class="{ 'row--me': msg.userId === userId }"
+            >
+              <div class="msg-bubble" :class="{ 'bubble--me': msg.userId === userId }">
+                <span class="msg-sender">{{ msg.userName }}</span>
+                <p class="msg-content">{{ msg.content }}</p>
+                <time class="msg-time">{{ formatTime(msg.createdAt) }}</time>
+              </div>
+            </div>
+          </div>
+
+          <div class="chat-input-row">
+            <input
+              v-model="forumMessage"
+              type="text"
+              maxlength="1000"
+              placeholder="Đặt câu hỏi hoặc chia sẻ..."
+              class="chat-input-field"
+              @keyup.enter="handleSendForum"
+            />
+            <button class="send-btn" :disabled="sendingForum || !forumMessage.trim()" @click="handleSendForum">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" class="send-icon" v-if="!sendingForum">
+                <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+              </svg>
+              <span v-else class="send-dots">...</span>
+            </button>
+          </div>
+          <p v-if="forumSendError" class="form-error">{{ forumSendError }}</p>
+        </template>
+
       </div>
     </Transition>
 
@@ -71,83 +125,154 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount, nextTick, watch } from "vue";
+import { ref, onMounted, onBeforeUnmount, nextTick } from "vue";
 import { ChatAPI } from "@/services/chat.service";
+import { ForumAPI } from "@/services/forum.service";
 
 const user      = JSON.parse(localStorage.getItem("user") || "{}");
 const userId    = user?._id ?? null;
 const userName  = user?.name ?? "Khách";
 
-const isOpen      = ref(false);
-const messages    = ref([]);
-const loading     = ref(false);
-const newMessage  = ref("");
-const sending     = ref(false);
-const sendError   = ref(null);
-const unreadHint  = ref(false);
-const chatBox     = ref(null);
+const isOpen     = ref(false);
+const activeTab  = ref("shop"); // "shop" | "forum"
+const unreadHint = ref(false);
 
-let pollTimer = null;
+// ══ CHAT VỚI SHOP ══
+const shopMessages  = ref([]);
+const loadingShop    = ref(false);
+const shopMessage    = ref("");
+const sendingShop     = ref(false);
+const shopSendError   = ref(null);
+const shopChatBox     = ref(null);
+let shopPollTimer = null;
 
-async function fetchMessages(showLoading = false) {
-  if (!userId) return;
-  if (showLoading) loading.value = true;
-  try {
-    const { data } = await ChatAPI.getMyMessages(userId);
-    const oldCount = messages.value.length;
-    messages.value = data.messages;
-    if (!isOpen.value && data.messages.length > oldCount) unreadHint.value = true;
-    if (isOpen.value) scrollToBottom();
-  } catch (e) {
-    // im lặng bỏ qua lỗi polling, tránh spam UI
-  } finally {
-    loading.value = false;
-  }
-}
+// ══ DIỄN ĐÀN ══
+const forumMessages     = ref([]);
+const loadingForum       = ref(false);
+const forumMessage       = ref("");
+const sendingForum        = ref(false);
+const forumSendError      = ref(null);
+const forumChatBox        = ref(null);
+let forumLastFetchTime = null;
+let forumPollTimer = null;
 
-async function handleSend() {
-  const content = newMessage.value.trim();
-  if (!content || !userId) return;
-  sending.value   = true;
-  sendError.value = null;
-  try {
-    const { data } = await ChatAPI.sendMessage(userId, userName, content);
-    messages.value.push(data.message);
-    newMessage.value = "";
-    scrollToBottom();
-  } catch (e) {
-    sendError.value = e?.response?.data?.message || "Gửi tin nhắn thất bại";
-  } finally {
-    sending.value = false;
-  }
-}
-
+// ══ CHUNG ══
 function toggleOpen() {
   isOpen.value = !isOpen.value;
   if (isOpen.value) {
     unreadHint.value = false;
-    fetchMessages(true);
-    scrollToBottom();
+    if (activeTab.value === "shop") fetchShopMessages(true);
+    else fetchForumInitial();
   }
 }
 
-async function scrollToBottom() {
+function switchTab(tab) {
+  activeTab.value = tab;
+  if (tab === "shop" && shopMessages.value.length === 0) fetchShopMessages(true);
+  if (tab === "forum" && forumMessages.value.length === 0) fetchForumInitial();
+  scrollToBottom(tab === "shop" ? shopChatBox : forumChatBox);
+}
+
+async function scrollToBottom(boxRef) {
   await nextTick();
-  if (chatBox.value) chatBox.value.scrollTop = chatBox.value.scrollHeight;
+  if (boxRef.value) boxRef.value.scrollTop = boxRef.value.scrollHeight;
 }
 
 function formatTime(iso) {
   return new Date(iso).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
 }
 
+// ══ LOGIC CHAT SHOP ══
+async function fetchShopMessages(showLoading = false) {
+  if (!userId) return;
+  if (showLoading) loadingShop.value = true;
+  try {
+    const { data } = await ChatAPI.getMyMessages(userId);
+    const oldCount = shopMessages.value.length;
+    shopMessages.value = data.messages;
+    if (!isOpen.value && data.messages.length > oldCount) unreadHint.value = true;
+    if (isOpen.value && activeTab.value === "shop") scrollToBottom(shopChatBox);
+  } catch (e) {
+    // im lặng bỏ qua lỗi polling
+  } finally {
+    loadingShop.value = false;
+  }
+}
+
+async function handleSendShop() {
+  const content = shopMessage.value.trim();
+  if (!content || !userId) return;
+  sendingShop.value  = true;
+  shopSendError.value = null;
+  try {
+    const { data } = await ChatAPI.sendMessage(userId, userName, content);
+    shopMessages.value.push(data.message);
+    shopMessage.value = "";
+    scrollToBottom(shopChatBox);
+  } catch (e) {
+    shopSendError.value = e?.response?.data?.message || "Gửi tin nhắn thất bại";
+  } finally {
+    sendingShop.value = false;
+  }
+}
+
+// ══ LOGIC DIỄN ĐÀN ══
+async function fetchForumInitial() {
+  loadingForum.value = true;
+  try {
+    const { data } = await ForumAPI.getMessages();
+    forumMessages.value = data.messages;
+    forumLastFetchTime = new Date().toISOString();
+    scrollToBottom(forumChatBox);
+  } catch (e) {
+    // im lặng bỏ qua lỗi
+  } finally {
+    loadingForum.value = false;
+  }
+}
+
+async function fetchForumNew() {
+  if (!forumLastFetchTime) return;
+  try {
+    const { data } = await ForumAPI.getMessagesSince(forumLastFetchTime);
+    if (data.messages.length > 0) {
+      forumMessages.value.push(...data.messages);
+      forumLastFetchTime = new Date().toISOString();
+      if (isOpen.value && activeTab.value === "forum") scrollToBottom(forumChatBox);
+    }
+  } catch (e) {
+    // im lặng bỏ qua lỗi polling
+  }
+}
+
+async function handleSendForum() {
+  const content = forumMessage.value.trim();
+  if (!content || !userId) return;
+  sendingForum.value  = true;
+  forumSendError.value = null;
+  try {
+    const { data } = await ForumAPI.createMessage(userId, userName, content);
+    forumMessages.value.push(data.message);
+    forumMessage.value = "";
+    forumLastFetchTime = new Date().toISOString();
+    scrollToBottom(forumChatBox);
+  } catch (e) {
+    forumSendError.value = e?.response?.data?.message || "Đăng tin nhắn thất bại";
+  } finally {
+    sendingForum.value = false;
+  }
+}
+
 onMounted(() => {
   if (!userId) return;
-  fetchMessages();
-  pollTimer = setInterval(() => fetchMessages(false), 5000);
+  fetchShopMessages();
+  shopPollTimer  = setInterval(() => fetchShopMessages(false), 5000);
+  forumPollTimer = setInterval(fetchForumNew, 5000);
 });
 
 onBeforeUnmount(() => {
-  if (pollTimer) clearInterval(pollTimer);
+  if (shopPollTimer)  clearInterval(shopPollTimer);
+  if (forumPollTimer) clearInterval(forumPollTimer);
 });
 </script>
 
@@ -173,12 +298,11 @@ onBeforeUnmount(() => {
   display: flex; flex-direction: column;
 }
 
-.chat-header { background: linear-gradient(135deg, #0a0f1e, #1e1b4b); padding: 16px 18px; }
-.header-info { display: flex; align-items: center; gap: 10px; }
-.header-avatar { width: 38px; height: 38px; border-radius: 50%; background: rgba(255,255,255,.1); display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
-.header-title { margin: 0; font-size: .9rem; font-weight: 700; color: white; }
-.header-sub { margin: 2px 0 0; font-size: .72rem; color: rgba(255,255,255,.65); display: flex; align-items: center; gap: 5px; }
-.status-dot { width: 6px; height: 6px; border-radius: 50%; background: #10b981; box-shadow: 0 0 6px #10b981; }
+.chat-header { background: linear-gradient(135deg, #0a0f1e, #1e1b4b); padding: 4px; }
+.header-tabs { display: flex; gap: 4px; }
+.tab-btn { flex: 1; padding: 12px 10px; background: transparent; border: none; color: rgba(255,255,255,.6); font-size: .8rem; font-weight: 700; cursor: pointer; border-radius: 12px; transition: all .2s; }
+.tab-btn:hover { color: rgba(255,255,255,.85); }
+.tab-active { background: rgba(255,255,255,.12); color: white; }
 
 .chat-body { padding: 14px; height: 320px; overflow-y: auto; background: #f8faff; display: flex; flex-direction: column; gap: 8px; }
 .chat-loading { display: flex; align-items: center; justify-content: center; height: 100%; }

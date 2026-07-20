@@ -20,6 +20,7 @@ const favoriteRouter = require("./app/routes/favorite.router");
 const deliveryRouter = require("./app/routes/delivery.router");
 const adminReviewRoute = require("./app/routes/admin.review.route");
 const chatRoutes = require("./app/routes/chat.route");
+const forumRoutes = require("./app/routes/forum.route");
 
 const app = express();
 
@@ -49,6 +50,7 @@ app.use("/api/favorites", favoriteRouter);
 app.use("/api/deliveries", deliveryRouter);
 app.use("/api/admin/reviews", adminReviewRoute);
 app.use("/api/chat", chatRoutes);
+app.use("/api/forum", forumRoutes);
 
 app.use((req, res, next) => {
     return next(new ApiError(404, "Resource not found"));

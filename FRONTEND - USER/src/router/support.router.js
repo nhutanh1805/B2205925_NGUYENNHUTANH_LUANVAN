@@ -1,6 +1,7 @@
 import SupportListView   from "@/views/support/SupportListView.vue";
 import SupportCreateView from "@/views/support/SupportCreateView.vue";
 import SupportDetailView from "@/views/support/SupportDetailView.vue";
+import ForumView         from "@/views/forum/ForumView.vue";
 
 const supportRoutes = [
   {
@@ -19,6 +20,12 @@ const supportRoutes = [
     path: "/support/:id",
     name: "SupportDetail",
     component: SupportDetailView,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/forum",
+    name: "ForumView",
+    component: ForumView,
     meta: { requiresAuth: true },
   },
 ];
