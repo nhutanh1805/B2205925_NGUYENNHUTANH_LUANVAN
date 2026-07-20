@@ -65,13 +65,37 @@
           Thống kê
         </router-link>
 
-       <router-link
-  to="/support"
-  class="nav-link support-link"
-  active-class="support-active"
->
-  CSKH
-</router-link>
+<div class="manage-wrapper" ref="supportWrapper">
+  <button
+    class="nav-link manage-btn"
+    :class="{ 'nav-active': isSupportActive }"
+    @click="toggleSupport"
+  >
+    Hỗ trợ
+    <i class="fas fa-chevron-down manage-caret" :class="{ open: supportOpen }"></i>
+  </button>
+
+  <transition name="panel">
+    <div v-if="supportOpen" class="manage-panel">
+      <router-link
+        to="/support"
+        class="manage-item"
+        active-class="manage-item-active"
+        @click="supportOpen = false"
+      >
+        CSKH
+      </router-link>
+      <router-link
+        to="/chat"
+        class="manage-item"
+        active-class="manage-item-active"
+        @click="supportOpen = false"
+      >
+        Chat
+      </router-link>
+    </div>
+  </transition>
+</div>
 
         <AdminMenu v-if="admin" :admin="admin" @logout="handleLogout" />
 
@@ -152,7 +176,11 @@ const manageWrapper = ref(null);
 const isManageActive = computed(() =>
   route.path.startsWith("/admin/users") || route.path.startsWith("/admin/shippers")
 );
-
+const supportOpen = ref(false);
+const supportWrapper = ref(null);
+const isSupportActive = computed(() =>
+  route.path.startsWith("/support") || route.path.startsWith("/chat")
+);
 const localUI = reactive({
   time: props.ui.time ?? true,
   iphone: props.ui.iphone ?? true,
@@ -171,11 +199,18 @@ const loadAdmin = () => {
 const toggleSettings = () => {
   settingsOpen.value = !settingsOpen.value;
   manageOpen.value = false;
+  supportOpen.value = false;
 };
 
 const toggleManage = () => {
   manageOpen.value = !manageOpen.value;
   settingsOpen.value = false;
+  supportOpen.value = false;
+};
+const toggleSupport = () => {
+  supportOpen.value = !supportOpen.value;
+  settingsOpen.value = false;
+  manageOpen.value = false;
 };
 
 const handleClickOutside = (event) => {
@@ -184,6 +219,9 @@ const handleClickOutside = (event) => {
   }
   if (manageWrapper.value && !manageWrapper.value.contains(event.target)) {
     manageOpen.value = false;
+  }
+    if (supportWrapper.value && !supportWrapper.value.contains(event.target)) {
+    supportOpen.value = false;
   }
 };
 

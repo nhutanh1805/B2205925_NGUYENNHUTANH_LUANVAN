@@ -26,6 +26,7 @@
 
     <ModelViewer v-if="ui.model" />
 <ChatbotTuvan />
+<ChatWidget />
   </div>
 </template>
 
@@ -39,6 +40,7 @@ import ModelViewer from "@/components/ModelViewer/ModelViewer.vue";
 import CommunitySidebar from "@/components/sidebar/CommunitySidebar.vue";
 import ChatbotPopup from "@/components/ChatbotPopup.vue";
 import ChatbotTuvan from "@/components/ChatbotTuvan.vue";  
+import ChatWidget from "@/components/chat/ChatWidget.vue";
 export default {
   name: "App",
 
@@ -51,6 +53,7 @@ export default {
     CommunitySidebar,
     // ChatbotPopup,
     ChatbotTuvan,
+    ChatWidget,
   },
 
   data() {

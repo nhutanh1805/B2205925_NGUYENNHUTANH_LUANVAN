@@ -6,6 +6,8 @@ import statisticRoutes from "./statistic.router";
 import stockReceiptRoutes from "./stockReceipt.router";
 import adminSupportRoutes from "./support.router";
 import adminShipperRoutes from "./adminShipper.router";
+import adminChatRoutes from "./chat.router";
+
 const routes = [
   {
     path: "/",
@@ -54,6 +56,9 @@ const routes = [
 
   // ===== ADMIN SHIPPER =====
   ...adminShipperRoutes,
+
+  // ===== ADMIN CHAT =====
+  ...adminChatRoutes,
 
   // ===== NOT FOUND =====
   {
