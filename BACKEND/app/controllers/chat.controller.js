@@ -35,6 +35,9 @@ exports.sendMessage = async (req, res, next) => {
     });
     return res.status(201).json({ message });
   } catch (error) {
+    if (error.isBadWord) {
+      return next(new ApiError(400, error.message));
+    }
     return next(new ApiError(500, "Lỗi gửi tin nhắn"));
   }
 };
@@ -83,6 +86,9 @@ exports.adminSendMessage = async (req, res, next) => {
     });
     return res.status(201).json({ message });
   } catch (error) {
+    if (error.isBadWord) {
+      return next(new ApiError(400, error.message));
+    }
     return next(new ApiError(500, "Lỗi gửi tin nhắn"));
   }
 };

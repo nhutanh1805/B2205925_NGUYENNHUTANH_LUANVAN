@@ -1,4 +1,5 @@
 const { ObjectId } = require("mongodb");
+const { containsBannedWord } = require("../utils/badWords.util");
 
 class ChatService {
   constructor(client) {
@@ -17,6 +18,12 @@ class ChatService {
   // Gửi tin nhắn — userId luôn là chủ cuộc hội thoại (khách hàng)
   // Nếu role = "admin" thì senderId = adminId (bắt buộc), để biết admin nào đã nhắn
   async sendMessage({ userId, senderId, senderName, role, content }) {
+    if (containsBannedWord(content)) {
+      const err = new Error("Nội dung chứa từ ngữ không phù hợp");
+      err.isBadWord = true;
+      throw err;
+    }
+
     const doc = {
       userId,                      // id khách hàng - định danh cuộc hội thoại
       senderId: senderId || null,  // userId (nếu role=user) hoặc adminId (nếu role=admin)
@@ -63,7 +70,7 @@ class ChatService {
       userName: userMap.get(String(c._id))?.name || "Khách",
       lastMessage: c.lastMessage,
       lastRole: c.lastRole,
-      lastSenderId: c.lastSenderId, // nếu lastRole="admin" thì đây là adminId đã trả lời gần nhất
+      lastSenderId: c.lastSenderId,
       lastCreatedAt: c.lastCreatedAt,
       unreadCount: c.unreadCount,
     }));
