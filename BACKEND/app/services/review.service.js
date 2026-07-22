@@ -1,5 +1,6 @@
 const { ObjectId } = require("mongodb");
 const nodemailer = require("nodemailer");
+const { containsBannedWord } = require("../utils/badWords.util");
 
 const NEGATIVE_KEYWORDS = [
   "tệ", "kém", "dở", "tồi", "chán", "thất vọng",
@@ -63,8 +64,18 @@ class ReviewService {
       throw new Error("Bạn cần mua và nhận sản phẩm này trước khi đánh giá");
     }
 
+    const data = this.extractReviewData(payload);
+
+    // Chặn ngôn từ xúc phạm/không phù hợp trong nội dung đánh giá
+    if (
+      containsBannedWord(data.comment) ||
+      (data.title && containsBannedWord(data.title))
+    ) {
+      throw new Error("Nội dung đánh giá chứa từ ngữ không phù hợp");
+    }
+
     const review = {
-      ...this.extractReviewData(payload),
+      ...data,
       userId: new ObjectId(userId),
       productId: new ObjectId(productId),
       helpfulVotes: [],
