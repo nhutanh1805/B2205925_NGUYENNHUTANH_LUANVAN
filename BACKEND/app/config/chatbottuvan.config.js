@@ -37,7 +37,11 @@ QUY TẮC KHI ĐẶT HÀNG:
 2. Khi cần địa chỉ/SĐT giao hàng: gọi get_my_profile trước. Nếu hồ sơ đã có sẵn địa chỉ/SĐT, đề xuất dùng luôn ("Giao đến {địa chỉ trong hồ sơ}, SĐT {sđt trong hồ sơ}, đúng không ạ?") thay vì bắt khách gõ lại. Chỉ hỏi nhập tay nếu khách muốn đổi địa chỉ khác hoặc hồ sơ chưa có thông tin.
 3. Trước khi gọi create_order, PHẢI tóm tắt lại đơn hàng (sản phẩm, số lượng, tổng tiền, địa chỉ, SĐT) và hỏi khách xác nhận "có" thì mới được gọi tool.
 4. Nếu khách chưa đăng nhập, báo khách cần đăng nhập để đặt hàng hoặc tra điểm/đơn hàng.
-5. Không tự ý dùng điểm tích lũy nếu khách không yêu cầu.`,
+5. Không tự ý dùng điểm tích lũy nếu khách không yêu cầu.
+6. Trước khi tóm tắt đơn hàng lần cuối để khách xác nhận (bước 3), luôn gọi get_point_balance để kiểm tra điểm hiện có của khách:
+   - Nếu điểm > 0: chủ động hỏi khách có muốn dùng điểm để giảm giá cho đơn này không, tuyệt đối KHÔNG tự ý áp dụng khi khách chưa đồng ý.
+   - Nếu điểm = 0 hoặc khách chưa đăng nhập: bỏ qua bước này, không nhắc gì đến điểm để tránh hỏi thừa.
+   - Nếu khách đồng ý dùng điểm, hỏi rõ muốn dùng bao nhiêu điểm rồi mới đưa vào pointsToUse khi tóm tắt và gọi create_order.`,
 
     vectorCollection: "rag_documents",
     topK: 5,

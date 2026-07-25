@@ -4,14 +4,56 @@ const OrderService  = require("./order.service");
 const PointService  = require("./point.service");
 const CartService   = require("./cart.service");
 
-function extractContent(data) {
-    const choice = data.choices?.[0];
-    if (!choice) return null;
-    const content = choice.message?.content;
+function extractContent(msg) {
+    if (!msg) return null;
+    const content = msg.content;
     if (content && content.trim()) return content.trim();
-    const reasoning = choice.message?.reasoning;
+    const reasoning = msg.reasoning;
     if (reasoning && reasoning.trim()) return reasoning.trim();
     return null;
+}
+
+// ─── Fallback parser cho model KHÔNG hỗ trợ native tool_calls ─────────────────
+// Một số model (thường là các model fallback ít hỗ trợ function-calling chuẩn
+// OpenAI) sẽ in tool call ra dạng text kiểu Llama cũ:
+//   <function=search_product>{"query":"..."}</function>
+// thay vì điền vào field `tool_calls` chuẩn. Nếu không xử lý, đoạn text rác này
+// sẽ bị coi là câu trả lời cuối và hiển thị thẳng cho khách, hoặc tệ hơn là model
+// tự bịa luôn nhiều lệnh gọi liên tiếp (kèm tham số bịa) trong CÙNG 1 lượt mà
+// chưa hề có kết quả thật của lệnh trước — vi phạm đúng quy trình tool-calling.
+//
+// Hàm này quét và trích ra các lệnh gọi dạng text, dùng cân bằng dấu ngoặc {}
+// để lấy đúng khối JSON (an toàn hơn regex non-greedy khi JSON có ngoặc lồng).
+function parsePseudoFunctionCalls(text) {
+    if (!text) return [];
+    const calls = [];
+    const tagRegex = /<?function\s*=\s*([a-zA-Z_][\w]*)\s*>/g;
+    let match;
+
+    while ((match = tagRegex.exec(text)) !== null) {
+        const name = match[1];
+        const jsonStart = text.indexOf("{", match.index);
+        if (jsonStart === -1) continue;
+
+        let depth = 0;
+        let end = -1;
+        for (let j = jsonStart; j < text.length; j++) {
+            if (text[j] === "{") depth++;
+            else if (text[j] === "}") {
+                depth--;
+                if (depth === 0) { end = j + 1; break; }
+            }
+        }
+        if (end === -1) continue;
+
+        try {
+            const args = JSON.parse(text.slice(jsonStart, end));
+            calls.push({ name, args });
+        } catch {
+            // JSON hỏng thì bỏ qua lệnh này, không cố đoán
+        }
+    }
+    return calls;
 }
 
 // ─── RAG: Full-text search trên MongoDB ───────────────────────────────────────
@@ -53,9 +95,6 @@ async function retrieveContext(db, userMessage) {
 // ─── Main Service ─────────────────────────────────────────────────────────────
 class ChatbotTuvanService {
 
-    // ─── Thực thi tool model yêu cầu gọi ───────────────────────────────────
-    // ctx.userId LUÔN lấy từ session đăng nhập thật, KHÔNG bao giờ tin theo
-    // giá trị model tự sinh ra trong args (tránh model bị dắt mũi thao túng đơn của người khác).
     async _executeTool(toolName, args, ctx) {
         const { client, db, userId } = ctx;
         const orderService = new OrderService(client);
@@ -133,6 +172,18 @@ class ChatbotTuvanService {
 
                 case "create_order": {
                     if (!userId) return { error: "Khách cần đăng nhập để đặt hàng" };
+
+                    if (ctx.createdOrder) {
+                        return {
+                            success: true,
+                            orderId: ctx.createdOrder.orderId,
+                            totalPrice: ctx.createdOrder.totalPrice,
+                            pointsUsed: ctx.createdOrder.pointsUsed,
+                            discount: ctx.createdOrder.discount,
+                            note: "Đơn hàng đã được tạo trước đó trong lượt chat này, không tạo trùng.",
+                        };
+                    }
+
                     if (!Array.isArray(args.items) || args.items.length === 0) {
                         return { error: "Thiếu danh sách sản phẩm" };
                     }
@@ -183,9 +234,6 @@ class ChatbotTuvanService {
                     const originalPrice = items.reduce((s, i) => s + i.price * i.quantity, 0);
                     const totalQuantity = items.reduce((s, i) => s + i.quantity, 0);
 
-                    // ── Xử lý điểm (giống hệt thứ tự trong order.controller.js thật) ──
-                    // redeemForOrder được gọi TRƯỚC khi có order._id (orderId: null),
-                    // rồi patch lại orderId vào transaction sau khi tạo đơn xong.
                     let pointsUsed = 0;
                     let discount   = 0;
 
@@ -233,13 +281,19 @@ class ChatbotTuvanService {
                         }
                     }
 
-                    return {
+                    const resultPayload = {
                         success: true,
                         orderId: order._id.toString(),
                         totalPrice: order.totalPrice,
                         pointsUsed,
                         discount,
                     };
+
+                    // Lưu lại vào ctx để chống tạo trùng nếu model lỡ gọi lại tool này
+                    // trong cùng lượt chat, và để dùng làm fallback nếu hết maxSteps.
+                    ctx.createdOrder = resultPayload;
+
+                    return resultPayload;
                 }
 
                 default:
@@ -248,6 +302,61 @@ class ChatbotTuvanService {
         } catch (err) {
             return { error: err.message };
         }
+    }
+
+    async _callModelWithFallback(messages) {
+        let lastErr = null;
+
+        for (const provider of config.providers) {
+            for (const model of provider.models) {
+                for (const apiKey of provider.apiKeys) {
+                    try {
+                        const response = await fetch(provider.url, {
+                            method: "POST",
+                            headers: {
+                                Authorization: `Bearer ${apiKey}`,
+                                "Content-Type": "application/json",
+                            },
+                            body: JSON.stringify({
+                                model,
+                                messages,
+                                tools: config.tools,
+                                tool_choice: "auto",
+                            }),
+                        });
+
+                        console.log(
+                            `[Groq] ${model} | ...${apiKey.slice(-6)} còn lại: ` +
+                            `${response.headers.get("x-ratelimit-remaining-requests")}/${response.headers.get("x-ratelimit-limit-requests")} req` +
+                            ` | ${response.headers.get("x-ratelimit-remaining-tokens")}/${response.headers.get("x-ratelimit-limit-tokens")} tokens` +
+                            ` | reset: ${response.headers.get("x-ratelimit-reset-requests")}`
+                        );
+
+                        const data = await response.json();
+
+                        if (data.error) {
+                            console.warn(`[ChatbotTuvan] ${model} / ...${apiKey.slice(-6)} lỗi:`, data.error.message);
+                            lastErr = new Error(data.error.message);
+                            continue; // thử model/key khác CHO BƯỚC HIỆN TẠI
+                        }
+
+                        const choice = data.choices?.[0];
+                        if (!choice?.message) {
+                            lastErr = new Error("Response không có message");
+                            continue;
+                        }
+
+                        console.log(`[ChatbotTuvan] Dùng model: ${model} | Key: ...${apiKey.slice(-6)}`);
+                        return choice.message;
+                    } catch (err) {
+                        console.warn(`[ChatbotTuvan] ${model} exception:`, err.message);
+                        lastErr = err;
+                    }
+                }
+            }
+        }
+
+        throw lastErr || new Error("Không có model nào phản hồi được");
     }
 
     async chatWithAI(client, userMessage, conversationHistory = [], userId = null) {
@@ -286,8 +395,8 @@ class ChatbotTuvanService {
             ragContext     ? `[NGỮ CẢNH BỔ SUNG]:\n${ragContext}`      : "",
         ].filter(Boolean).join("\n\n");
 
-        // 4. Build messages
-        const baseMessages = [
+        // 4. Build messages (chỉ khởi tạo 1 lần cho cả lượt chat)
+        let messages = [
             { role: "system", content: systemContent },
             ...conversationHistory.map((msg) => ({
                 role: msg.role === "bot" ? "assistant" : msg.role,
@@ -296,94 +405,74 @@ class ChatbotTuvanService {
             { role: "user", content: userMessage },
         ];
 
-        const ctx = { client, db, userId };
+        const ctx = { client, db, userId, createdOrder: null };
         const maxSteps = config.maxToolSteps || 4;
 
-        // 5. Gọi AI — xoay vòng providers → models → apiKeys, mỗi model có vòng lặp tool-call riêng
-        for (const provider of config.providers) {
-            for (const model of provider.models) {
-                for (const apiKey of provider.apiKeys) {
-                    try {
-                        let messages = [...baseMessages];
-                        let finalContent = null;
+        for (let step = 0; step < maxSteps; step++) {
+            const msg = await this._callModelWithFallback(messages);
 
-                        for (let step = 0; step < maxSteps; step++) {
-                            const response = await fetch(provider.url, {
-                                method: "POST",
-                                headers: {
-                                    Authorization: `Bearer ${apiKey}`,
-                                    "Content-Type": "application/json",
-                                },
-                                body: JSON.stringify({
-                                    model,
-                                    messages,
-                                    tools: config.tools,
-                                    tool_choice: "auto",
-                                }),
-                            });
-
-                            console.log(
-                                `[Groq] ${model} | ...${apiKey.slice(-6)} còn lại: ` +
-                                `${response.headers.get("x-ratelimit-remaining-requests")}/${response.headers.get("x-ratelimit-limit-requests")} req` +
-                                ` | ${response.headers.get("x-ratelimit-remaining-tokens")}/${response.headers.get("x-ratelimit-limit-tokens")} tokens` +
-                                ` | reset: ${response.headers.get("x-ratelimit-reset-requests")}`
-                            );
-
-                            const data = await response.json();
-
-                            if (data.error) {
-                                console.warn(`[ChatbotTuvan] ${model} / ...${apiKey.slice(-6)} lỗi:`, data.error.message);
-                                break; // thử key/model khác
-                            }
-
-                            const choice = data.choices?.[0];
-                            const msg = choice?.message;
-                            if (!msg) break;
-
-                            // Model muốn gọi tool
-                            if (msg.tool_calls?.length) {
-                                messages.push(msg);
-
-                                for (const call of msg.tool_calls) {
-                                    let result;
-                                    try {
-                                        const args = JSON.parse(call.function.arguments || "{}");
-                                        result = await this._executeTool(call.function.name, args, ctx);
-                                    } catch (err) {
-                                        result = { error: err.message };
-                                    }
-
-                                    console.log(`[ChatbotTuvan] Tool "${call.function.name}" ->`, JSON.stringify(result).slice(0, 200));
-
-                                    messages.push({
-                                        role: "tool",
-                                        tool_call_id: call.id,
-                                        content: JSON.stringify(result),
-                                    });
-                                }
-                                continue; // gọi lại model với kết quả tool
-                            }
-
-                            // Model trả lời text bình thường
-                            const content = extractContent(data);
-                            if (content) {
-                                finalContent = content;
-                            }
-                            break;
-                        }
-
-                        if (finalContent) {
-                            console.log(`[ChatbotTuvan] Dùng model: ${model} | Key: ...${apiKey.slice(-6)}`);
-                            return finalContent;
-                        }
-                    } catch (err) {
-                        console.warn(`[ChatbotTuvan] ${model} exception:`, err.message);
+            if (!msg.tool_calls?.length && msg.content) {
+                const pseudoCalls = parsePseudoFunctionCalls(msg.content);
+                if (pseudoCalls.length) {
+                    const first = pseudoCalls[0];
+                    if (pseudoCalls.length > 1) {
+                        console.warn(
+                            `[ChatbotTuvan] Model trả ${pseudoCalls.length} tool-call dạng text giả trong 1 lượt, ` +
+                            `chỉ thực thi lệnh đầu tiên "${first.name}", bỏ qua các lệnh sau (model tự bịa, chưa có kết quả thật).`
+                        );
+                    } else {
+                        console.warn(`[ChatbotTuvan] Model trả tool-call dạng text giả "${first.name}", tự parse lại.`);
                     }
+                    msg.tool_calls = [{
+                        id: `pseudo_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+                        function: { name: first.name, arguments: JSON.stringify(first.args || {}) },
+                    }];
+                    msg.content = null; // không hiển thị text rác cho khách
                 }
             }
+
+            // Model muốn gọi tool
+            if (msg.tool_calls?.length) {
+                messages.push(msg);
+
+                for (const call of msg.tool_calls) {
+                    let result;
+                    try {
+                        const args = JSON.parse(call.function.arguments || "{}");
+                        result = await this._executeTool(call.function.name, args, ctx);
+                    } catch (err) {
+                        result = { error: err.message };
+                    }
+
+                    console.log(`[ChatbotTuvan] Tool "${call.function.name}" ->`, JSON.stringify(result).slice(0, 200));
+
+                    messages.push({
+                        role: "tool",
+                        tool_call_id: call.id,
+                        content: JSON.stringify(result),
+                    });
+                }
+                continue; 
+            }
+
+            // Model trả lời text bình thường
+            const content = extractContent(msg);
+            if (content) {
+                if (/function\s*=\s*[a-zA-Z_]\w*\s*>/.test(content)) {
+                    console.warn("[ChatbotTuvan] Content cuối vẫn dính cú pháp tool-call giả, bỏ qua:", content.slice(0, 200));
+                    break;
+                }
+                return content;
+            }
+            break;
         }
 
-        throw new Error("Không có model nào phản hồi được");
+        if (ctx.createdOrder) {
+            const o = ctx.createdOrder;
+            return `Đơn hàng của bạn đã được đặt thành công! Mã đơn: ${o.orderId}, tổng tiền: ${o.totalPrice.toLocaleString()} VNĐ (thanh toán COD). Cảm ơn bạn đã mua hàng, shop sẽ giao trong 2-5 ngày nhé!`;
+        }
+
+        throw new Error("Model trả về định dạng không hợp lệ, vui lòng thử lại");
     }
 }
 
