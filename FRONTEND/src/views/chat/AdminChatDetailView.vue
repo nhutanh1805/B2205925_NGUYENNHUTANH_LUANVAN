@@ -19,6 +19,7 @@
           Nhắn tin với khách
         </div>
         <h1 class="hero-title">{{ userName }}</h1>
+        <p v-if="userEmail" class="hero-email">{{ userEmail }}</p>
       </div>
     </div>
 
@@ -86,6 +87,7 @@ const adminName = admin?.name ?? "Admin";
 
 const messages   = ref([]);
 const userName   = ref("Khách");
+const userEmail  = ref("");
 const loading    = ref(false);
 const error      = ref(null);
 const newMessage = ref("");
@@ -101,8 +103,11 @@ async function fetchMessages(showLoading = false) {
   try {
     const { data } = await AdminChatAPI.getMessagesByUser(userId);
     messages.value = data.messages;
-    const lastAdminMsg = [...data.messages].reverse().find((m) => m.role === "admin");
-    if (lastAdminMsg?.senderName) userName.value = userName.value; // giữ nguyên, tên khách lấy riêng nếu cần
+    // Tên/email khách lấy từ API (chỉ cập nhật lại nếu có, tránh nháy về "Khách" khi poll lỗi)
+    if (data.user) {
+      userName.value  = data.user.name  || "Khách";
+      userEmail.value = data.user.email || "";
+    }
     scrollToBottom();
   } catch (e) {
     if (showLoading) error.value = e?.response?.data?.message || "Lỗi tải tin nhắn";
@@ -160,6 +165,7 @@ onBeforeUnmount(() => { if (pollTimer) clearInterval(pollTimer); });
 .eyebrow-dot { width: 7px; height: 7px; border-radius: 50%; background: #10b981; box-shadow: 0 0 8px #10b981; animation: blink 1.8s ease-in-out infinite; }
 @keyframes blink { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:.4; transform:scale(1.5); } }
 .hero-title { font-size: clamp(1.8rem, 5vw, 2.6rem); font-weight: 900; color: white; letter-spacing: -.02em; text-shadow: 0 2px 30px rgba(0,0,0,.4); }
+.hero-email { margin: 8px 0 0; font-size: .85rem; color: rgba(255,255,255,.65); font-weight: 500; }
 
 .main-panel { max-width: 680px; margin: -32px auto 0; padding: 0 24px 60px; position: relative; z-index: 10; }
 

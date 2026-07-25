@@ -44,6 +44,7 @@
               <span class="conv-name">{{ c.userName }}</span>
               <span class="conv-time">{{ formatTime(c.lastCreatedAt) }}</span>
             </div>
+            <div v-if="c.userEmail" class="conv-email">{{ c.userEmail }}</div>
             <div class="conv-bottom">
               <p class="conv-last">
                 <span v-if="c.lastRole === 'admin'" class="conv-prefix">Bạn: </span>
@@ -146,6 +147,7 @@ onBeforeUnmount(() => { if (pollTimer) clearInterval(pollTimer); });
 .conv-top { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
 .conv-name { font-size: .92rem; font-weight: 700; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .conv-time { font-size: .72rem; color: #94a3b8; flex-shrink: 0; }
+.conv-email { font-size: .74rem; color: #94a3b8; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .conv-bottom { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 3px; }
 .conv-last { margin: 0; font-size: .82rem; color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .conv-prefix { color: #94a3b8; }

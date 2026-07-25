@@ -15,6 +15,21 @@ class ChatService {
       .toArray();
   }
 
+  // ADMIN — lấy tên + email của 1 khách để hiển thị header trang chi tiết chat
+  async getUserInfo(userId) {
+    if (!ObjectId.isValid(userId)) return null;
+    const user = await this.Users.findOne(
+      { _id: new ObjectId(userId) },
+      { projection: { name: 1, email: 1 } }
+    );
+    if (!user) return null;
+    return {
+      userId: String(user._id),
+      name: user.name || "Khách",
+      email: user.email || null,
+    };
+  }
+
   // Gửi tin nhắn — userId luôn là chủ cuộc hội thoại (khách hàng)
   // Nếu role = "admin" thì senderId = adminId (bắt buộc), để biết admin nào đã nhắn
   async sendMessage({ userId, senderId, senderName, role, content }) {
@@ -68,6 +83,7 @@ class ChatService {
     return conversations.map((c) => ({
       userId: c._id,
       userName: userMap.get(String(c._id))?.name || "Khách",
+      userEmail: userMap.get(String(c._id))?.email || null,
       lastMessage: c.lastMessage,
       lastRole: c.lastRole,
       lastSenderId: c.lastSenderId,

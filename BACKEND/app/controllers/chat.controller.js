@@ -55,20 +55,25 @@ exports.getConversations = async (req, res, next) => {
   }
 };
 
-// Admin xem tin nhắn của 1 khách (kèm đánh dấu đã đọc)
+// Admin xem tin nhắn của 1 khách
 exports.getMessagesByUser = async (req, res, next) => {
   const { userId } = req.params;
   try {
     const service = new ChatService(MongoDB.client);
-    const messages = await service.getMessages(userId);
+    const [messages, user] = await Promise.all([
+      service.getMessages(userId),
+      service.getUserInfo(userId),
+    ]);
     await service.markAsRead(userId);
-    return res.json({ messages });
+    return res.json({
+      messages,
+      user: user || { userId, name: "Khách", email: null },
+    });
   } catch (error) {
     return next(new ApiError(500, "Lỗi lấy tin nhắn"));
   }
 };
 
-// Admin gửi tin nhắn cho 1 khách — bắt buộc adminId để biết ai đã nhắn
 exports.adminSendMessage = async (req, res, next) => {
   const { userId } = req.params;
   const { adminId, adminName, content } = req.body;
