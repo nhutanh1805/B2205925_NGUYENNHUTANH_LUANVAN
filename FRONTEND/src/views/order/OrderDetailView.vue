@@ -131,21 +131,21 @@
               <div class="admin-field">
                 <label class="admin-lbl">Cập nhật trạng thái</label>
                 <select
-                  v-model="order.status"
-                  @change="updateStatus(order._id, order.status)"
+                  :value="order.status"
+                  @change="updateStatus(order._id, $event.target.value)"
                   class="status-select"
                   :class="`select-${order.status}`"
                   :disabled="isStatusLocked(order.status)"
                 >
-                  <option value="pending">🕐 Chờ xác nhận</option>
-                  <option value="confirmed">✅ Đã xác nhận</option>
-                  <option value="paid">💳 Đã thanh toán</option>
-                  <option value="preparing">📦 Chuẩn bị hàng</option>
-                  <option value="shipping">🚚 Đang giao</option>
-                  <option value="failed">⚠️ Giao thất bại</option>
-                  <option value="delivered">📬 Đã giao</option>
-                  <option value="completed">🎉 Hoàn thành</option>
-                  <option value="cancelled">❌ Đã hủy</option>
+                  <option value="pending"   :disabled="!canTransitionTo(order, 'pending')">🕐 Chờ xác nhận</option>
+                  <option value="confirmed" :disabled="!canTransitionTo(order, 'confirmed')">✅ Đã xác nhận</option>
+                  <option value="paid"      :disabled="!canTransitionTo(order, 'paid') || order.paymentMethod === 'COD'">💳 Đã thanh toán</option>
+                  <option value="preparing" :disabled="!canTransitionTo(order, 'preparing')">📦 Chuẩn bị hàng</option>
+                  <option value="shipping"  :disabled="!canTransitionTo(order, 'shipping')">🚚 Đang giao</option>
+                  <option value="failed"    :disabled="!canTransitionTo(order, 'failed')">⚠️ Giao thất bại</option>
+                  <option value="delivered" :disabled="!canTransitionTo(order, 'delivered')">📬 Đã giao</option>
+                  <option value="completed" :disabled="!canTransitionTo(order, 'completed')">🎉 Hoàn thành</option>
+                  <option value="cancelled" :disabled="isStatusLocked(order.status)">❌ Đã hủy</option>
                 </select>
                 <p v-if="isStatusLocked(order.status)" class="locked-note">
                   🔒 Đơn hàng đã khóa, không thể thay đổi trạng thái
@@ -408,6 +408,29 @@ const isStepActive = (key) => {
   return orderArr.indexOf(key) <= orderArr.indexOf(order.value?.status)
 }
 
+// ── Transition rules (đồng bộ với trang List) ─────────
+const TRANSITIONS_COD = {
+  pending:   ["confirmed", "preparing", "cancelled"],
+  confirmed: ["preparing", "cancelled"],
+  preparing: ["shipping",  "cancelled"],
+  shipping:  ["delivered", "failed"],
+  failed:    ["preparing", "cancelled"],
+  delivered: ["completed"],
+}
+const TRANSITIONS_VNPAY = {
+  pending:   ["paid", "cancelled"],
+  paid:      ["preparing"],
+  preparing: ["shipping"],
+  shipping:  ["delivered", "failed"],
+  failed:    ["preparing", "cancelled"],
+  delivered: ["completed"],
+}
+const canTransitionTo = (order, newStatus) => {
+  if (!order) return false
+  const map = order.paymentMethod === "VNPAY" ? TRANSITIONS_VNPAY : TRANSITIONS_COD
+  return map[order.status]?.includes(newStatus) ?? false
+}
+
 // ── Assign shipper modal ──────────────────────────────
 const showAssignModal = ref(false)
 const shippers        = ref([])
@@ -480,9 +503,13 @@ const loadOrder = async () => {
 
 const goBack = () => router.back()
 
-const updateStatus = async (id, status) => {
+const updateStatus = async (id, newStatus) => {
+  if (!order.value || !canTransitionTo(order.value, newStatus)) {
+    await loadOrder() // reset lại select về đúng trạng thái hiện tại nếu không hợp lệ
+    return
+  }
   try {
-    await OrderService.updateOrderStatus(id, status)
+    await OrderService.updateOrderStatus(id, newStatus)
     await loadOrder()
   } catch (err) { alert(err.message) }
 }
