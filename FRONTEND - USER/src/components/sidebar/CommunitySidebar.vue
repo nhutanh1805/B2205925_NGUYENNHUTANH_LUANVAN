@@ -6,23 +6,6 @@
         <i class="bi bi-people-fill me-2"></i>Thông tin liên hệ
       </h5>
 
-      <!-- VIDEO TRAILER -->
-      <div class="sidebar-video mb-4">
-        <video
-          ref="sidebarVideo"
-          :src="sidebarTrailer"
-          autoplay
-          muted
-          loop
-          playsinline
-          preload="auto"
-          class="w-100 rounded-3 shadow-sm"
-        ></video>
-        <p class="small text-center text-light mt-2 mb-0">
-          Trailer mới nhất 2025
-        </p>
-      </div>
-
       <!-- CONTACT INFO -->
       <div class="contact-info">
         <div class="contact-item">
@@ -80,14 +63,6 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
-import sidebarTrailer from "@/assets/video/BannerMain.mp4";
-
-const sidebarVideo = ref(null);
-
-onMounted(() => {
-  sidebarVideo.value?.play();
-});
 </script>
 
 <style scoped>
@@ -152,26 +127,12 @@ onMounted(() => {
   text-shadow: 0 2px 6px rgba(0,0,0,0.5);
 }
 
-/* ================= VIDEO ================= */
-.sidebar-video video {
-  height: 160px;
-  object-fit: cover;
-  border-radius: 14px;
-  transition: 0.3s;
-  z-index: 1;
-  position: relative;
-}
-
-.sidebar-video p {
-  color: #fff; /* chắc chắn đọc được */
-}
-
 /* ================= CONTACT ================= */
 .contact-info {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  max-height: 280px;
+  max-height: 340px;
   overflow-y: auto;
 }
 

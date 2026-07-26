@@ -134,15 +134,15 @@
               <div class="display-options">
                 <label class="display-label">
                   <input type="checkbox" v-model="localUI.time" />
-                  Time On Page
+                  Thời gian trên trang
                 </label>
                 <label class="display-label">
                   <input type="checkbox" v-model="localUI.iphone" />
-                  iPhone UI
+                  Giao diện Shipper
                 </label>
                 <label class="display-label">
                   <input type="checkbox" v-model="localUI.idle" />
-                  Idle Toast
+                  Thông báo không hoạt động
                 </label>
               </div>
             </div>

@@ -92,25 +92,16 @@
               <div class="display-options">
                 <label class="display-label">
                   <input type="checkbox" v-model="localUI.time" />
-                  Time On Page
-                </label>
-                <label class="display-label">
-                  <input type="checkbox" v-model="localUI.iphone" />
-                  iPhone UI
+                  Thời gian trên trang
                 </label>
                 <label class="display-label">
                   <input type="checkbox" v-model="localUI.idle" />
-                  Idle Toast
+                  Thông báo không hoạt động
                 </label>
 
                 <label class="display-label">
                   <input type="checkbox" v-model="localUI.sidebar" />
-                  Community Sidebar
-                </label>
-
-                <label class="display-label">
-                  <input type="checkbox" v-model="localUI.model" />
-                  Model Viewer
+                  Liên Hệ
                 </label>
               </div>
             </div>
@@ -140,9 +131,8 @@ const settingsWrapper = ref(null);
 
 const localUI = reactive({
   time: props.ui.time ?? true,
-  iphone: props.ui.iphone ?? true,
   idle: props.ui.idle ?? true,
-  model: props.ui.model ?? true,
+  sidebar: props.ui.sidebar ?? true,
   dark: props.ui.dark ?? localStorage.getItem("darkMode") === "true",
   lang: props.ui.lang ?? localStorage.getItem("language") ?? "vi",
 });

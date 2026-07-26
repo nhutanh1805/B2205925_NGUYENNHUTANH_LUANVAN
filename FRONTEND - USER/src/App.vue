@@ -15,8 +15,6 @@
     <!-- ================= EXTRA UI ================= -->
     <TimeOnPage v-if="ui.time" />
 
-    <Iphone v-if="ui.iphone" />
-    <ChatbotPopup />
     <IdleToast
       v-if="ui.idle"
       ref="idleToast"
@@ -24,7 +22,6 @@
 
     <CommunitySidebar v-if="ui.sidebar" />
 
-    <ModelViewer v-if="ui.model" />
 <ChatbotTuvan />
 <ChatWidget />
   </div>
@@ -32,13 +29,10 @@
 
 <script>
 import AppHeader from "@/components/AppHeader.vue";
-import Iphone from "@/components/iphone/Iphone.vue";
 import TimeOnPage from "@/components/timeonpage/TimeOnPage.vue";
 import IdleToast from "@/components/idle/IdleToast.vue";
 import { initIdleDetector } from "@/components/idle/IdleDetector";
-import ModelViewer from "@/components/ModelViewer/ModelViewer.vue";
 import CommunitySidebar from "@/components/sidebar/CommunitySidebar.vue";
-import ChatbotPopup from "@/components/ChatbotPopup.vue";
 import ChatbotTuvan from "@/components/ChatbotTuvan.vue";  
 import ChatWidget from "@/components/chat/ChatWidget.vue";
 export default {
@@ -47,11 +41,8 @@ export default {
   components: {
     AppHeader,
     TimeOnPage,
-    Iphone,
     IdleToast,
-    ModelViewer,
     CommunitySidebar,
-    // ChatbotPopup,
     ChatbotTuvan,
     ChatWidget,
   },
@@ -60,9 +51,7 @@ export default {
     return {
       ui: {
         time: localStorage.getItem("ui_time") === "true",
-        iphone: localStorage.getItem("ui_iphone") === "true",
         idle: localStorage.getItem("ui_idle") === "true",
-        model: localStorage.getItem("ui_model") === "true",
         sidebar: localStorage.getItem("ui_sidebar") === "true",
         dark: localStorage.getItem("darkMode") === "true",
         lang: localStorage.getItem("language") || "vi",
@@ -75,9 +64,7 @@ export default {
       this.ui = { ...this.ui, ...newUI };
 
       localStorage.setItem("ui_time", this.ui.time);
-      localStorage.setItem("ui_iphone", this.ui.iphone);
       localStorage.setItem("ui_idle", this.ui.idle);
-      localStorage.setItem("ui_model", this.ui.model);
       localStorage.setItem("ui_sidebar", this.ui.sidebar);
       localStorage.setItem("darkMode", this.ui.dark);
       localStorage.setItem("language", this.ui.lang);
