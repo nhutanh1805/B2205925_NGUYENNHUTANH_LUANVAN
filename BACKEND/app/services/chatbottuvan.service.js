@@ -13,6 +13,40 @@ function extractContent(msg) {
     return null;
 }
 
+// ─── Tìm đơn hàng theo _id đầy đủ HOẶC mã rút gọn 6 ký tự cuối ────────────────
+// UI (OrderDetail, shipper app...) chỉ hiển thị mã rút gọn kiểu #3F0CC0BD
+// (_id.slice(-6).toUpperCase()), khách/shipper không bao giờ nhìn thấy _id đầy
+// đủ 24 ký tự. Vì vậy khi khách nhắn mã rút gọn cho chatbot, phải tự tra theo
+// 6 ký tự cuối của _id thay vì findById thẳng (sẽ luôn ra null/lỗi).
+async function resolveOrder(db, rawId) {
+    if (!rawId) return null;
+    const clean = rawId.toString().replace("#", "").trim();
+
+    // Mã đầy đủ (24 ký tự hex) → tìm trực tiếp
+    if (/^[0-9a-fA-F]{24}$/.test(clean)) {
+        return await db.collection("orders").findOne({ _id: new ObjectId(clean) });
+    }
+
+    // Mã rút gọn (4-23 ký tự hex) → so khớp N ký tự CUỐI của _id, N = độ dài mã
+    // được truyền vào. Không cố định 6 ký tự vì các UI khác nhau trong hệ thống
+    // (shipper app, OrderDetail khách, admin...) có thể cắt số ký tự khác nhau.
+    if (/^[0-9a-fA-F]{4,23}$/.test(clean)) {
+        const len = clean.length;
+        const start = 24 - len;
+        const orders = await db.collection("orders").find({
+            $expr: {
+                $eq: [
+                    { $toLower: { $substrCP: [{ $toString: "$_id" }, start, len] } },
+                    clean.toLowerCase(),
+                ],
+            },
+        }).toArray();
+        return orders[0] || null;
+    }
+
+    return null;
+}
+
 // ─── Fallback parser cho model KHÔNG hỗ trợ native tool_calls ─────────────────
 // Một số model (thường là các model fallback ít hỗ trợ function-calling chuẩn
 // OpenAI) sẽ in tool call ra dạng text kiểu Llama cũ:
@@ -129,6 +163,7 @@ class ChatbotTuvanService {
                     return {
                         orders: orders.slice(0, 5).map((o) => ({
                             orderId: o._id.toString(),
+                            shortCode: o._id.toString().slice(-6).toUpperCase(),
                             status: o.status,
                             totalPrice: o.totalPrice,
                             createdAt: o.createdAt,
@@ -137,7 +172,8 @@ class ChatbotTuvanService {
                 }
 
                 case "get_order_status": {
-                    const order = await orderService.findById(args.orderId);
+                    // Hỗ trợ cả _id đầy đủ và mã rút gọn 6 ký tự (#3F0CC0BD) mà UI hiển thị
+                    const order = await resolveOrder(db, args.orderId);
                     if (!order) return { error: "Không tìm thấy đơn hàng với mã này" };
                     if (userId && order.userId !== userId) {
                         return { error: "Đơn hàng này không thuộc về khách đang chat" };
@@ -391,6 +427,12 @@ class ChatbotTuvanService {
         const systemContent = [
             config.systemPrompt,
             userId ? "" : "[LƯU Ý]: Khách hiện CHƯA đăng nhập, không thể tra điểm/đơn hàng hoặc đặt hàng.",
+            "[LƯU Ý VỀ MÃ ĐƠN HÀNG]: Khách thường cung cấp mã đơn dạng RÚT GỌN " +
+            "(ví dụ: #3F0CC0BD), đây chính là mã hiển thị trên giao diện, không phải " +
+            "_id đầy đủ trong database. Khi gọi tool get_order_status, hãy truyền " +
+            "NGUYÊN VĂN mã khách cung cấp (có thể bỏ dấu #), KHÔNG tự bịa thêm ký tự " +
+            "hay cố đoán ra mã dài hơn — hệ thống sẽ tự tra theo mã rút gọn này, " +
+            "dù mã dài hay ngắn.",
             productContext ? `[SẢN PHẨM HIỆN CÓ]:\n${productContext}` : "",
             ragContext     ? `[NGỮ CẢNH BỔ SUNG]:\n${ragContext}`      : "",
         ].filter(Boolean).join("\n\n");
