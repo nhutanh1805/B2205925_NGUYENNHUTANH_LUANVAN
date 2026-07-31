@@ -397,12 +397,23 @@ const loadOrders = async (page = 1) => {
 const goToDetail = (id) => router.push(`/orders/${id}`)
 const changePage = (page) => loadOrders(page)
 
+// ── Đổi trạng thái — có hỏi xác nhận trước khi thực hiện ──
 const updateStatus = async (id, newStatus) => {
   const order = orders.value.find(o => o._id === id)
   if (!order || !canTransitionTo(order, newStatus)) {
     await loadOrders(pagination.value.page)
     return
   }
+
+  const confirmed = confirm(
+    `Xác nhận chuyển đơn #${order._id.slice(-8).toUpperCase()} sang trạng thái "${statusText(newStatus)}"?`
+  )
+  if (!confirmed) {
+    // Reset select về đúng trạng thái hiện tại (khách bấm Hủy trong hộp thoại)
+    await loadOrders(pagination.value.page)
+    return
+  }
+
   try {
     await OrderService.updateOrderStatus(id, newStatus)
     await loadOrders(pagination.value.page)

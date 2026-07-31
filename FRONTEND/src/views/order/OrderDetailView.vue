@@ -503,11 +503,22 @@ const loadOrder = async () => {
 
 const goBack = () => router.back()
 
+// ── Đổi trạng thái — có hỏi xác nhận trước khi thực hiện ──
 const updateStatus = async (id, newStatus) => {
   if (!order.value || !canTransitionTo(order.value, newStatus)) {
     await loadOrder() // reset lại select về đúng trạng thái hiện tại nếu không hợp lệ
     return
   }
+
+  const confirmed = confirm(
+    `Xác nhận chuyển đơn #${order.value._id.slice(-8).toUpperCase()} sang trạng thái "${getStatusLabel(newStatus)}"?`
+  )
+  if (!confirmed) {
+    // Reset select về đúng trạng thái hiện tại (khách bấm Hủy trong hộp thoại)
+    await loadOrder()
+    return
+  }
+
   try {
     await OrderService.updateOrderStatus(id, newStatus)
     await loadOrder()
