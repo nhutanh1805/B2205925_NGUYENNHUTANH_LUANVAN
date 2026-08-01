@@ -94,6 +94,38 @@ class StockBatchService {
       .toArray();
   }
 
+  // MỚI: Lấy danh sách lô hàng còn tồn của 1 sản phẩm, kèm tên nhà cung cấp
+  // (join sang stock_receipts vì receiptId trong batch lưu dạng string, còn
+  // _id của receipt là ObjectId nên phải $toObjectId khi lookup)
+  async getBatchesByProductWithReceipt(productId) {
+    return await this.Batch.aggregate([
+      { $match: { productId, quantity: { $gt: 0 } } },
+      { $sort: { importedAt: 1 } }, // FIFO: lô cũ nhất lên trước
+      {
+        $lookup: {
+          from: "stock_receipts",
+          let: { rid: "$receiptId" },
+          pipeline: [
+            { $match: { $expr: { $eq: ["$_id", { $toObjectId: "$$rid" }] } } },
+            { $project: { supplierName: 1 } },
+          ],
+          as: "receipt",
+        },
+      },
+      { $unwind: { path: "$receipt", preserveNullAndEmptyArrays: true } },
+      {
+        $project: {
+          quantity:     1,
+          importPrice:  1,
+          importedAt:   1,
+          receiptId:    1,
+          supplierName: "$receipt.supplierName",
+          subtotal:     { $multiply: ["$quantity", "$importPrice"] },
+        },
+      },
+    ]).toArray();
+  }
+
   async getTotalStock(productId) {
     const result = await this.Batch.aggregate([
       { $match: { productId, quantity: { $gt: 0 } } },

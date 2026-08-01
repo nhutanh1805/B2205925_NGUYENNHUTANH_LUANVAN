@@ -220,6 +220,52 @@
       </div>
     </div>
 
+    <!-- ═══════════ LÔ HÀNG TỒN KHO (FIFO) ═══════════ -->
+    <div class="batch-block">
+      <div class="section-header">
+        <h2 class="section-title">Lô hàng tồn kho (FIFO)</h2>
+        <div class="section-line"></div>
+      </div>
+
+      <div v-if="isLoadingBatches" class="batch-loading">Đang tải lô hàng…</div>
+
+      <div v-else-if="batches.length" class="batch-wrap">
+        <div class="batch-summary">
+          <div class="batch-summary-item">
+            <span class="bs-label">Tổng còn lại</span>
+            <b class="bs-value">{{ batchSummary.totalQuantity }} sản phẩm</b>
+          </div>
+          <div class="batch-summary-item">
+            <span class="bs-label">Giá trị tồn kho</span>
+            <b class="bs-value bs-money">{{ formatPrice(batchSummary.totalValue) }}₫</b>
+          </div>
+        </div>
+
+        <table class="batch-table">
+          <thead>
+            <tr>
+              <th>Ngày nhập</th>
+              <th>Nhà cung cấp</th>
+              <th>Còn lại</th>
+              <th>Giá nhập</th>
+              <th>Thành tiền</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="b in batches" :key="b._id">
+              <td>{{ formatDate(b.importedAt) }}</td>
+              <td>{{ b.supplierName || "—" }}</td>
+              <td><span class="batch-qty">{{ b.quantity }}</span></td>
+              <td>{{ formatPrice(b.importPrice) }}₫</td>
+              <td class="batch-subtotal">{{ formatPrice(b.subtotal) }}₫</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div v-else class="batch-empty">Sản phẩm chưa có lô hàng nào còn tồn kho.</div>
+    </div>
+
     <!-- ═══════════ REVIEW MANAGEMENT (đã tách component) ═══════════ -->
     <AdminReviewManager :product-id="product._id" />
 
@@ -244,6 +290,29 @@ const isEditingPrice = ref(false);
 const isSavingPrice = ref(false);
 const editPrice = ref(0);
 const editSalePrice = ref(0);
+
+// ─── Lô hàng tồn kho (FIFO) ────────────────────────────
+const batches = ref([]);
+const batchSummary = ref({ totalQuantity: 0, totalValue: 0 });
+const isLoadingBatches = ref(true);
+
+async function fetchBatches(productId) {
+  isLoadingBatches.value = true;
+  try {
+    const res = await fetch(`/api/stock-batches/product/${productId}`);
+    const data = await res.json();
+    batches.value = data.data || [];
+    batchSummary.value = data.summary || { totalQuantity: 0, totalValue: 0 };
+  } catch (err) {
+    console.error("Lỗi tải lô hàng:", err);
+  } finally {
+    isLoadingBatches.value = false;
+  }
+}
+
+function formatDate(d) {
+  return new Date(d).toLocaleDateString("vi-VN");
+}
 
 const discountPercent = computed(() => {
   if (!product.value?.salePrice) return 0;
@@ -302,6 +371,7 @@ onMounted(async () => {
   const res = await ProductService.get(route.params.id);
   product.value = res;
   currentImage.value = res.images?.length ? res.images[0] : "https://via.placeholder.com/600x400";
+  fetchBatches(res._id);
 });
 </script>
 
@@ -662,6 +732,37 @@ onMounted(async () => {
 .spec-key { color: #94a3b8; font-weight: 500; }
 .spec-val { color: #0f172a; font-weight: 700; text-align: right; max-width: 55%; }
 
+/* ═══ LÔ HÀNG TỒN KHO ═══ */
+.batch-block { max-width: 1200px; margin: 24px auto 0; padding: 0 24px; }
+.batch-loading, .batch-empty {
+  text-align: center; padding: 30px; color: #94a3b8; background: white;
+  border-radius: 20px; border: 1.5px solid #e8edf8; font-size: .88rem;
+}
+.batch-wrap {
+  background: white; border-radius: 20px; border: 1.5px solid #e8edf8;
+  box-shadow: 0 8px 30px rgba(10,15,30,.07); overflow: hidden;
+}
+.batch-summary {
+  display: flex; gap: 24px; padding: 18px 22px;
+  background: linear-gradient(135deg, #eff6ff, #f5f3ff);
+  border-bottom: 1px solid #e8edf8;
+}
+.batch-summary-item { display: flex; flex-direction: column; gap: 4px; }
+.bs-label { font-size: .72rem; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; }
+.bs-value { font-size: 1.1rem; font-weight: 800; color: #0f172a; }
+.bs-money { color: #4f46e5; }
+.batch-table { width: 100%; border-collapse: collapse; font-size: .86rem; }
+.batch-table th {
+  text-align: left; padding: 12px 22px; font-size: .72rem; font-weight: 700;
+  color: #94a3b8; text-transform: uppercase; letter-spacing: .05em;
+  border-bottom: 1px solid #f1f5f9; background: #fafbff;
+}
+.batch-table td { padding: 12px 22px; border-bottom: 1px solid #f1f5f9; color: #334155; }
+.batch-table tr:last-child td { border-bottom: none; }
+.batch-table tr:hover td { background: #f8faff; }
+.batch-qty { font-weight: 800; color: #10b981; }
+.batch-subtotal { font-weight: 700; color: #0f172a; }
+
 .loading-screen {
   display: flex; flex-direction: column;
   align-items: center; justify-content: center;
@@ -694,6 +795,7 @@ onMounted(async () => {
   .hero-content { padding: 20px 14px 0; }
   .product-shell { margin: -20px auto 0; padding: 0 14px; }
   .spec-block { padding: 0 14px; }
+  .batch-block { padding: 0 14px; }
   .toolbar-actions { width: 100%; }
   .btn-edit, .btn-delete { flex: 1; justify-content: center; }
   .buy-actions { flex-direction: column; }
