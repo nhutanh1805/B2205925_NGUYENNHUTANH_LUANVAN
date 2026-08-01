@@ -180,13 +180,13 @@
 
             <div class="card-action">
              <template v-if="order.status === 'preparing'">
-                <button class="action-btn btn-pickup" :disabled="updating === order._id" @click="changeStatus(order._id, 'shipping')">
+                <button class="action-btn btn-pickup" :disabled="updating === order._id" @click="openConfirmModal(order, 'shipping')">
                   <span v-if="updating === order._id" class="spinner"></span>
                   <span v-else>Bắt đầu giao</span>
                 </button>
               </template>
               <template v-else-if="order.status === 'shipping'">
-                <button class="action-btn btn-done" :disabled="updating === order._id" @click="changeStatus(order._id, 'delivered')">
+                <button class="action-btn btn-done" :disabled="updating === order._id" @click="openConfirmModal(order, 'delivered')">
                   <span v-if="updating === order._id" class="spinner"></span>
                   <span v-else>Giao thành công</span>
                 </button>
@@ -222,6 +222,31 @@
           <span class="nav-icon">⎋</span>
           <span class="nav-lbl">Đăng xuất</span>
         </button>
+      </div>
+
+      <!-- ══ MODAL XÁC NHẬN ĐỔI TRẠNG THÁI ══ -->
+      <div v-if="showConfirmModal" class="confirm-modal-overlay" @click.self="closeConfirmModal">
+        <div class="confirm-modal-box">
+          <div class="confirm-modal-icon" :class="`icon-${confirmTargetStatus}`">
+            {{ confirmTargetStatus === 'shipping' ? '🛵' : '✅' }}
+          </div>
+          <h3 class="confirm-modal-title">{{ confirmModalText.title }}</h3>
+          <p class="confirm-modal-sub" v-if="confirmTargetOrder">
+            Đơn #{{ confirmTargetOrder._id.slice(-6).toUpperCase() }} — {{ confirmModalText.desc }}
+          </p>
+
+          <div class="confirm-modal-actions">
+            <button class="btn-confirm-cancel" @click="closeConfirmModal">Hủy</button>
+            <button
+              class="btn-confirm-ok" :class="`ok-${confirmTargetStatus}`"
+              :disabled="updating"
+              @click="confirmChangeStatus"
+            >
+              <span v-if="updating" class="spinner"></span>
+              <span v-else>Xác nhận</span>
+            </button>
+          </div>
+        </div>
       </div>
 
       <!-- ══ MODAL LÝ DO THẤT BẠI ══ -->
@@ -410,6 +435,36 @@ const changeStatus = async (orderId, newStatus) => {
   } finally {
     updating.value = null
   }
+}
+
+// ── Xác nhận đổi trạng thái (tránh bấm nhầm) ───────────
+const showConfirmModal    = ref(false)
+const confirmTargetOrder  = ref(null)
+const confirmTargetStatus = ref("")
+
+const confirmTexts = {
+  shipping:  { title: "Bắt đầu giao hàng?",   desc: "Đơn sẽ chuyển sang trạng thái Đang giao." },
+  delivered: { title: "Xác nhận giao thành công?", desc: "Đơn sẽ chờ admin xác nhận hoàn tất." },
+}
+const confirmModalText = computed(() => confirmTexts[confirmTargetStatus.value] || { title: "", desc: "" })
+
+const openConfirmModal = (order, newStatus) => {
+  confirmTargetOrder.value = order
+  confirmTargetStatus.value = newStatus
+  showConfirmModal.value = true
+}
+const closeConfirmModal = () => {
+  showConfirmModal.value = false
+  confirmTargetOrder.value = null
+  confirmTargetStatus.value = ""
+}
+const confirmChangeStatus = async () => {
+  if (!confirmTargetOrder.value || !confirmTargetStatus.value) return
+  const orderId = confirmTargetOrder.value._id
+  const newStatus = confirmTargetStatus.value
+  showConfirmModal.value = false
+  await changeStatus(orderId, newStatus)
+  closeConfirmModal()
 }
 
 // ── Báo giao thất bại ──────────────────────────────────
@@ -742,6 +797,46 @@ onMounted(async () => {
 .nav-lbl { font-size: .48rem; font-weight: 700; color: #94a3b8; letter-spacing: .02em; }
 .nav-btn.active .nav-lbl { color: #4f46e5; }
 .nav-btn.active .nav-icon { filter: drop-shadow(0 1px 3px rgba(79,70,229,.4)); }
+
+/* ══ CONFIRM STATUS MODAL ══════════════════════════════ */
+.confirm-modal-overlay {
+  position: absolute; inset: 0; z-index: 100;
+  background: rgba(15,18,37,.6); backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center; padding: 16px;
+}
+.confirm-modal-box {
+  background: #fff; border-radius: 14px; width: 100%;
+  padding: 16px 14px 14px; text-align: center;
+  box-shadow: 0 14px 30px rgba(0,0,0,.35);
+}
+.confirm-modal-icon {
+  width: 40px; height: 40px; margin: 0 auto 8px;
+  border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  font-size: 1.1rem;
+}
+.icon-shipping  { background: rgba(139,92,246,.15); }
+.icon-delivered { background: rgba(16,185,129,.15); }
+.confirm-modal-title { font-size: .82rem; font-weight: 900; color: #0f172a; margin: 0 0 4px; }
+.confirm-modal-sub { font-size: .62rem; color: #94a3b8; margin: 0 0 14px; line-height: 1.4; }
+.confirm-modal-actions { display: flex; gap: 8px; }
+.btn-confirm-cancel {
+  flex: 1; padding: 8px; border-radius: 9px; font-size: .66rem; font-weight: 700;
+  background: #f1f5f9; border: 1px solid #e2e8f0; color: #64748b; cursor: pointer;
+}
+.btn-confirm-ok {
+  flex: 1; padding: 8px; border-radius: 9px; font-size: .66rem; font-weight: 800;
+  color: #fff; border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 5px;
+}
+.ok-shipping {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  box-shadow: 0 3px 8px rgba(245,158,11,.35);
+}
+.ok-delivered {
+  background: linear-gradient(135deg, #10b981, #059669);
+  box-shadow: 0 3px 8px rgba(16,185,129,.35);
+}
+.btn-confirm-ok:disabled { opacity: .6; cursor: not-allowed; }
 
 /* ══ FAIL REASON MODAL ══════════════════════════════ */
 .fail-modal-overlay {
