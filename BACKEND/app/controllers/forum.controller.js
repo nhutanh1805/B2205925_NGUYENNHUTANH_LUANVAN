@@ -1,6 +1,7 @@
 const ForumService = require("../services/forum.service");
 const MongoDB = require("../utils/mongodb.util");
 const ApiError = require("../api-error");
+const { getIO } = require("../utils/socket.util");
 
 exports.getMessages = async (req, res, next) => {
   const { since } = req.query;
@@ -28,10 +29,14 @@ exports.createMessage = async (req, res, next) => {
       userName: userName || "Ẩn danh",
       content: content.trim(),
     });
+
+    // Bắn realtime tới tất cả client đang kết nối
+    getIO().emit("forum:new-message", message);
+
     return res.status(201).json({ message });
   } catch (error) {
     if (error.isBadWord) {
-      return next(new ApiError(400, error.message)); // lỗi 400 riêng cho từ cấm
+      return next(new ApiError(400, error.message));
     }
     return next(new ApiError(500, "Lỗi đăng tin nhắn"));
   }

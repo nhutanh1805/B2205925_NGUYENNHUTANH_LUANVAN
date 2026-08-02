@@ -67,6 +67,7 @@
 
 <script setup>
 import { ref, onMounted, onBeforeUnmount, nextTick } from "vue";
+import { io } from "socket.io-client";
 import { ForumAPI } from "@/services/forum.service";
 
 const user     = JSON.parse(localStorage.getItem("user") || "{}");
@@ -80,34 +81,19 @@ const sending    = ref(false);
 const sendError  = ref(null);
 const chatBox    = ref(null);
 
-let lastFetchTime = null;
-let pollTimer = null;
+// Đổi URL cho đúng backend của bạn (nên đưa vào biến môi trường VITE_API_BASE_URL)
+const socket = io("http://localhost:8080");
 
 async function fetchInitial() {
   loading.value = true;
   try {
     const { data } = await ForumAPI.getMessages();
     messages.value = data.messages;
-    lastFetchTime = new Date().toISOString();
     scrollToBottom();
   } catch (e) {
     // im lặng, giữ trạng thái cũ
   } finally {
     loading.value = false;
-  }
-}
-
-async function fetchNewMessages() {
-  if (!lastFetchTime) return;
-  try {
-    const { data } = await ForumAPI.getMessagesSince(lastFetchTime);
-    if (data.messages.length > 0) {
-      messages.value.push(...data.messages);
-      lastFetchTime = new Date().toISOString();
-      scrollToBottom();
-    }
-  } catch (e) {
-    // bỏ qua lỗi polling
   }
 }
 
@@ -117,11 +103,11 @@ async function handleSend() {
   sending.value   = true;
   sendError.value = null;
   try {
-    const { data } = await ForumAPI.createMessage(userId, userName, content);
-    messages.value.push(data.message);
+    await ForumAPI.createMessage(userId, userName, content);
+    // Không push thủ công vào messages ở đây nữa —
+    // tin nhắn sẽ tới qua socket "forum:new-message" (kể cả của chính mình),
+    // tránh bị trùng lặp.
     newMessage.value = "";
-    lastFetchTime = new Date().toISOString();
-    scrollToBottom();
   } catch (e) {
     sendError.value = e?.response?.data?.message || "Đăng tin nhắn thất bại";
   } finally {
@@ -143,11 +129,22 @@ function formatTime(iso) {
   return new Date(iso).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
 }
 
+function handleNewMessage(message) {
+  // tránh trùng nếu socket echo lại đúng tin vừa insert 2 lần (hiếm nhưng an toàn)
+  if (messages.value.some((m) => m._id === message._id)) return;
+  messages.value.push(message);
+  scrollToBottom();
+}
+
 onMounted(() => {
   fetchInitial();
-  pollTimer = setInterval(fetchNewMessages, 5000);
+  socket.on("forum:new-message", handleNewMessage);
 });
-onBeforeUnmount(() => { if (pollTimer) clearInterval(pollTimer); });
+
+onBeforeUnmount(() => {
+  socket.off("forum:new-message", handleNewMessage);
+  socket.disconnect();
+});
 </script>
 
 <style scoped>
