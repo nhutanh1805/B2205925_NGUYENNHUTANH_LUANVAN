@@ -82,7 +82,7 @@ const sendError  = ref(null);
 const chatBox    = ref(null);
 
 // Đổi URL cho đúng backend của bạn (nên đưa vào biến môi trường VITE_API_BASE_URL)
-const socket = io("http://localhost:8080");
+const socket = io("http://localhost:3000");
 
 async function fetchInitial() {
   loading.value = true;

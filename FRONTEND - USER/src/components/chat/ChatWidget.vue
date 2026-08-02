@@ -143,6 +143,7 @@
 
 <script setup>
 import { ref, onMounted, onBeforeUnmount, nextTick } from "vue";
+import { io } from "socket.io-client";
 import { ChatAPI } from "@/services/chat.service";
 import { ForumAPI } from "@/services/forum.service";
 
@@ -151,41 +152,37 @@ const userId    = user?._id ?? null;
 const userName  = user?.name ?? "Khách";
 
 const isOpen     = ref(false);
-const activeTab  = ref("shop"); // "shop" | "forum"
+const activeTab  = ref("shop");
 const unreadHint = ref(false);
 
-// ══ CHAT VỚI SHOP ══
+const socket = userId ? io("http://localhost:3000") : null;
+
 const shopMessages  = ref([]);
 const loadingShop    = ref(false);
 const shopMessage    = ref("");
 const sendingShop     = ref(false);
 const shopSendError   = ref(null);
 const shopChatBox     = ref(null);
-let shopPollTimer = null;
 
-// ══ DIỄN ĐÀN ══
 const forumMessages     = ref([]);
 const loadingForum       = ref(false);
 const forumMessage       = ref("");
 const sendingForum        = ref(false);
 const forumSendError      = ref(null);
 const forumChatBox        = ref(null);
-let forumLastFetchTime = null;
-let forumPollTimer = null;
 
-// ══ CHUNG ══
 function toggleOpen() {
   isOpen.value = !isOpen.value;
   if (isOpen.value) {
     unreadHint.value = false;
-    if (activeTab.value === "shop") fetchShopMessages(true);
-    else fetchForumInitial();
+    if (activeTab.value === "shop" && shopMessages.value.length === 0) fetchShopMessages();
+    if (activeTab.value === "forum" && forumMessages.value.length === 0) fetchForumInitial();
   }
 }
 
 function switchTab(tab) {
   activeTab.value = tab;
-  if (tab === "shop" && shopMessages.value.length === 0) fetchShopMessages(true);
+  if (tab === "shop" && shopMessages.value.length === 0) fetchShopMessages();
   if (tab === "forum" && forumMessages.value.length === 0) fetchForumInitial();
   scrollToBottom(tab === "shop" ? shopChatBox : forumChatBox);
 }
@@ -204,18 +201,15 @@ function initials(name) {
   return name.trim().split(" ").slice(-2).map((w) => w[0]).join("").toUpperCase();
 }
 
-// ══ LOGIC CHAT SHOP ══
-async function fetchShopMessages(showLoading = false) {
+async function fetchShopMessages() {
   if (!userId) return;
-  if (showLoading) loadingShop.value = true;
+  loadingShop.value = true;
   try {
     const { data } = await ChatAPI.getMyMessages(userId);
-    const oldCount = shopMessages.value.length;
     shopMessages.value = data.messages;
-    if (!isOpen.value && data.messages.length > oldCount) unreadHint.value = true;
     if (isOpen.value && activeTab.value === "shop") scrollToBottom(shopChatBox);
   } catch (e) {
-    // im lặng bỏ qua lỗi polling
+    // im lặng
   } finally {
     loadingShop.value = false;
   }
@@ -227,10 +221,8 @@ async function handleSendShop() {
   sendingShop.value  = true;
   shopSendError.value = null;
   try {
-    const { data } = await ChatAPI.sendMessage(userId, userName, content);
-    shopMessages.value.push(data.message);
+    await ChatAPI.sendMessage(userId, userName, content);
     shopMessage.value = "";
-    scrollToBottom(shopChatBox);
   } catch (e) {
     shopSendError.value = e?.response?.data?.message || "Gửi tin nhắn thất bại";
   } finally {
@@ -238,32 +230,26 @@ async function handleSendShop() {
   }
 }
 
-// ══ LOGIC DIỄN ĐÀN ══
+function handleShopNewMessage(message) {
+  if (shopMessages.value.some((m) => m._id === message._id)) return;
+  shopMessages.value.push(message);
+  if (isOpen.value && activeTab.value === "shop") {
+    scrollToBottom(shopChatBox);
+  } else if (message.role === "admin") {
+    unreadHint.value = true;
+  }
+}
+
 async function fetchForumInitial() {
   loadingForum.value = true;
   try {
     const { data } = await ForumAPI.getMessages();
     forumMessages.value = data.messages;
-    forumLastFetchTime = new Date().toISOString();
     scrollToBottom(forumChatBox);
   } catch (e) {
-    // im lặng bỏ qua lỗi
+    // im lặng
   } finally {
     loadingForum.value = false;
-  }
-}
-
-async function fetchForumNew() {
-  if (!forumLastFetchTime) return;
-  try {
-    const { data } = await ForumAPI.getMessagesSince(forumLastFetchTime);
-    if (data.messages.length > 0) {
-      forumMessages.value.push(...data.messages);
-      forumLastFetchTime = new Date().toISOString();
-      if (isOpen.value && activeTab.value === "forum") scrollToBottom(forumChatBox);
-    }
-  } catch (e) {
-    // im lặng bỏ qua lỗi polling
   }
 }
 
@@ -273,11 +259,8 @@ async function handleSendForum() {
   sendingForum.value  = true;
   forumSendError.value = null;
   try {
-    const { data } = await ForumAPI.createMessage(userId, userName, content);
-    forumMessages.value.push(data.message);
+    await ForumAPI.createMessage(userId, userName, content);
     forumMessage.value = "";
-    forumLastFetchTime = new Date().toISOString();
-    scrollToBottom(forumChatBox);
   } catch (e) {
     forumSendError.value = e?.response?.data?.message || "Đăng tin nhắn thất bại";
   } finally {
@@ -285,16 +268,27 @@ async function handleSendForum() {
   }
 }
 
+function handleForumNewMessage(message) {
+  if (forumMessages.value.some((m) => m._id === message._id)) return;
+  forumMessages.value.push(message);
+  if (isOpen.value && activeTab.value === "forum") scrollToBottom(forumChatBox);
+}
+
 onMounted(() => {
-  if (!userId) return;
+  if (!userId || !socket) return;
+
   fetchShopMessages();
-  shopPollTimer  = setInterval(() => fetchShopMessages(false), 5000);
-  forumPollTimer = setInterval(fetchForumNew, 5000);
+
+  socket.emit("chat:join-user", userId);
+  socket.on("chat:new-message", handleShopNewMessage);
+  socket.on("forum:new-message", handleForumNewMessage);
 });
 
 onBeforeUnmount(() => {
-  if (shopPollTimer)  clearInterval(shopPollTimer);
-  if (forumPollTimer) clearInterval(forumPollTimer);
+  if (!socket) return;
+  socket.off("chat:new-message", handleShopNewMessage);
+  socket.off("forum:new-message", handleForumNewMessage);
+  socket.disconnect();
 });
 </script>
 

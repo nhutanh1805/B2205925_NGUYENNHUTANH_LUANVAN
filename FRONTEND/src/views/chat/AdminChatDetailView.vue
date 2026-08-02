@@ -76,6 +76,7 @@
 <script setup>
 import { ref, onMounted, onBeforeUnmount, nextTick } from "vue";
 import { useRoute } from "vue-router";
+import { io } from "socket.io-client";
 import { AdminChatAPI } from "@/services/chat.service";
 
 const route  = useRoute();
@@ -95,7 +96,7 @@ const sending    = ref(false);
 const sendError  = ref(null);
 const chatBox    = ref(null);
 
-let pollTimer = null;
+const socket = io("http://localhost:3000");
 
 async function fetchMessages(showLoading = false) {
   if (showLoading) loading.value = true;
@@ -103,7 +104,6 @@ async function fetchMessages(showLoading = false) {
   try {
     const { data } = await AdminChatAPI.getMessagesByUser(userId);
     messages.value = data.messages;
-    // Tên/email khách lấy từ API (chỉ cập nhật lại nếu có, tránh nháy về "Khách" khi poll lỗi)
     if (data.user) {
       userName.value  = data.user.name  || "Khách";
       userEmail.value = data.user.email || "";
@@ -123,10 +123,8 @@ async function handleSend() {
   sending.value   = true;
   sendError.value = null;
   try {
-    const { data } = await AdminChatAPI.sendMessage(userId, adminId, adminName, content);
-    messages.value.push(data.message);
+    await AdminChatAPI.sendMessage(userId, adminId, adminName, content);
     newMessage.value = "";
-    scrollToBottom();
   } catch (e) {
     sendError.value = e?.response?.data?.message || "Gửi tin nhắn thất bại";
   } finally {
@@ -141,11 +139,22 @@ async function scrollToBottom() {
 
 function formatDate(iso) { return new Date(iso).toLocaleString("vi-VN"); }
 
+function handleNewMessage(message) {
+  if (messages.value.some((m) => m._id === message._id)) return;
+  messages.value.push(message);
+  scrollToBottom();
+}
+
 onMounted(() => {
   fetchMessages(true);
-  pollTimer = setInterval(() => fetchMessages(false), 5000);
+  socket.emit("chat:join-user", userId);
+  socket.on("chat:new-message", handleNewMessage);
 });
-onBeforeUnmount(() => { if (pollTimer) clearInterval(pollTimer); });
+
+onBeforeUnmount(() => {
+  socket.off("chat:new-message", handleNewMessage);
+  socket.disconnect();
+});
 </script>
 
 <style scoped>

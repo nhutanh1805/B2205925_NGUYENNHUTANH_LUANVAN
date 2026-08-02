@@ -1,10 +1,10 @@
 const ChatService = require("../services/chat.service");
 const MongoDB = require("../utils/mongodb.util");
 const ApiError = require("../api-error");
+const { getIO } = require("../utils/socket.util");
 
 // ─── KHÁCH HÀNG ─────────────────────────────────────────────
 
-// Lấy tin nhắn của chính mình
 exports.getMyMessages = async (req, res, next) => {
   const { userId } = req.body;
   if (!userId) return next(new ApiError(400, "Thiếu userId"));
@@ -18,7 +18,6 @@ exports.getMyMessages = async (req, res, next) => {
   }
 };
 
-// Khách gửi tin nhắn
 exports.sendMessage = async (req, res, next) => {
   const { userId, senderName, content } = req.body;
   if (!userId)  return next(new ApiError(400, "Thiếu userId"));
@@ -33,6 +32,11 @@ exports.sendMessage = async (req, res, next) => {
       role:       "user",
       content,
     });
+
+    const io = getIO();
+    io.to(`user:${userId}`).emit("chat:new-message", message);
+    io.to("admins").emit("chat:conversation-update", { userId });
+
     return res.status(201).json({ message });
   } catch (error) {
     if (error.isBadWord) {
@@ -44,7 +48,6 @@ exports.sendMessage = async (req, res, next) => {
 
 // ─── ADMIN ──────────────────────────────────────────────────
 
-// Danh sách hội thoại
 exports.getConversations = async (req, res, next) => {
   try {
     const service = new ChatService(MongoDB.client);
@@ -55,7 +58,6 @@ exports.getConversations = async (req, res, next) => {
   }
 };
 
-// Admin xem tin nhắn của 1 khách
 exports.getMessagesByUser = async (req, res, next) => {
   const { userId } = req.params;
   try {
@@ -89,6 +91,11 @@ exports.adminSendMessage = async (req, res, next) => {
       role:       "admin",
       content,
     });
+
+    const io = getIO();
+    io.to(`user:${userId}`).emit("chat:new-message", message);
+    io.to("admins").emit("chat:conversation-update", { userId });
+
     return res.status(201).json({ message });
   } catch (error) {
     if (error.isBadWord) {

@@ -63,6 +63,7 @@
 <script setup>
 import { ref, onMounted, onBeforeUnmount } from "vue";
 import { useRouter } from "vue-router";
+import { io } from "socket.io-client";
 import { AdminChatAPI } from "@/services/chat.service";
 
 const router = useRouter();
@@ -71,7 +72,7 @@ const conversations = ref([]);
 const loading = ref(false);
 const error = ref(null);
 
-let pollTimer = null;
+const socket = io("http://localhost:3000");
 
 async function fetchConversations(showLoading = false) {
   if (showLoading) loading.value = true;
@@ -105,11 +106,20 @@ function formatTime(iso) {
     : d.toLocaleDateString("vi-VN");
 }
 
+function handleConversationUpdate() {
+  fetchConversations(false);
+}
+
 onMounted(() => {
   fetchConversations(true);
-  pollTimer = setInterval(() => fetchConversations(false), 8000);
+  socket.emit("chat:join-admin");
+  socket.on("chat:conversation-update", handleConversationUpdate);
 });
-onBeforeUnmount(() => { if (pollTimer) clearInterval(pollTimer); });
+
+onBeforeUnmount(() => {
+  socket.off("chat:conversation-update", handleConversationUpdate);
+  socket.disconnect();
+});
 </script>
 
 <style scoped>
