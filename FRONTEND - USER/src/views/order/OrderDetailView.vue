@@ -103,6 +103,12 @@
                 <span class="info-val date">{{ formatDate(order.createdAt) }}</span>
               </div>
 
+              <!-- Dự kiến giao hàng -->
+              <div class="info-item" v-if="showEstimatedDelivery">
+                <span class="info-lbl">Dự kiến giao</span>
+                <span class="info-val estimate">{{ formatDate(estimatedDeliveryDate) }}</span>
+              </div>
+
               <!-- Phương thức thanh toán -->
               <div class="info-item">
                 <span class="info-lbl">Thanh toán</span>
@@ -283,6 +289,24 @@ const isStepActive = (key) => {
   const step = orderArr.indexOf(key)
   return step <= cur
 }
+
+// ══ Dự kiến giao hàng ══
+// Số ngày dự kiến giao theo phương thức thanh toán.
+// Nếu backend có sẵn field order.estimatedDeliveryDate, thay computed này bằng:
+// computed(() => order.value?.estimatedDeliveryDate)
+const estimatedDeliveryDate = computed(() => {
+  if (!order.value?.createdAt) return null
+  const days = order.value.paymentMethod === "VNPAY" ? 2 : 3
+  const d = new Date(order.value.createdAt)
+  d.setDate(d.getDate() + days)
+  return d
+})
+
+// Chỉ hiện khi đơn còn đang xử lý (chưa giao xong / chưa hủy / chưa thất bại)
+const showEstimatedDelivery = computed(() => {
+  const hiddenStatuses = ["delivered", "completed", "cancelled", "failed"]
+  return order.value && !hiddenStatuses.includes(order.value.status)
+})
 
 const formatPrice = v => new Intl.NumberFormat("vi-VN").format(v)
 const formatDate = d =>
@@ -490,6 +514,7 @@ onMounted(loadOrder)
 }
 .info-val.mono { font-family: monospace; color: #2563eb; font-size: 1rem; }
 .info-val.date { color: #64748b; }
+.info-val.estimate { color: #7c3aed; font-weight: 700; }
 .info-val.note {
   background: #fffbeb; border: 1.5px solid #fde68a;
   border-radius: 8px; padding: 8px 10px;
