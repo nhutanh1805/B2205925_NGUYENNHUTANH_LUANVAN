@@ -106,7 +106,7 @@
               <!-- Dự kiến giao hàng -->
               <div class="info-item" v-if="showEstimatedDelivery">
                 <span class="info-lbl">Dự kiến giao</span>
-                <span class="info-val estimate">{{ formatDate(estimatedDeliveryDate) }}</span>
+                <span class="info-val estimate">{{ formatDateOnly(estimatedDeliveryDate) }}</span>
               </div>
 
               <!-- Phương thức thanh toán -->
@@ -175,6 +175,15 @@
             <div v-if="order.status === 'cancelled'" class="cancelled-notice">
               <span>❌</span>
               <span>Đơn hàng này đã bị hủy</span>
+            </div>
+
+            <!-- Late delivery notice -->
+            <div v-if="isLate" class="late-notice">
+              <span>🙏</span>
+              <span>
+                Đơn hàng đang giao trễ hơn dự kiến, chúng tôi xin lỗi vì sự bất tiện này.
+                <b>{{ order.lateCompensated ? "Bạn đã được cộng 50 điểm bù đắp vào tài khoản." : "Chúng tôi sẽ sớm gửi điểm bù đắp đến bạn." }}</b>
+              </span>
             </div>
           </div>
 
@@ -290,11 +299,8 @@ const isStepActive = (key) => {
   return step <= cur
 }
 
-// ══ Dự kiến giao hàng ══
-// Số ngày dự kiến giao theo phương thức thanh toán.
-// Nếu backend có sẵn field order.estimatedDeliveryDate, thay computed này bằng:
-// computed(() => order.value?.estimatedDeliveryDate)
 const estimatedDeliveryDate = computed(() => {
+  if (order.value?.estimatedDeliveryDate) return new Date(order.value.estimatedDeliveryDate)
   if (!order.value?.createdAt) return null
   const days = order.value.paymentMethod === "VNPAY" ? 2 : 3
   const d = new Date(order.value.createdAt)
@@ -308,11 +314,21 @@ const showEstimatedDelivery = computed(() => {
   return order.value && !hiddenStatuses.includes(order.value.status)
 })
 
+// Đơn được coi là trễ hẹn nếu: đang xử lý + đã qua ngày dự kiến giao
+const isLate = computed(() => {
+  if (!showEstimatedDelivery.value || !estimatedDeliveryDate.value) return false
+  return new Date() > estimatedDeliveryDate.value
+})
+
 const formatPrice = v => new Intl.NumberFormat("vi-VN").format(v)
 const formatDate = d =>
   new Date(d).toLocaleString("vi-VN", {
     day: "2-digit", month: "2-digit", year: "numeric",
     hour: "2-digit", minute: "2-digit",
+  })
+const formatDateOnly = d =>
+  new Date(d).toLocaleDateString("vi-VN", {
+    day: "2-digit", month: "2-digit", year: "numeric",
   })
 
 const getStatusLabel = (s) => ({
@@ -593,6 +609,15 @@ onMounted(loadOrder)
   background: #fef2f2; border: 1.5px solid #fecaca;
   color: #b91c1c; font-weight: 700; font-size: .85rem;
 }
+.late-notice {
+  margin: 0 24px 20px;
+  display: flex; align-items: flex-start; gap: 8px;
+  padding: 12px 16px; border-radius: 12px;
+  background: #fff7ed; border: 1.5px solid #fed7aa;
+  color: #9a3412; font-weight: 600; font-size: .85rem;
+  line-height: 1.5;
+}
+.late-notice b { color: #c2410c; }
 
 /* ══ PRODUCTS CARD ══ */
 .product-list { display: flex; flex-direction: column; }

@@ -195,12 +195,18 @@ class RecommendationService {
       .project({ "items.productId": 1, "items.quantity": 1 })
       .toArray();
 
+    // freq[id] = SỐ ĐƠN HÀNG KHÁC NHAU có xuất hiện sản phẩm này cùng productId.
+    // Trước đây cộng theo item.quantity nên 1 đơn mua 2 cái bị tính thành "2 đơn hàng" — SAI.
+    // Giờ mỗi đơn chỉ được tính tối đa 1 lần cho mỗi sản phẩm, bất kể mua bao nhiêu cái trong đơn đó.
     const freq = {};
     for (const order of orders) {
+      const seenInThisOrder = new Set();
       for (const item of order.items || []) {
         const id = item.productId?.toString();
         if (!id || id === productId) continue;
-        freq[id] = (freq[id] || 0) + (item.quantity || 1);
+        if (seenInThisOrder.has(id)) continue;
+        seenInThisOrder.add(id);
+        freq[id] = (freq[id] || 0) + 1;
       }
     }
 
