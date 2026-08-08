@@ -134,9 +134,9 @@ class OrderService {
 
     const isCOD = order.paymentMethod === "COD";
 
-    // Admin được hủy đơn ở MỌI trạng thái (trừ "cancelled"/"completed" đã bị
-    // chặn ở trên vì đó là trạng thái cuối). Nên "cancelled" được thêm vào
-    // cuối tất cả các nhánh transition dưới đây.
+    // Admin được hủy đơn ở MỌI trạng thái, TRỪ "cancelled"/"completed" (chặn ở
+    // trên vì đó là trạng thái cuối) và "delivered" (hàng đã giao tới khách,
+    // không hủy được nữa — chỉ còn chuyển sang "completed").
     const allowedTransitions = isCOD
       ? {
           pending:   ["confirmed", "preparing", "cancelled"],
@@ -144,7 +144,7 @@ class OrderService {
           preparing: ["shipping",  "cancelled"],
           shipping:  ["delivered", "failed", "cancelled"],
           failed:    ["preparing", "cancelled"],
-          delivered: ["completed", "cancelled"],
+          delivered: ["completed"], // Đã giao rồi thì không hủy được nữa, chỉ chuyển sang Hoàn thành
         }
       : {
           pending:   ["paid", "cancelled"],
@@ -152,7 +152,7 @@ class OrderService {
           preparing: ["shipping",  "cancelled"],
           shipping:  ["delivered", "failed", "cancelled"],
           failed:    ["preparing", "cancelled"],
-          delivered: ["completed", "cancelled"],
+          delivered: ["completed"], // Đã giao rồi thì không hủy được nữa, chỉ chuyển sang Hoàn thành
         };
 
     if (!allowedTransitions[currentStatus]?.includes(newStatus)) {

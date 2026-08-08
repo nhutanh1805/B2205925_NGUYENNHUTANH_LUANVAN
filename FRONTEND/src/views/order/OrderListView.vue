@@ -172,9 +172,9 @@
                {{ order.shipperId ? 'Đổi shipper' : 'Gán shipper' }}
             </button>
 
-            <!-- Admin được hủy đơn ở MỌI trạng thái, chỉ khóa khi đã "cancelled"/"completed" -->
+            <!-- Admin được hủy đơn ở mọi trạng thái, TRỪ "cancelled"/"completed"/"delivered" -->
             <button
-              v-if="!isStatusLocked(order.status)"
+              v-if="canCancelOrder(order.status)"
               @click="cancelOrder(order._id)"
               class="btn-cancel"
             >
@@ -366,15 +366,15 @@ const formatDate  = (d) =>
     hour: "2-digit", minute: "2-digit",
   })
 
-// Admin được hủy đơn ở MỌI trạng thái, nên "cancelled" được thêm vào cuối
-// tất cả các nhánh dưới đây (khớp với allowedTransitions trong order.service.js)
+// Admin được hủy đơn ở mọi trạng thái TRỪ "delivered" (hàng đã tới khách),
+// khớp với allowedTransitions trong order.service.js
 const TRANSITIONS_COD = {
   pending:   ["confirmed", "preparing", "cancelled"],
   confirmed: ["preparing", "cancelled"],
   preparing: ["shipping",  "cancelled"],
   shipping:  ["delivered", "failed", "cancelled"],
   failed:    ["preparing", "cancelled"],
-  delivered: ["completed", "cancelled"],
+  delivered: ["completed"], // Đã giao rồi thì không hủy được nữa
 }
 const TRANSITIONS_VNPAY = {
   pending:   ["paid", "cancelled"],
@@ -382,9 +382,12 @@ const TRANSITIONS_VNPAY = {
   preparing: ["shipping",  "cancelled"],
   shipping:  ["delivered", "failed", "cancelled"],
   failed:    ["preparing", "cancelled"],
-  delivered: ["completed", "cancelled"],
+  delivered: ["completed"], // Đã giao rồi thì không hủy được nữa
 }
 const isStatusLocked = (s) => s === 'cancelled' || s === 'completed'
+// Riêng "delivered" không khóa cả dropdown (vẫn cần chuyển sang "completed"),
+// chỉ ẩn nút Hủy — nên tách hàm riêng cho nút Hủy
+const canCancelOrder = (s) => !isStatusLocked(s) && s !== 'delivered'
 const canTransitionTo = (order, newStatus) => {
   const map = order.paymentMethod === "VNPAY" ? TRANSITIONS_VNPAY : TRANSITIONS_COD
   return map[order.status]?.includes(newStatus) ?? false
