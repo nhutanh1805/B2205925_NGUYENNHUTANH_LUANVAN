@@ -158,13 +158,18 @@
 <option value="cancelled" :disabled="isStatusLocked(order.status)">Đã hủy</option>
             </select>
 
-            <!-- Nút gán shipper — chỉ hiện khi confirmed và paid-->
+            <!--
+              Nút gán/đổi shipper:
+              - preparing: chỉ hiện khi CHƯA có shipper (gán lần đầu)
+              - failed: LUÔN hiện dù đã có shipper (shipper cũ giao thất bại,
+                admin có thể giữ nguyên hoặc đổi sang shipper khác)
+            -->
             <button
-              v-if="['preparing','failed'].includes(order.status)"
+              v-if="order.status === 'failed' || (order.status === 'preparing' && !order.shipperId)"
               @click="openAssignModal(order)"
               class="btn-assign"
             >
-              🛵 {{ order.shipperId ? 'Đổi shipper' : 'Gán shipper' }}
+               {{ order.shipperId ? 'Đổi shipper' : 'Gán shipper' }}
             </button>
 
             <!-- Admin được hủy đơn ở MỌI trạng thái, chỉ khóa khi đã "cancelled"/"completed" -->
