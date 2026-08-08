@@ -1,14 +1,16 @@
 const { ObjectId } = require("mongodb");
 const ProductService    = require("./product.service");
 const StockBatchService = require("./stockBatch.service");
+const DeliveryService   = require("./delivery.service");
 
 class OrderService {
   constructor(client) {
-    this.client         = client;
-    this.Order          = client.db().collection("orders");
-    this.User           = client.db().collection("users");
-    this.productService = new ProductService(client);
-    this.batchService   = new StockBatchService(client);
+    this.client          = client;
+    this.Order           = client.db().collection("orders");
+    this.User            = client.db().collection("users");
+    this.productService  = new ProductService(client);
+    this.batchService     = new StockBatchService(client);
+    this.deliveryService  = new DeliveryService(client);
   }
 
   // Trừ batch FIFO + trừ stock product
@@ -131,22 +133,26 @@ class OrderService {
     }
 
     const isCOD = order.paymentMethod === "COD";
-const allowedTransitions = isCOD
+
+    // Admin được hủy đơn ở MỌI trạng thái (trừ "cancelled"/"completed" đã bị
+    // chặn ở trên vì đó là trạng thái cuối). Nên "cancelled" được thêm vào
+    // cuối tất cả các nhánh transition dưới đây.
+    const allowedTransitions = isCOD
       ? {
           pending:   ["confirmed", "preparing", "cancelled"],
           confirmed: ["preparing", "cancelled"],
           preparing: ["shipping",  "cancelled"],
-          shipping:  ["delivered", "failed"],
+          shipping:  ["delivered", "failed", "cancelled"],
           failed:    ["preparing", "cancelled"],
-          delivered: ["completed"],
+          delivered: ["completed", "cancelled"],
         }
       : {
           pending:   ["paid", "cancelled"],
-          paid:      ["preparing"],
-          preparing: ["shipping"],
-          shipping:  ["delivered", "failed"],
+          paid:      ["preparing", "cancelled"],
+          preparing: ["shipping",  "cancelled"],
+          shipping:  ["delivered", "failed", "cancelled"],
           failed:    ["preparing", "cancelled"],
-          delivered: ["completed"],
+          delivered: ["completed", "cancelled"],
         };
 
     if (!allowedTransitions[currentStatus]?.includes(newStatus)) {
@@ -155,6 +161,14 @@ const allowedTransitions = isCOD
 
     if (newStatus === "cancelled" && order.stockDeducted) {
       await this._restoreItems(order.items);
+    }
+
+    // Nếu đơn đã gán shipper (có bản ghi delivery đang "assigned"/"shipping"),
+    // phải đồng bộ sang "cancelled" khi hủy. Không thì bản ghi delivery kẹt lại
+    // ở status cũ, khiến getStatsByShipper() tính nhầm đơn đã hủy vào thống kê
+    // của shipper (vì hàm đó đọc từ collection deliveries, không đọc từ orders).
+    if (newStatus === "cancelled" && order.shipperId) {
+      await this.deliveryService.updateDeliveryStatus(orderId, "cancelled");
     }
 
     const extraFields = newStatus === "paid" ? { paymentStatus: "paid" } : {};

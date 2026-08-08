@@ -167,8 +167,9 @@
               🛵 {{ order.shipperId ? 'Đổi shipper' : 'Gán shipper' }}
             </button>
 
+            <!-- Admin được hủy đơn ở MỌI trạng thái, chỉ khóa khi đã "cancelled"/"completed" -->
             <button
-              v-if="order.paymentMethod === 'COD' ? ['pending','confirmed','preparing','failed'].includes(order.status) : ['pending','failed'].includes(order.status)"
+              v-if="!isStatusLocked(order.status)"
               @click="cancelOrder(order._id)"
               class="btn-cancel"
             >
@@ -360,21 +361,23 @@ const formatDate  = (d) =>
     hour: "2-digit", minute: "2-digit",
   })
 
+// Admin được hủy đơn ở MỌI trạng thái, nên "cancelled" được thêm vào cuối
+// tất cả các nhánh dưới đây (khớp với allowedTransitions trong order.service.js)
 const TRANSITIONS_COD = {
   pending:   ["confirmed", "preparing", "cancelled"],
   confirmed: ["preparing", "cancelled"],
   preparing: ["shipping",  "cancelled"],
-  shipping:  ["delivered", "failed"],
+  shipping:  ["delivered", "failed", "cancelled"],
   failed:    ["preparing", "cancelled"],
-  delivered: ["completed"],
+  delivered: ["completed", "cancelled"],
 }
 const TRANSITIONS_VNPAY = {
   pending:   ["paid", "cancelled"],
-  paid:      ["preparing"],
-  preparing: ["shipping"],
-  shipping:  ["delivered", "failed"],
+  paid:      ["preparing", "cancelled"],
+  preparing: ["shipping",  "cancelled"],
+  shipping:  ["delivered", "failed", "cancelled"],
   failed:    ["preparing", "cancelled"],
-  delivered: ["completed"],
+  delivered: ["completed", "cancelled"],
 }
 const isStatusLocked = (s) => s === 'cancelled' || s === 'completed'
 const canTransitionTo = (order, newStatus) => {

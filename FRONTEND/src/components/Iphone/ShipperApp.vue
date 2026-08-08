@@ -203,6 +203,9 @@
               <template v-else-if="order.status === 'completed'">
                 <div class="done-label">Đã hoàn thành</div>
               </template>
+              <template v-else-if="order.status === 'cancelled'">
+                <div class="cancel-label">Đơn đã bị Admin hủy. Vui lòng đem đơn về kho!!!</div>
+              </template>
             </div>
           </div>
         </template>
@@ -369,6 +372,7 @@ const tabs = [
   { label: "Thất bại",   value: "failed"    },
   { label: "Đã giao",    value: "delivered" },
   { label: "Hoàn thành", value: "completed" },
+  { label: "Đã hủy",     value: "cancelled" },
 ]
 
 const statusLabel = (s) => ({
@@ -379,6 +383,7 @@ const statusLabel = (s) => ({
   failed:    "Thất bại",
   delivered: "Đã giao",
   completed: "Hoàn thành",
+  cancelled: "Đã hủy",
 }[s] || s)
 
 const formatPrice = (v) => new Intl.NumberFormat("vi-VN").format(v)
@@ -712,6 +717,7 @@ onMounted(async () => {
 .card-delivered { border-left-color: #10b981; }
 .card-completed { border-left-color: #16a34a; }
 .card-failed    { border-left-color: #dc2626; }
+.card-cancelled { border-left-color: #6b7280; }
 
 .card-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 7px; }
 .card-id { font-size: .62rem; font-weight: 900; color: #1e293b; letter-spacing: .02em; }
@@ -723,6 +729,7 @@ onMounted(async () => {
 .chip-preparing { background: #fef3c7; color: #d97706; border: 1px solid #fde68a; }
 .chip-completed { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
 .chip-failed    { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+.chip-cancelled { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
 
 .card-info { display: flex; flex-direction: column; gap: 4px; margin-bottom: 7px; }
 .info-row { display: flex; align-items: flex-start; gap: 5px; }
@@ -769,12 +776,13 @@ onMounted(async () => {
 }
 .btn-fail:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(239,68,68,.45); }
 .action-btn:disabled { opacity: .6; cursor: not-allowed; transform: none; }
-.done-label, .fail-label {
+.done-label, .fail-label, .cancel-label {
   flex: 1; text-align: center; font-size: .58rem; font-weight: 700;
   border-radius: 9px; padding: 6px;
 }
 .done-label { color: #059669; background: #d1fae5; border: 1px solid #6ee7b7; }
 .fail-label { color: #b91c1c; background: #fef2f2; border: 1px solid #fecaca; }
+.cancel-label { color: #475569; background: #f1f5f9; border: 1px solid #cbd5e1; }
 
 .spinner {
   width: 10px; height: 10px;
