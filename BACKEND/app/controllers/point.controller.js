@@ -2,7 +2,6 @@ const PointService = require("../services/point.service");
 const MongoDB = require("../utils/mongodb.util");
 const ApiError = require("../api-error");
 
-// Lấy số điểm hiện tại
 exports.getBalance = async (req, res, next) => {
   const { userId } = req.body;
   if (!userId) return next(new ApiError(400, "Thiếu userId"));
@@ -16,7 +15,6 @@ exports.getBalance = async (req, res, next) => {
   }
 };
 
-// Lấy lịch sử giao dịch điểm
 exports.getHistory = async (req, res, next) => {
   const { userId } = req.body;
   if (!userId) return next(new ApiError(400, "Thiếu userId"));
@@ -30,7 +28,19 @@ exports.getHistory = async (req, res, next) => {
   }
 };
 
-// Tích điểm thủ công (gọi sau khi đơn hàng thành công)
+exports.getBatches = async (req, res, next) => {
+  const { userId } = req.body;
+  if (!userId) return next(new ApiError(400, "Thiếu userId"));
+
+  try {
+    const pointService = new PointService(MongoDB.client);
+    const batches = await pointService.getActiveBatches(userId);
+    return res.json({ batches });
+  } catch (error) {
+    return next(new ApiError(500, "Lỗi lấy danh sách lô điểm"));
+  }
+};
+
 exports.earnFromOrder = async (req, res, next) => {
   const { userId, orderId, orderTotal } = req.body;
   if (!userId || !orderTotal) return next(new ApiError(400, "Thiếu thông tin"));
@@ -45,7 +55,6 @@ exports.earnFromOrder = async (req, res, next) => {
   }
 };
 
-// Dùng điểm
 exports.redeem = async (req, res, next) => {
   const { userId, points, note } = req.body;
   if (!userId || !points) return next(new ApiError(400, "Thiếu thông tin"));

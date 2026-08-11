@@ -1,7 +1,6 @@
 import createApiClient from "./api.service";
 
-const POINT_TO_VND = 100;         // 1 điểm = 100₫
-
+const POINT_TO_VND = 100;
 
 class PointService {
   constructor(baseUrl = "/api/points") {
@@ -24,6 +23,11 @@ class PointService {
     return (await this.api.post("/history", { userId })).data;
   }
 
+  async getBatches() {
+    const userId = this.getUserId();
+    return (await this.api.post("/batches", { userId })).data;
+  }
+
   async earnFromOrder(orderId, orderTotal) {
     const userId = this.getUserId();
     return (await this.api.post("/earn", { userId, orderId, orderTotal })).data;
@@ -34,7 +38,6 @@ class PointService {
     return (await this.api.post("/redeem", { userId, points, note })).data;
   }
 
-  // Tính preview giảm giá từ số điểm nhập
   calcRedeem(pointsRequested, userBalance, orderTotal) {
     const maxByOrder = Math.floor((orderTotal * 0.2) / POINT_TO_VND);
     const affordable = Math.min(pointsRequested, userBalance ?? Infinity);

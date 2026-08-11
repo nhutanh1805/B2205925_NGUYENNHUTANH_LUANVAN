@@ -1,10 +1,8 @@
 const { ObjectId } = require("mongodb");
 
-const POINT_TO_VND = 100;              // 1 điểm = 100₫ (khi dùng để giảm giá)
-const POINT_EXPIRY_DAYS = 15;          // điểm hết hạn sau 15 ngày nếu không dùng
+const POINT_TO_VND = 100;
+const POINT_EXPIRY_DAYS = 15;
 const POINT_EXPIRY_MS = POINT_EXPIRY_DAYS * 24 * 60 * 60 * 1000;
-
-// const POINT_EXPIRY_MS = 60 * 1000; // TEST: hết hạn sau 1 phút, nếu test sẽ xóa 2 dòng trên
 
 class PointService {
   constructor(client) {
@@ -20,7 +18,6 @@ class PointService {
     return result[0]?.total || 0;
   }
 
-  // Lấy lịch sử giao dịch điểm
   async getHistory(userId, limit = 20) {
     return this.Points.find({ userId })
       .sort({ createdAt: -1 })
@@ -28,8 +25,33 @@ class PointService {
       .toArray();
   }
 
-  // Trừ dần điểm theo FIFO từ các giao dịch cộng điểm còn remainingPoints > 0
-  // (điểm cũ nhất, sắp hết hạn nhất sẽ bị tiêu trước)
+  async getActiveBatches(userId) {
+    const now = Date.now();
+
+    const batches = await this.Points.find({
+      userId,
+      remainingPoints: { $gt: 0 },
+    })
+      .sort({ expiresAt: 1 })
+      .toArray();
+
+    return batches.map((b) => {
+      const expiresAt = b.expiresAt || null;
+      const daysLeft = expiresAt
+        ? Math.ceil((new Date(expiresAt).getTime() - now) / (24 * 60 * 60 * 1000))
+        : null;
+
+      return {
+        _id: b._id,
+        points: b.remainingPoints,
+        createdAt: b.createdAt,
+        expiresAt,
+        daysLeft,
+        note: b.note,
+      };
+    });
+  }
+
   async _consumePoints(userId, amount) {
     let remaining = amount;
 
@@ -53,21 +75,16 @@ class PointService {
     await Promise.all(ops);
 
     if (remaining > 0) {
-      // Có thể do dữ liệu cũ (tạo trước khi có remainingPoints) chưa được migrate.
-      // Không chặn giao dịch, chỉ log để biết mà kiểm tra lại.
       console.warn(
         `[Point] User ${userId} thiếu ${remaining} điểm remainingPoints khi trừ FIFO (kiểm tra dữ liệu cũ)`
       );
     }
   }
 
-  // Tích điểm khi đặt hàng thành công
-  // Tỉ lệ: 1.000đ = 1 điểm (tính theo giá gốc, không phải giá sau giảm)
   async earnFromOrder(userId, orderId, orderTotal) {
     const points = Math.floor(orderTotal / 1000);
     if (points <= 0) return null;
 
-    // Chống tích điểm 2 lần cho cùng 1 đơn
     if (orderId) {
       const existed = await this.Points.findOne({
         userId,
@@ -93,12 +110,10 @@ class PointService {
     return transaction;
   }
 
-  // Hoàn điểm khi đơn hàng bị huỷ (hoàn lại điểm ĐÃ TÍCH cho đơn đó)
   async refundFromOrder(userId, orderId, orderTotal) {
     const points = Math.floor(orderTotal / 1000);
     if (points <= 0) return null;
 
-    // Trừ ngược đúng vào giao dịch earn gốc của đơn này (nếu còn đủ điểm chưa dùng)
     if (orderId) {
       const earnTx = await this.Points.findOne({
         userId,
@@ -127,7 +142,6 @@ class PointService {
     return transaction;
   }
 
-  // Dùng điểm để đổi ưu đãi thủ công (không gắn đơn hàng)
   async redeem(userId, points, note = "Đổi điểm") {
     const balance = await this.getBalance(userId);
     if (balance < points) throw new Error("Không đủ điểm");
@@ -147,8 +161,6 @@ class PointService {
     return transaction;
   }
 
-  // Dùng điểm khi thanh toán đơn hàng
-  // Tự động giới hạn MAX_REDEEM_PER_ORDER
   async redeemForOrder(userId, orderId, pointsRequested, orderTotal) {
     const maxByOrder = Math.floor((orderTotal * 0.2) / POINT_TO_VND);
     const capped = Math.min(pointsRequested, maxByOrder);
@@ -172,8 +184,6 @@ class PointService {
     return { transaction, pointsUsed: capped, discount };
   }
 
-  // Hoàn lại điểm đã dùng khi đơn bị huỷ
-  // Tạo thành 1 lô điểm mới với hạn 15 ngày tính từ lúc hoàn (không giữ hạn cũ)
   async refundRedeemedPoints(userId, orderId, points) {
     if (!points || points <= 0) return null;
 

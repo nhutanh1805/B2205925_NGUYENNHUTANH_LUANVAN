@@ -1,7 +1,6 @@
 <template>
   <div class="point-page">
 
-    <!-- HERO -->
     <div class="hero">
       <div class="hero-mesh"></div>
       <div class="hero-orb hero-orb-1"></div>
@@ -29,13 +28,21 @@
             <div class="sk-line w40"></div>
           </div>
         </div>
+
+        <div v-if="!loading && expiringSoon" class="expiry-banner">
+          <span class="expiry-ico">⏰</span>
+          <span class="expiry-text">
+            <strong>{{ expiringSoon.points.toLocaleString("vi-VN") }} điểm</strong>
+            sẽ hết hạn trong
+            <strong>{{ expiringSoon.daysLeft }} ngày</strong>
+            — dùng ngay kẻo mất!
+          </span>
+        </div>
       </div>
     </div>
 
-    <!-- MAIN -->
     <div class="main-panel">
 
-      <!-- HOW IT WORKS -->
       <section class="info-section">
         <h2 class="section-title">Cách tích điểm</h2>
         <div class="info-grid">
@@ -57,7 +64,31 @@
         </div>
       </section>
 
-      <!-- HISTORY -->
+      <section class="batches-section" v-if="!loading && batches.length > 0">
+        <button class="batches-toggle" @click="showBatches = !showBatches">
+          <h2 class="section-title" style="margin-bottom:0">Chi tiết lô điểm còn hiệu lực</h2>
+          <span class="toggle-arrow" :class="{ open: showBatches }">▾</span>
+        </button>
+
+        <div v-if="showBatches" class="batches-list">
+          <div
+            v-for="b in batches"
+            :key="b._id"
+            class="batch-row"
+            :class="{ warn: b.daysLeft !== null && b.daysLeft <= 3 }"
+          >
+            <div class="batch-info">
+              <span class="batch-points">{{ b.points.toLocaleString("vi-VN") }} điểm</span>
+              <span class="batch-note">{{ b.note }}</span>
+            </div>
+            <span class="batch-expiry" v-if="b.daysLeft !== null">
+              Còn {{ b.daysLeft }} ngày
+              <span class="batch-expiry-date">({{ formatDate(b.expiresAt) }})</span>
+            </span>
+          </div>
+        </div>
+      </section>
+
       <section class="history-section">
         <h2 class="section-title">Lịch sử giao dịch</h2>
 
@@ -101,22 +132,35 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue"
+import { ref, computed, onMounted } from "vue"
 import PointService from "@/services/point.service"
+
+const EXPIRY_WARN_DAYS = 3
 
 const balance = ref(0)
 const history = ref([])
+const batches = ref([])
 const loading = ref(true)
+const showBatches = ref(false)
+
+const expiringSoon = computed(() => {
+  const nearest = batches.value[0]
+  if (!nearest || nearest.daysLeft === null) return null
+  if (nearest.daysLeft > EXPIRY_WARN_DAYS) return null
+  return nearest
+})
 
 const load = async () => {
   loading.value = true
   try {
-    const [bal, hist] = await Promise.all([
+    const [bal, hist, batch] = await Promise.all([
       PointService.getBalance(),
       PointService.getHistory(),
+      PointService.getBatches(),
     ])
     balance.value = bal.balance || 0
     history.value = hist.history || []
+    batches.value = batch.batches || []
   } catch (err) {
     console.error(err)
   } finally {
@@ -132,7 +176,6 @@ const ICONS = {
 }
 const txIcon = (tx) => ICONS[tx.type] || "🎟️"
 
-// expire dùng style riêng (xám) để phân biệt với spend (đỏ) dù cả hai đều là điểm âm
 const rowClass = (tx) => {
   if (tx.type === "expire") return "expire"
   return tx.points > 0 ? "earn" : "spend"
@@ -154,7 +197,6 @@ onMounted(load)
   font-family: 'Segoe UI', system-ui, sans-serif;
 }
 
-/* HERO */
 .hero {
   position: relative; overflow: hidden;
   background: #0a0f1e; padding: 64px 32px 80px; text-align: center;
@@ -209,7 +251,6 @@ onMounted(load)
 .balance-num  { display: block; font-size: 2rem; font-weight: 900; color: #fbbf24; line-height: 1; }
 .balance-lbl  { display: block; font-size: .72rem; color: rgba(255,255,255,.45); letter-spacing: .07em; text-transform: uppercase; margin-top: 4px; }
 
-/* SKELETON */
 .balance-skeleton { min-width: 240px; }
 .sk-circle { width: 48px; height: 48px; border-radius: 50%; background: rgba(255,255,255,.1); flex-shrink: 0; animation: shimmer 1.4s infinite; }
 .sk-text { flex: 1; display: flex; flex-direction: column; gap: 8px; }
@@ -217,16 +258,25 @@ onMounted(load)
 .w20 { width: 20%; } .w35 { width: 35%; } .w40 { width: 40%; } .w55 { width: 55%; } .w60 { width: 60%; }
 @keyframes shimmer { 0%,100% { opacity:1; } 50% { opacity:.4; } }
 
-/* MAIN */
+.expiry-banner {
+  display: inline-flex; align-items: center; gap: 10px;
+  margin-top: 16px; padding: 12px 22px;
+  background: rgba(239,68,68,.12); border: 1px solid rgba(248,113,113,.4);
+  border-radius: 999px; backdrop-filter: blur(8px);
+}
+.expiry-ico { font-size: 1.1rem; flex-shrink: 0; }
+.expiry-text { font-size: .82rem; color: #fecaca; }
+.expiry-text strong { color: #fca5a5; font-weight: 800; }
+
 .main-panel {
   max-width: 860px; margin: -24px auto 0;
   padding: 0 24px 60px; position: relative; z-index: 10;
   display: flex; flex-direction: column; gap: 24px;
 }
 
-/* SECTIONS */
 .info-section,
-.history-section {
+.history-section,
+.batches-section {
   background: white; border-radius: 24px; padding: 28px;
   box-shadow: 0 12px 40px rgba(37,99,235,.08);
   border: 1.5px solid #e8edf8;
@@ -236,7 +286,6 @@ onMounted(load)
   font-size: 1.1rem; font-weight: 900; color: #0f172a; margin-bottom: 20px;
 }
 
-/* INFO GRID */
 .info-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
 .info-card {
   text-align: center; padding: 20px 12px;
@@ -247,7 +296,32 @@ onMounted(load)
 .info-card h3 { font-size: .95rem; font-weight: 800; color: #0f172a; margin-bottom: 4px; }
 .info-card p  { font-size: .8rem; color: #64748b; }
 
-/* HISTORY */
+.batches-toggle {
+  width: 100%; display: flex; align-items: center; justify-content: space-between;
+  background: none; border: none; cursor: pointer; padding: 0;
+}
+.toggle-arrow {
+  font-size: 1.1rem; color: #94a3b8; transition: transform .2s ease;
+}
+.toggle-arrow.open { transform: rotate(180deg); }
+
+.batches-list { display: flex; flex-direction: column; margin-top: 16px; }
+.batch-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 12px 14px; border-radius: 12px;
+  border-bottom: 1.5px solid #f0f4ff;
+}
+.batch-row.warn { background: #fef2f2; border-radius: 12px; border-bottom-color: transparent; }
+.batch-row:last-child { border-bottom: none; }
+
+.batch-info { display: flex; flex-direction: column; }
+.batch-points { font-weight: 800; color: #0f172a; font-size: .92rem; }
+.batch-note { font-size: .75rem; color: #94a3b8; margin-top: 2px; }
+
+.batch-expiry { font-size: .82rem; font-weight: 700; color: #16a34a; text-align: right; white-space: nowrap; }
+.batch-row.warn .batch-expiry { color: #e11d48; }
+.batch-expiry-date { display: block; font-size: .7rem; font-weight: 500; color: #94a3b8; }
+
 .skeleton-list { display: flex; flex-direction: column; gap: 12px; }
 .skeleton-row  { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1.5px solid #f0f4ff; }
 .sk-dot        { width: 36px; height: 36px; border-radius: 50%; background: #e8edf8; flex-shrink: 0; animation: shimmer 1.4s infinite; }
@@ -275,7 +349,6 @@ onMounted(load)
 .history-row.expire .tx-points { color: #94a3b8; }
 .history-row.expire .tx-note   { color: #94a3b8; }
 
-/* MOBILE */
 @media (max-width: 640px) {
   .hero { padding: 48px 16px 60px; }
   .main-panel { padding: 0 12px 40px; }
