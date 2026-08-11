@@ -172,21 +172,21 @@ class ChatbotTuvanService {
                 }
 
                 case "get_order_status": {
-                    // Hỗ trợ cả _id đầy đủ và mã rút gọn 6 ký tự (#3F0CC0BD) mà UI hiển thị
-                    const order = await resolveOrder(db, args.orderId);
-                    if (!order) return { error: "Không tìm thấy đơn hàng với mã này" };
-                    if (userId && order.userId !== userId) {
-                        return { error: "Đơn hàng này không thuộc về khách đang chat" };
-                    }
-                    return {
-                        orderId: order._id.toString(),
-                        status: order.status,
-                        totalPrice: order.totalPrice,
-                        paymentMethod: order.paymentMethod,
-                        paymentStatus: order.paymentStatus,
-                        createdAt: order.createdAt,
-                    };
-                }
+    // Hỗ trợ cả _id đầy đủ và mã rút gọn 6 ký tự (#3F0CC0BD) mà UI hiển thị
+    const order = await resolveOrder(db, args.orderId);
+    if (!order) return { error: "Không tìm thấy đơn hàng với mã này" };
+    if (userId && order.userId?.toString() !== userId.toString()) {
+        return { error: "Đơn hàng này không thuộc về khách đang chat" };
+    }
+    return {
+        orderId: order._id.toString(),
+        status: order.status,
+        totalPrice: order.totalPrice,
+        paymentMethod: order.paymentMethod,
+        paymentStatus: order.paymentStatus,
+        createdAt: order.createdAt,
+    };
+}
 
                 case "search_product": {
                     if (!args.query?.trim()) return { error: "Thiếu từ khóa tìm kiếm" };
