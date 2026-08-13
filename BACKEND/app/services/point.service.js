@@ -161,10 +161,17 @@ class PointService {
     return transaction;
   }
 
+  // ─── Dùng điểm giảm giá cho đơn hàng ─────────────────────────────────────
+  // QUY TẮC: điểm chỉ được dùng để giảm TỐI ĐA 20% giá trị đơn hàng
+  // (1 điểm = 100 VNĐ). Nếu số điểm khách yêu cầu (pointsRequested) vượt mức
+  // này, tự động cắt xuống còn đúng mức tối đa (capped) và báo lại qua
+  // wasCapped/maxAllowed để tầng gọi (vd: chatbot) biết mà thông báo khách,
+  // tránh trường hợp khách tưởng đã dùng hết điểm nhưng thực ra bị giới hạn.
   async redeemForOrder(userId, orderId, pointsRequested, orderTotal) {
     const maxByOrder = Math.floor((orderTotal * 0.2) / POINT_TO_VND);
     const capped = Math.min(pointsRequested, maxByOrder);
     const discount = capped * POINT_TO_VND;
+    const wasCapped = pointsRequested > maxByOrder;
 
     const balance = await this.getBalance(userId);
     if (balance < capped) throw new Error("Không đủ điểm");
@@ -181,7 +188,13 @@ class PointService {
     };
 
     await this.Points.insertOne(transaction);
-    return { transaction, pointsUsed: capped, discount };
+    return {
+      transaction,
+      pointsUsed: capped,
+      discount,
+      maxAllowed: maxByOrder,
+      wasCapped,
+    };
   }
 
   async refundRedeemedPoints(userId, orderId, points) {

@@ -272,6 +272,9 @@ class ChatbotTuvanService {
 
                     let pointsUsed = 0;
                     let discount   = 0;
+                    // Ghi chú trả về cho model khi số điểm khách yêu cầu bị giới hạn lại
+                    // do vượt quá mức tối đa 20% giá trị đơn hàng (xem point.service.js)
+                    let pointCapNote = null;
 
                     if (args.pointsToUse > 0) {
                         const redeemResult = await pointService.redeemForOrder(
@@ -282,6 +285,14 @@ class ChatbotTuvanService {
                         );
                         pointsUsed = redeemResult.pointsUsed;
                         discount   = redeemResult.discount;
+
+                        if (redeemResult.wasCapped) {
+                            pointCapNote =
+                                `Khách yêu cầu dùng ${args.pointsToUse} điểm, nhưng điểm chỉ được ` +
+                                `dùng tối đa 20% giá trị đơn hàng nên hệ thống chỉ áp dụng được ` +
+                                `${redeemResult.maxAllowed} điểm (giảm ${redeemResult.discount.toLocaleString()} VNĐ). ` +
+                                `Hãy thông báo rõ điều này cho khách.`;
+                        }
                     }
 
                     const totalPrice = Math.max(0, originalPrice - discount);
@@ -323,6 +334,7 @@ class ChatbotTuvanService {
                         totalPrice: order.totalPrice,
                         pointsUsed,
                         discount,
+                        ...(pointCapNote ? { note: pointCapNote } : {}),
                     };
 
                     // Lưu lại vào ctx để chống tạo trùng nếu model lỡ gọi lại tool này
@@ -433,6 +445,13 @@ class ChatbotTuvanService {
             "NGUYÊN VĂN mã khách cung cấp (có thể bỏ dấu #), KHÔNG tự bịa thêm ký tự " +
             "hay cố đoán ra mã dài hơn — hệ thống sẽ tự tra theo mã rút gọn này, " +
             "dù mã dài hay ngắn.",
+            "[LƯU Ý VỀ ĐIỂM TÍCH LŨY]: Điểm tích lũy chỉ được dùng để giảm giá TỐI ĐA " +
+            "20% giá trị đơn hàng (quy đổi: 1 điểm = 100 VNĐ). Nếu khách muốn dùng " +
+            "toàn bộ điểm hoặc số điểm vượt quá 20% giá trị đơn, hãy tự tính trước " +
+            "mức tối đa cho phép (= làm tròn xuống của tổng tiền đơn hàng * 0.2 / 100) " +
+            "và báo cho khách biết con số này trước khi đặt hàng, tránh để khách hiểu " +
+            "nhầm là dùng được hết điểm. Nếu tool create_order trả về field \"note\" " +
+            "báo điểm đã bị giới hạn, PHẢI truyền đạt lại nội dung đó cho khách.",
             productContext ? `[SẢN PHẨM HIỆN CÓ]:\n${productContext}` : "",
             ragContext     ? `[NGỮ CẢNH BỔ SUNG]:\n${ragContext}`      : "",
         ].filter(Boolean).join("\n\n");
@@ -494,7 +513,7 @@ class ChatbotTuvanService {
                         content: JSON.stringify(result),
                     });
                 }
-                continue; 
+                continue;
             }
 
             // Model trả lời text bình thường
@@ -511,7 +530,8 @@ class ChatbotTuvanService {
 
         if (ctx.createdOrder) {
             const o = ctx.createdOrder;
-            return `Đơn hàng của bạn đã được đặt thành công! Mã đơn: ${o.orderId}, tổng tiền: ${o.totalPrice.toLocaleString()} VNĐ (thanh toán COD). Cảm ơn bạn đã mua hàng, shop sẽ giao trong 2-5 ngày nhé!`;
+            const capSuffix = o.note ? ` (${o.note})` : "";
+            return `Đơn hàng của bạn đã được đặt thành công! Mã đơn: ${o.orderId}, tổng tiền: ${o.totalPrice.toLocaleString()} VNĐ (thanh toán COD).${capSuffix} Cảm ơn bạn đã mua hàng, shop sẽ giao trong 2-5 ngày nhé!`;
         }
 
         throw new Error("Model trả về định dạng không hợp lệ, vui lòng thử lại");
